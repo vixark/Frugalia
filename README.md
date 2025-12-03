@@ -1,8 +1,27 @@
 # Frugalia [En Progreso]
 
-# Librería .NET para consultas optimizadas y económicas con modelos de IA
+## Librería .NET para consultas optimizadas y económicas con modelos de IA
 
-Frugalia es una librería para .NET que permite integrar modelos de inteligencia artificial (OpenAI GPT, Claude, Gemini, etc.) en aplicaciones empresariales, con un enfoque especial en la optimización de costos y el uso eficiente de recursos.
+Frugalia es una librería para .NET que permite integrar modelos de inteligencia artificial con un enfoque en la optimización de costos y la calidad de las respuestas. 
+
+La idea es ayudarte a:
+
+- Gastar menos en tókenes y dinero.
+- Exprimir mejor las características de la API (razonamiento, caché, funciones, búsqueda web, etc).
+- Tener métricas claras y detalladas de cuánto te cuesta cada llamada.
+- Encontrar tu propio equilibrio entre calidad de las respuestas y costo.
+   
+Actualmente está implementado OpenAI con una arquitectura preparada a corto plazo para Claude y Gemini.
+
+## ¿Por qué otro encapsulador/wrapper más?
+
+La mayoría de encapsuladores de modelos de IA hacen:
+
+> Consulta → Llamada a la API de la IA seleccionada → Respuesta
+
+Frugalia está pensada para actuar en el intermedio y ayudarte a resolver problemas de optimización de costos que surgen de la variedad de opciones que las API de IA proveen.  
+
+> Consulta con más información del caso de uso →  Optimizaciones internas de Frugalia → Llamada optimizada a la API de la IA → Respuesta
 
 # Características Diferenciadoras
 
