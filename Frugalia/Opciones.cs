@@ -51,7 +51,7 @@ namespace Frugalia {
 
                 EscribirInstrucciónSistema(instrucciónSistema);
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
-
+                
                 EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
                 AcciónEscribirOpcionesRazonamiento = (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, nombreModelo2, largoInstrucciónÚtil2) => {
 
@@ -60,13 +60,13 @@ namespace Frugalia {
                     var nombreModeloMinúsculas = nombreModelo2.ToLowerInvariant();
 
                     if (razonamientoEfectivo != Razonamiento.Alto && nombreModeloMinúsculas == "gpt-5-pro")
-                        throw new Exception("gpt-5-pro no permite nivel de razonamiento diferente de alto.");
+                        throw new InvalidOperationException("gpt-5-pro no permite nivel de razonamiento diferente de alto.");
 
                     var modelosSinRazonamiento = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" };
                     if (modelosSinRazonamiento.Contains(nombreModeloMinúsculas)) {
 
                         if (razonamientoEfectivo != Razonamiento.Ninguno) // No se debe agregar ReasoningOptions incluso con none en estos modelos porque saca error. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
-                            throw new Exception($"El modelo {nombreModeloMinúsculas} no soporta razonamiento. Solo se puede usar con Razonamiento = Ninguno.");
+                            throw new NotSupportedException($"El modelo {nombreModeloMinúsculas} no soporta razonamiento. Solo se puede usar con Razonamiento = Ninguno.");
 
                     } else {
 
@@ -86,7 +86,7 @@ namespace Frugalia {
                             textoRazonamiento = "high";
                             break;
                         default:
-                            throw new Exception($"Razonamiento {razonamientoEfectivo} no considerado.");
+                            throw new ArgumentOutOfRangeException(nameof(razonamientoEfectivo), $"Razonamiento {razonamientoEfectivo} no considerado.");
                         }
 
                         OpcionesGPT.ReasoningOptions =
