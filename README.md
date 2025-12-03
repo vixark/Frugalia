@@ -1,4 +1,4 @@
-# Frugalia {En Progreso]
+# Frugalia [En Progreso]
 
 # Librería .NET para consultas optimizadas y económicas con modelos de IA
 
