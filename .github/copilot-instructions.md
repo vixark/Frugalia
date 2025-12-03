@@ -1,0 +1,1 @@
+Sigue las reglas descritas en AGENTS.md de este repositorio.
