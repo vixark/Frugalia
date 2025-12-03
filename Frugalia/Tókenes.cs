@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using static Frugalia.Global;
 
 
-
 namespace Frugalia {
-
 
 
     public readonly struct Tókenes {
@@ -171,7 +169,6 @@ namespace Frugalia {
 
 
     } // TókenesUsados>
-
 
 
 } // Frugalia>

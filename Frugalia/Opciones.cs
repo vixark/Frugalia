@@ -6,9 +6,7 @@ using System.Text;
 using static Frugalia.Global;
 
 
-
 namespace Frugalia {
-
 
 
     #pragma warning disable SCME0001 // Este tipo se incluye solo con fines de evaluación y está sujeto a cambios o a que se elimine en próximas actualizaciones. Suprima este diagnóstico para continuar.
@@ -163,7 +161,6 @@ namespace Frugalia {
     } // Opciones>
     #pragma warning restore OPENAI001 // Este tipo se incluye solo con fines de evaluación y está sujeto a cambios o a que se elimine en próximas actualizaciones. Suprima este diagnóstico para continuar.
     #pragma warning restore SCME0001 // Este tipo se incluye solo con fines de evaluación y está sujeto a cambios o a que se elimine en próximas actualizaciones. Suprima este diagnóstico para continuar.
-
 
 
 } // Frugalia>

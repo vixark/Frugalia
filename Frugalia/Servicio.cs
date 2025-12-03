@@ -4,9 +4,7 @@ using System.Text.Json;
 using static Frugalia.Global;
 
 
-
 namespace Frugalia {
-
 
 
     public class Servicio {
@@ -603,7 +601,6 @@ namespace Frugalia {
 
 
     } // Servicio>
-
 
 
 } // Frugalia>

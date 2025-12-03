@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 
-
 namespace Frugalia {
-
 
 
     public sealed class Función {
@@ -96,7 +94,6 @@ namespace Frugalia {
 
 
     } // Función>
-
 
 
 } // Frugalia>

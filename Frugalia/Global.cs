@@ -5,7 +5,6 @@ using System.IO;
 using System.Text.Json;
 
 
-
 namespace Frugalia {
 
 
@@ -322,7 +321,6 @@ namespace Frugalia {
 
 
     } // Global>
-
 
 
 } // Frugalia>

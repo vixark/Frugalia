@@ -2,9 +2,7 @@
 using static Frugalia.Global;
 
 
-
 namespace Frugalia {
-
 
 
     public readonly struct Modelo {
@@ -170,7 +168,6 @@ namespace Frugalia {
 
 
     } // Modelo>
-
 
 
 } // Frugalia>

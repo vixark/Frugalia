@@ -4,9 +4,7 @@ using System.Text.Json;
 using static Frugalia.Global;
 
 
-
 namespace Frugalia {
-
 
 
     #pragma warning disable OPENAI001 // Este tipo se incluye solo con fines de evaluación y está sujeto a cambios o a que se elimine en próximas actualizaciones. Suprima este diagnóstico para continuar.
@@ -105,7 +103,6 @@ namespace Frugalia {
 
     } // ÍtemRespuesta>
     #pragma warning restore OPENAI001 // Este tipo se incluye solo con fines de evaluación y está sujeto a cambios o a que se elimine en próximas actualizaciones. Suprima este diagnóstico para continuar.
-
 
 
 } // Frugalia>
