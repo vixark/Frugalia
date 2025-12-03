@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
-using Frugalia;
-
 namespace Frugalia.Pruebas;
+
 
 public class FuncionesAuxiliares {
 

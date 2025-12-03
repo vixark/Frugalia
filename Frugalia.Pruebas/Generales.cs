@@ -1,19 +1,11 @@
-﻿
+﻿namespace Frugalia.Pruebas;
 
 
-namespace Frugalia.Pruebas {
+public class Generales {
 
 
-
-    public class Generales {
-
-
-        [Fact]
-        public void Verdadero() => Assert.True(true);
+    [Fact]
+    public void Verdadero() => Assert.True(true);
 
 
-    } // Generales>
-
-
-
-} // Frugalia.Pruebas>
+} // Generales>
