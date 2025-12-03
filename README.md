@@ -1,6 +1,6 @@
 # Frugalia
 
-## Librería .NET para consultas optimizadas y económicas con modelos de IA
+## Librería .NET para consultas optimizadas y económicas a modelos de IA
 
 Frugalia es una librería para .NET que permite integrar modelos de inteligencia artificial con un enfoque en la optimización de costos manteniendo la calidad de las respuestas. 
 
