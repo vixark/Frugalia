@@ -56,7 +56,7 @@ namespace Frugalia {
                 AcciónEscribirOpcionesRazonamiento = (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, nombreModelo2, largoInstrucciónÚtil2) => {
 
                     var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
-                        nombreModelo, largoInstrucciónÚtil2);
+                        nombreModelo2, largoInstrucciónÚtil2);
                     var nombreModeloMinúsculas = nombreModelo2.ToLowerInvariant();
 
                     if (razonamientoEfectivo != Razonamiento.Alto && nombreModeloMinúsculas == "gpt-5-pro")
