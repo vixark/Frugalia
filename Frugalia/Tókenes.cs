@@ -142,8 +142,11 @@ namespace Frugalia {
                     Suspender(); // Verificar funcionamiento.
                     if (modelo.PrecioAlmacenamientoCachéPorHora == null)
                         throw new Exception("No se esperaba que un modelo Gemini tenga PrecioAlmacenamientoCachéPorHora vacío.");
+                    var fracciónHora = tókenes.MinutosEscrituraManualCaché / 60m;
+                    var precioAlmacenamientoCachéFracciónHora = (decimal)modelo.PrecioAlmacenamientoCachéPorHora * fracciónHora;
                     pesosEscrituraManualCaché = CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd)
-                        + tókenes.EscrituraManualCaché * (tókenes.MinutosEscrituraManualCaché / 60m) * (decimal)modelo.PrecioAlmacenamientoCachéPorHora; // Al escribir en caché Gemini cobra los tókenes de entrada normalmente y le costo del tiempo de almacenamiento 
+                        + CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, precioAlmacenamientoCachéFracciónHora, tasaCambioUsd);
+                    // Al escribir en caché Gemini cobra los tókenes de entrada normalmente y el costo del tiempo de almacenamiento
                     break;
 
                 default:
