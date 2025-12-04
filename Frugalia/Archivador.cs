@@ -43,6 +43,7 @@ namespace Frugalia {
                     foreach (var archivoId in ArchivosIds) {
                         ArchivadorGPT.DeleteFile(archivoId);
                     }
+                    ArchivosIds.Clear();
 
                 };
 
@@ -61,6 +62,7 @@ namespace Frugalia {
                             instruccionesYArchivos.Add(ResponseContentPart.CreateInputImagePart(archivo.Id));
                         } else {
                             error = "Tipo archivo no soportado";
+                            return (null, "Tipo archivo no soportado.");
                         }
 
                     }

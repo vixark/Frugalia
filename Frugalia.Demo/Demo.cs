@@ -16,7 +16,7 @@ internal class Demo {
         Console.WriteLine("Selecciona el número de demo a ejecutar:");
         Console.WriteLine("1. Consulta de texto.");
         Console.WriteLine("2. Consulta con archivos.");
-        Console.WriteLine("3. Consulta buscando en internet.");
+        Console.WriteLine("3. Consulta buscando en internet con error por Razonamiento = Ninguno.");
         Console.WriteLine("4. Consulta usando funciones.");
         Console.WriteLine("");
         Console.ResetColor();
