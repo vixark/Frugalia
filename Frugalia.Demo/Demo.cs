@@ -5,7 +5,7 @@ namespace Frugalia.Demo;
 internal class Demo {
 
 
-    static void Main(string[] args) {
+    static void Main() {
 
         Console.ForegroundColor = ConsoleColor.Magenta;
         Console.WriteLine("");

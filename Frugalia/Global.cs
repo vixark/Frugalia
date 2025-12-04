@@ -87,7 +87,7 @@ namespace Frugalia {
         internal static string LeerClave(string rutaArchivo, out string error) {
 
             error = null;
-            if (!File.Exists(rutaArchivo)) {
+            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) {
                 error = "No se encontró el archivo con la clave de la API.";
                 return null;
             }

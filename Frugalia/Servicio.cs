@@ -32,6 +32,8 @@ namespace Frugalia {
 
         protected bool Lote { get; }
 
+        internal bool Iniciado { get; }
+
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
             RestricciónRazonamiento restricciónRazonamientoAlto, TratamientoNegritas tratamientoNegritas, string rutaArchivoClaveAPI, out string error,
@@ -39,9 +41,16 @@ namespace Frugalia {
 
             var modelo = Modelo.ObtenerModeloNulable(nombreModelo);
             if (modelo == null) {
+
                 error = $"El modelo '{nombreModelo}' no es válido.";
+                Iniciado = false;
                 return;
+
             }
+
+            ClaveAPI = LeerClave(rutaArchivoClaveAPI, out error);
+            if (!string.IsNullOrEmpty(error)) return;
+
             NombreModelo = nombreModelo;
             Familia = ((Modelo)modelo).Familia;
             Razonamiento = razonamiento;
@@ -51,9 +60,8 @@ namespace Frugalia {
             Lote = lote;
             RestricciónRazonamientoAlto = restricciónRazonamientoAlto;
             RestricciónRazonamientoMedio = restricciónRazonamientoMedio;
-            ClaveAPI = LeerClave(rutaArchivoClaveAPI, out error);
-            if (!string.IsNullOrEmpty(error)) return;
             Cliente = new Cliente(Familia, ClaveAPI);
+            Iniciado = true;
 
         } // ServicioIA>
 
@@ -426,6 +434,11 @@ namespace Frugalia {
             out string error, out Dictionary<string, Tókenes> tókenes, bool buscarEnInternet = false) {
 
             tókenes = default;
+            if (!Iniciado) {
+                error = "No se ha iniciado correctamente el servicio.";
+                return null;
+            }
+            
             if (buscarEnInternet && (Razonamiento == Razonamiento.Ninguno || Razonamiento == Razonamiento.NingunoOMayor)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno o NingunoOMayor.
                 error = "No se puede ejecutar una búsqueda en internet con razonamiento ninguno o mínimo.";
                 return null;
@@ -465,8 +478,14 @@ namespace Frugalia {
         public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
             List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo) {
 
-            instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
             tókenes = default;
+            if (!Iniciado) {
+                error = "No se ha iniciado correctamente el servicio.";
+                return null;
+            }
+
+            instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
+            
             if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
 
             var archivador = Cliente.ObtenerArchivador();
@@ -511,10 +530,16 @@ namespace Frugalia {
             List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int instruccionesPorConversación, 
             double proporciónPrimerInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones, out bool funciónEjecutada) {
 
-            instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
-                conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
             tókenes = new Dictionary<string, Tókenes>();
             funciónEjecutada = false;
+            if (!Iniciado) {
+                error = "No se ha iniciado correctamente el servicio.";
+                return null;
+            }
+
+            instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
+                conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
+            
             var máximasConsultas = 5; // Limitación de iteraciones entre llamadas a la función y llamadas a la IA para evitar que se quede en un ciclo infinito.
             var consultas = 0;
 
