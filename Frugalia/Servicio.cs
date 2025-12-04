@@ -42,11 +42,15 @@ namespace Frugalia {
             error = null;
             var modelo = Modelo.ObtenerModeloNulable(nombreModelo);
             if (modelo == null) {
-
                 error = $"El modelo '{nombreModelo}' no es válido.";
                 Iniciado = false;
                 return;
+            }
 
+            if (string.IsNullOrWhiteSpace(claveAPI)) {
+                error = "La clave de la API no puede ser nula ni vacía.";
+                Iniciado = false;
+                return;
             }
 
             ClaveAPI = claveAPI;
@@ -389,7 +393,7 @@ namespace Frugalia {
                 var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, NombreModelo, ref tókenes);
                 var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(TratamientoNegritas);
 
-                var nivelesMejoramiento = 0;
+                int nivelesMejoramiento;
                 if (textoRespuesta.Contains(LoHiceBien)) {
                     nivelesMejoramiento = 0;
                 } else if (textoRespuesta.Contains(MedioRecomendado)) {
@@ -398,6 +402,7 @@ namespace Frugalia {
                     nivelesMejoramiento = 2;
                 } else {
                     Suspender(); // Verificar cuando pase. El modelo no contestó con la etiqueta correcta.
+                    throw new Exception("La respuesta del modelo no incluyó la etiqueta de autoevaluación esperada.");
                 }
 
                 if (nivelesMejoramiento == 0) {
@@ -443,7 +448,7 @@ namespace Frugalia {
         public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
             out string error, out Dictionary<string, Tókenes> tókenes, bool buscarEnInternet = false) {
 
-            tókenes = default;
+            tókenes = new Dictionary<string, Tókenes>();
             if (!Iniciado) {
                 error = "No se ha iniciado correctamente el servicio.";
                 return null;
@@ -502,7 +507,7 @@ namespace Frugalia {
         public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
             List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo) {
 
-            tókenes = default;
+            tókenes = new Dictionary<string, Tókenes>();
             if (!Iniciado) {
                 error = "No se ha iniciado correctamente el servicio.";
                 return null;
