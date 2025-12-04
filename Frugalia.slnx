@@ -3,6 +3,9 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Project Path="Frugalia.Demo/Frugalia.Demo.csproj" Id="e08b1acf-8555-4d31-a322-6047aa26fdc6" />
   <Project Path="Frugalia.Pruebas/Frugalia.Pruebas.csproj" Id="80876ca3-8453-4009-946f-c70927c02e5d" />
   <Project Path="Frugalia/Frugalia.csproj" />
