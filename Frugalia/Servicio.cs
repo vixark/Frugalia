@@ -426,7 +426,7 @@ namespace Frugalia {
             out string error, out Dictionary<string, Tókenes> tókenes, bool buscarEnInternet = false) {
 
             tókenes = default;
-            if (buscarEnInternet && (Razonamiento == Razonamiento.Ninguno || Razonamiento == Razonamiento.NingunoOMayor)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
+            if (buscarEnInternet && (Razonamiento == Razonamiento.Ninguno || Razonamiento == Razonamiento.NingunoOMayor)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno o NingunoOMayor.
                 error = "No se puede ejecutar una búsqueda en internet con razonamiento ninguno o mínimo.";
                 return null;
             }
