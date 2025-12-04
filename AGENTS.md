@@ -28,3 +28,6 @@ void Procedimiento()
 6. Deja dos líneas en blanco entre el bloque de using al inicio del archivo y el primer elemento (namespace/clase/enum).
 
 7. Si el archivo no es para .NET Standard 2.0, usa el estilo moderno de namespaces al inicio del archivo sin llaves {}. 
+
+8. Los comentarios de código siempre agrégalos en la misma línea del código que se está explicando. No los agregues solos en líneas independientes. Los comentarios de código no deben ser multilínea, siempre escríbelos en una sola línea.
+

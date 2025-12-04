@@ -145,8 +145,7 @@ namespace Frugalia {
                     var fracciónHora = tókenes.MinutosEscrituraManualCaché / 60m;
                     var precioAlmacenamientoCachéFracciónHora = (decimal)modelo.PrecioAlmacenamientoCachéPorHora * fracciónHora;
                     pesosEscrituraManualCaché = CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd)
-                        + CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, precioAlmacenamientoCachéFracciónHora, tasaCambioUsd);
-                    // Al escribir en caché Gemini cobra los tókenes de entrada normalmente y el costo del tiempo de almacenamiento
+                        + CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, precioAlmacenamientoCachéFracciónHora, tasaCambioUsd); // Al escribir en caché Gemini cobra los tókenes de entrada normalmente y el costo del tiempo de almacenamiento
                     break;
 
                 default:
