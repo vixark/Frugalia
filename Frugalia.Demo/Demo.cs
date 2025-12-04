@@ -48,19 +48,10 @@ internal class Demo {
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
 
-            Dictionary<string, Tókenes> tókenes;
-            string detallesAdicionales;
-            string error;
-            try {
-
-                (respuesta, tókenes, detallesAdicionales, error) = consulta(servicio, modelo);
-                if (!string.IsNullOrEmpty(error)) respuesta = error;
-                respuesta = $"Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}{Environment.NewLine}" +
-                    $"{detallesAdicionales}{respuesta}{Environment.NewLine}";
-
-            } catch (Exception ex) {
-                respuesta = $"Excepción en consulta: {ex.Message}";                
-            }
+            (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, modelo);
+            if (!string.IsNullOrEmpty(error)) respuesta = error;
+            respuesta = $"Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}{Environment.NewLine}" +
+                $"{detallesAdicionales}{respuesta}{Environment.NewLine}";
             
         } else {
             respuesta = errorInicio;

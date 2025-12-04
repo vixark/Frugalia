@@ -53,7 +53,7 @@ namespace Frugalia {
 
                     var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
                         nombreModelo2, largoInstrucciónÚtil2);
-                    var nombreModeloMinúsculas = nombreModelo2.ToLowerInvariant();
+                    var nombreModeloMinúsculas = (nombreModelo2 ?? "").ToLowerInvariant();
 
                     if (razonamientoEfectivo != Razonamiento.Alto && nombreModeloMinúsculas == "gpt-5-pro")
                         throw new InvalidOperationException("gpt-5-pro no permite nivel de razonamiento diferente de alto.");

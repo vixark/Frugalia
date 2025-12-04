@@ -450,16 +450,16 @@ namespace Frugalia {
                 return null;
             }
 
-            instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
-
-            var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, NombreModelo,
-                ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema));
-            if (buscarEnInternet && (razonamientoEfectivo == Razonamiento.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
-                error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
-                return null;
-            }
-
             try {
+
+                instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
+
+                var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, NombreModelo,
+                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema));
+                if (buscarEnInternet && (razonamientoEfectivo == Razonamiento.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
+                    error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
+                    return null;
+                }
 
                 Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
                     out string respuestaTextoLimpio, ref tókenes);
@@ -497,13 +497,14 @@ namespace Frugalia {
                 return null;
             }
 
-            instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
-            
-            if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
-
-            var archivador = Cliente.ObtenerArchivador();
+            Archivador archivador = null;
             try {
 
+                instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
+
+                if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
+
+                archivador = Cliente.ObtenerArchivador();
                 var conversaciónConArchivosYError = archivador.ObtenerConversaciónConArchivos(rutasArchivos, instrucción, tipoArchivo);
                 if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) {
                     error = conversaciónConArchivosYError.Error;
@@ -521,7 +522,7 @@ namespace Frugalia {
                 return null;
 
             } finally {
-                archivador.EliminarArchivos();
+                archivador?.EliminarArchivos();
             }
 
         } // Consulta>
@@ -565,19 +566,19 @@ namespace Frugalia {
                 return null;
             }
 
-            instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
-                conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
-            
-            var máximasConsultas = 5; // Limitación de iteraciones entre llamadas a la función y llamadas a la IA para evitar que se quede en un ciclo infinito.
-            var consultas = 0;
-
             if (conversación == null) {
                 error = "No se permite pasar objeto conversación en nulo. ConsultaConFunciones() debe reusar la conversación para su correcto funcionamiento.";
                 return null;
             }
 
+            var máximasConsultas = 5; // Limitación de iteraciones entre llamadas a la función y llamadas a la IA para evitar que se quede en un ciclo infinito.
+            var consultas = 0;
+
             try {
 
+                instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
+                    conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
+            
                 Respuesta respuesta;
                 string respuestaTextoLimpio;
                 var funciónEjecutadaÚltimaConsulta = false;

@@ -2,6 +2,7 @@
 using OpenAI.Responses;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using static Frugalia.Global;
 
 
@@ -49,10 +50,15 @@ namespace Frugalia {
 
                 FunciónObtenerConversaciónConArchivos = (rutasArchivos, instrucción, tipoArchivo) => {
 
+                    if (rutasArchivos == null || rutasArchivos.Count == 0) return (null, "Debe enviarse al menos un archivo.");
+                    if (string.IsNullOrWhiteSpace(instrucción)) return (null, "La instrucción asociada a los archivos no puede estar vacía.");
+
                     string error = null;
 
                     var instruccionesYArchivos = new List<ResponseContentPart>();
                     foreach (var rutaArchivo in rutasArchivos) {
+
+                        if (string.IsNullOrWhiteSpace(rutaArchivo) || !File.Exists(rutaArchivo)) return (null, $"No se encontró la ruta de archivo {rutaArchivo}.");
 
                         var archivo = (OpenAIFile)ArchivadorGPT.UploadFile(rutaArchivo, FileUploadPurpose.UserData);
                         ArchivosIds.Add(archivo.Id);
