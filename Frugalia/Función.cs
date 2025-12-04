@@ -53,8 +53,11 @@ namespace Frugalia {
         internal static string ObtenerResultado(List<Función> funciones, string nombreFunción, out 
             (string ParámetroConError, string Descripción) error, List<(string Nombre, string Valor)> parámetrosUsuario) {
 
-            if (string.IsNullOrEmpty(nombreFunción)) {
-                error = ("", $"El nombre de la función no puede ser vacío.");
+            if (funciones == null) {
+                error = ("", "La lista funciones no puede ser nula.");
+                return null;
+            } else if(string.IsNullOrEmpty(nombreFunción)) {
+                error = ("", "El nombre de la función no puede ser vacío.");
                 return null;
             }
 
