@@ -366,7 +366,7 @@ namespace Frugalia {
             if (!string.IsNullOrEmpty(instrucción) && conversación != null) throw new Exception("Debe haber instrucción o conversación, pero no ambas.");
 
             var (respuesta, tókenesUsadosEnConsulta) = Cliente.ObtenerRespuesta(instrucción, conversación, opciones, nombreModelo, Lote);
-            tókenes.AgregarSumando(tókenesUsadosEnConsulta);
+            tókenes = tókenes.AgregarSumando(tókenesUsadosEnConsulta); // Se asigna a si mismo para que funcione cuando viene nulo.
 
             return respuesta;
 

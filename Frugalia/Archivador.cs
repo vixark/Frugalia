@@ -50,6 +50,8 @@ namespace Frugalia {
 
         public void EliminarArchivos() => AcciónEliminarArchivos();
 
+        private void EliminarArchivosSubidosParcialmente() => AcciónEliminarArchivos();
+
         private Func<List<string>, string, TipoArchivo, (Conversación Conversación, string Error)> FunciónObtenerConversaciónConArchivos { get; }
 
         public (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string instrucción, TipoArchivo tipoArchivo)
@@ -81,8 +83,11 @@ namespace Frugalia {
                     var instruccionesYArchivos = new List<ResponseContentPart>();
                     foreach (var rutaArchivo in rutasArchivos) {
 
-                        if (string.IsNullOrWhiteSpace(rutaArchivo) || !File.Exists(rutaArchivo)) return (null, $"No se encontró la ruta de archivo {rutaArchivo}.");
-
+                        if (string.IsNullOrWhiteSpace(rutaArchivo) || !File.Exists(rutaArchivo)) {
+                            EliminarArchivosSubidosParcialmente();
+                            return (null, $"No se encontró la ruta de archivo {rutaArchivo}.");
+                        }
+                            
                         var archivo = (OpenAIFile)ArchivadorGPT.UploadFile(rutaArchivo, FileUploadPurpose.UserData);
                         ArchivosIds.Add(archivo.Id);
                         if (tipoArchivo == TipoArchivo.Pdf) {
@@ -90,6 +95,7 @@ namespace Frugalia {
                         } else if (tipoArchivo == TipoArchivo.Imagen) {
                             instruccionesYArchivos.Add(ResponseContentPart.CreateInputImagePart(archivo.Id));
                         } else {
+                            EliminarArchivosSubidosParcialmente();
                             error = "Tipo archivo no soportado";
                             return (null, "Tipo archivo no soportado.");
                         }
