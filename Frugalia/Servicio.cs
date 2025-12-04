@@ -137,6 +137,15 @@ namespace Frugalia {
              
             */
 
+            if (instrucciónSistema == null) instrucciónSistema = "";
+            if (rellenoInstrucciónSistema == null) rellenoInstrucciónSistema = "";
+            if (instruccionesPorConversación <= 0)
+                throw new ArgumentOutOfRangeException(nameof(instruccionesPorConversación), "instruccionesPorConversación debe ser mayor a 0.");
+            if (proporciónPrimerInstrucciónVsSiguientes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(proporciónPrimerInstrucciónVsSiguientes), "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0.");
+            if (proporciónRespuestasVsInstrucciones < 0)
+                throw new ArgumentOutOfRangeException(nameof(proporciónRespuestasVsInstrucciones), "proporciónRespuestasVsInstrucciones no puede ser negativo.");
+
             var modelo = Modelo.ObtenerModelo(NombreModelo);
             if (modelo.LímiteTókenesActivaciónCachéAutomática == null) return "";
             if (modelo.LímiteTókenesActivaciónCachéAutomática <= 0) throw new Exception("El límite de tókenes no puede ser 0 o negativo.");
@@ -350,14 +359,14 @@ namespace Frugalia {
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         internal Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
-            bool buscarEnInternet, List<Función> funciones, out string respuestaTextoLimpio, out Dictionary<string, Tókenes> tókenes) {
+            bool buscarEnInternet, List<Función> funciones, out string respuestaTextoLimpio, ref Dictionary<string, Tókenes> tókenes) {
 
             if (!string.IsNullOrEmpty(instrucción) && conversación != null)
                 throw new Exception("No se permite pasar a la funcion Responder() instrucciones individuales no nulas y a la vez pasar conversación no nula.");
             if (string.IsNullOrEmpty(instrucción) && conversación == null)
                 throw new Exception("No se permite pasar a la funcion Responder() instrucciones individuales nulas y a la vez pasar conversación nula.");
 
-            tókenes = new Dictionary<string, Tókenes>();
+            if (tókenes == null) tókenes = new Dictionary<string, Tókenes>();
             var últimaInstruccion = instrucción;
             if (string.IsNullOrEmpty(instrucción)) últimaInstruccion = ObtenerTextoÚltimaInstrucción(conversación);
             var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema);
@@ -451,7 +460,7 @@ namespace Frugalia {
             try {
 
                 Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
-                    out string respuestaTextoLimpio, out tókenes);
+                    out string respuestaTextoLimpio, ref tókenes);
                 error = null;
                 return respuestaTextoLimpio;
 
@@ -500,7 +509,7 @@ namespace Frugalia {
                 }
 
                 var respuesta = Responder(instrucción: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
-                    buscarEnInternet: false, funciones: null, out string respuestaTextoLimpio, out tókenes);
+                    buscarEnInternet: false, funciones: null, out string respuestaTextoLimpio, ref tókenes);
                 error = null;
                 return respuestaTextoLimpio;
 
@@ -564,7 +573,7 @@ namespace Frugalia {
                         return null;
                     }
                     respuesta = Responder(instrucción: null, conversación, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet: false,
-                        funciones, out respuestaTextoLimpio, out tókenes);
+                        funciones, out respuestaTextoLimpio, ref tókenes);
                     funciónEjecutadaÚltimaConsulta = false;
 
                     foreach (var ítemRespuesta in respuesta.ObtenerÍtemsRespuesta()) {
