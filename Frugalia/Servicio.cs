@@ -550,6 +550,21 @@ namespace Frugalia {
                 return null;
             }
 
+            if (instruccionesPorConversación <= 0) {
+                error = "instruccionesPorConversación debe ser mayor a 0.";
+                return null;
+            }
+
+            if (proporciónPrimerInstrucciónVsSiguientes <= 0) {
+                error = "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0.";
+                return null;
+            }
+
+            if (proporciónRespuestasVsInstrucciones < 0) {
+                error = "proporciónRespuestasVsInstrucciones no puede ser negativo.";
+                return null;
+            }
+
             instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
                 conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
             
@@ -602,8 +617,9 @@ namespace Frugalia {
 
                                 var resultado = Función.ObtenerResultado(funciones, ítemRespuesta.ObtenerNombreFunción(),
                                     out (string ParámetroConError, string Descripción) errorFunción, ExtraerParámetros(json));
+                                var hayErrorFunción = !string.IsNullOrEmpty(errorFunción.Descripción); // El valor default de la tupla errorFunción es (null, null), pero el usuario de la librería también podría devolver ("", ""), entonces se evalúa la existencia de error ante ambas opciones: "" y null.
 
-                                if (errorFunción != default) {
+                                if (hayErrorFunción) {
 
                                     var errorJson = JsonSerializer.Serialize(new { error = errorFunción.Descripción, field = errorFunción.ParámetroConError });
                                     conversación.AgregarÍtemRespuesta(ítemRespuesta.CrearÍtemRespuestaFunción(errorJson));
