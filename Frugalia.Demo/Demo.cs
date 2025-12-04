@@ -48,11 +48,20 @@ internal class Demo {
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
 
-            (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, modelo);
-            if (!string.IsNullOrEmpty(error)) respuesta = error;
-            respuesta = $"Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}{Environment.NewLine}" +
-                $"{detallesAdicionales}{respuesta}{Environment.NewLine}";
+            Dictionary<string, Tókenes> tókenes;
+            string detallesAdicionales;
+            string error;
+            try {
 
+                (respuesta, tókenes, detallesAdicionales, error) = consulta(servicio, modelo);
+                if (!string.IsNullOrEmpty(error)) respuesta = error;
+                respuesta = $"Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}{Environment.NewLine}" +
+                    $"{detallesAdicionales}{respuesta}{Environment.NewLine}";
+
+            } catch (Exception ex) {
+                respuesta = $"Excepción en consulta: {ex.Message}";                
+            }
+            
         } else {
             respuesta = errorInicio;
         }
@@ -87,8 +96,8 @@ internal class Demo {
     } // ConsultaConArchivos>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error)
-        ConsultaBuscandoEnInternet(Servicio servicio, Modelo modelo) {
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaBuscandoEnInternet(Servicio servicio, 
+        Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
         var respuesta = servicio.Consulta(10, "Eres un investigador de mercado de productos de consumo diario en Colombia", ref rellenoInstrucciónSistema,

@@ -25,6 +25,8 @@ namespace Frugalia {
 
         internal bool Lote { get; }
 
+        internal string Error { get; } // Error al obtener los tókenes del servicio.
+
         internal string NombreModelo { get; }
 
         internal int EscrituraManualCaché { get; }
@@ -58,12 +60,23 @@ namespace Frugalia {
             EscrituraManualCaché = escrituraManualCaché ?? 0;
             SalidaNoRazonamiento = SalidaTotal - SalidaRazonamiento;
             EntradaNoCaché = EntradaTotal - EntradaCaché;
+            Error = null;
 
+        } // Tókenes>
+
+
+        /// <param name="nombreModelo"></param>
+        /// <param name="lote"></param>
+        /// <param name="error"></param>
+        internal Tókenes(string nombreModelo, bool lote, string error) : this(nombreModelo, lote, null, null, null, null, null, null) {
+            Error = error;
         } // Tókenes>
 
 
         public static Tókenes operator +(Tókenes tókenes1, Tókenes tókenes2) {
 
+            if (!string.IsNullOrEmpty(tókenes1.Error)) return tókenes1; // Si alguno de los dos tókenes tiene error, la suma no es posible y se devuelve el objeto tókenes del error.
+            if (!string.IsNullOrEmpty(tókenes2.Error)) return tókenes2;
             if (tókenes1.NombreModelo != tókenes2.NombreModelo) throw new Exception("No se pueden sumar tókenes usados de diferente modelo.");
             if (tókenes1.Lote != tókenes2.Lote) throw new Exception("No se pueden sumar tókenes de lote y no lote.");
             if (tókenes1.MinutosEscrituraManualCaché != tókenes2.MinutosEscrituraManualCaché)
@@ -156,13 +169,17 @@ namespace Frugalia {
 
                 var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraManualCaché;
                 totalTodos += totalPesos;
-                texto += $"{clave}: {tókenes.EntradaNoCaché} tókenes de entrada no caché a {FormatearMoneda(pesosNoCaché)} " + Environment.NewLine +
-                   $"{clave}: {tókenes.EntradaCaché} tókenes de entrada caché a {FormatearMoneda(pesosCaché)}" + Environment.NewLine +
-                   $"{clave}: {tókenes.SalidaNoRazonamiento} tókenes de salida no razonamiento a {FormatearMoneda(pesosNoRazonamiento)}" + Environment.NewLine +
-                   $"{clave}: {tókenes.SalidaRazonamiento} tókenes de salida razonamiento a {FormatearMoneda(pesosRazonamiento)}" + Environment.NewLine +
-                   $"{clave}: {tókenes.EscrituraManualCaché} tókenes de escritura manual en caché por {tókenes.MinutosEscrituraManualCaché} minutos " +
-                   $"a {FormatearMoneda(pesosEscrituraManualCaché)}" + Environment.NewLine +
-                   $"Total {clave}: {FormatearMoneda(totalPesos)}" + Environment.NewLine;
+                if (!string.IsNullOrEmpty(tókenes.Error)) {
+                    texto += $"{clave}: {tókenes.Error}{Environment.NewLine}";
+                } else {      
+                    texto += $"{clave}: {tókenes.EntradaNoCaché} tókenes de entrada no caché a {FormatearMoneda(pesosNoCaché)} " + Environment.NewLine +
+                       $"{clave}: {tókenes.EntradaCaché} tókenes de entrada caché a {FormatearMoneda(pesosCaché)}" + Environment.NewLine +
+                       $"{clave}: {tókenes.SalidaNoRazonamiento} tókenes de salida no razonamiento a {FormatearMoneda(pesosNoRazonamiento)}" + Environment.NewLine +
+                       $"{clave}: {tókenes.SalidaRazonamiento} tókenes de salida razonamiento a {FormatearMoneda(pesosRazonamiento)}" + Environment.NewLine +
+                       $"{clave}: {tókenes.EscrituraManualCaché} tókenes de escritura manual en caché por {tókenes.MinutosEscrituraManualCaché} minutos " +
+                       $"a {FormatearMoneda(pesosEscrituraManualCaché)}" + Environment.NewLine +
+                       $"Total {clave}: {FormatearMoneda(totalPesos)}" + Environment.NewLine;
+                }
 
             }
 

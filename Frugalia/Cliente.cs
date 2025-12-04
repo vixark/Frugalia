@@ -50,9 +50,14 @@ namespace Frugalia {
                         throw new InvalidOperationException("Debe haber al menos una instrucción o conversación.");
                     }
 
-                    var tókenes = new Tókenes(nombreModelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
-                        respuestaGPT.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGPT.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
-
+                    Tókenes tókenes;
+                    if (respuestaGPT.Usage == null) {
+                        tókenes = new Tókenes(nombreModelo, lote, "respuestaGPT.Usage es nulo.");
+                    } else {
+                        tókenes = new Tókenes(nombreModelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
+                            respuestaGPT.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGPT.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
+                    }
+                        
                     return (new Respuesta(respuestaGPT), tókenes);
 
                 };
