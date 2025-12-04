@@ -53,6 +53,8 @@ namespace Frugalia {
     public static class Global {
 
 
+        private static readonly Random AleatorioCompartido = new Random();
+
         public static string DobleLínea = $"{Environment.NewLine}{Environment.NewLine}";
 
         internal const string LoHiceBien = "[lo-hice-bien]";
@@ -84,7 +86,7 @@ namespace Frugalia {
         };
 
 
-        internal static string LeerClave(string rutaArchivo, out string error) {
+        public static string LeerClave(string rutaArchivo, out string error) {
 
             error = null;
             if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) {
@@ -314,8 +316,9 @@ namespace Frugalia {
 
         public static int ObtenerAleatorio(int mínimo, int máximo) {
 
-            var nuevoAleatorio = new Random();
-            return nuevoAleatorio.Next(mínimo, máximo);
+            lock (AleatorioCompartido) {
+                return AleatorioCompartido.Next(mínimo, máximo);
+            }
 
         } // ObtenerAleatorio>
 

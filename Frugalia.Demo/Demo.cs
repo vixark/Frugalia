@@ -40,10 +40,11 @@ internal class Demo {
         (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error)> consulta) {
 
         var modelo = Modelo.ObtenerModelo("gpt-5.1");
-        var servicio = new Servicio(modelo.Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja,
-            CalidadAdaptable.MejorarModeloYRazonamiento, RestricciónRazonamiento.ModelosMuyPequeños, TratamientoNegritas.Eliminar,
-            @"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt",
-            out string errorInicio);
+        var claveAPI = LeerClave(@"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt", out string errorClaveAPI);
+        if (!string.IsNullOrEmpty(errorClaveAPI)) return errorClaveAPI;
+
+        var servicio = new Servicio(modelo.Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
+            RestricciónRazonamiento.ModelosMuyPequeños, TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
 
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
@@ -62,7 +63,7 @@ internal class Demo {
     } // Consultar>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaTexto(Servicio servicio,
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaTexto(Servicio servicio, 
         Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";

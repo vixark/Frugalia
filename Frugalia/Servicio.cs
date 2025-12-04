@@ -36,9 +36,10 @@ namespace Frugalia {
 
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
-            RestricciónRazonamiento restricciónRazonamientoAlto, TratamientoNegritas tratamientoNegritas, string rutaArchivoClaveAPI, out string error,
+            RestricciónRazonamiento restricciónRazonamientoAlto, TratamientoNegritas tratamientoNegritas, string claveAPI, out string error,
             RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna) { // A propósito solo se provee un constructor con muchos parámetros para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
 
+            error = null;
             var modelo = Modelo.ObtenerModeloNulable(nombreModelo);
             if (modelo == null) {
 
@@ -48,9 +49,7 @@ namespace Frugalia {
 
             }
 
-            ClaveAPI = LeerClave(rutaArchivoClaveAPI, out error);
-            if (!string.IsNullOrEmpty(error)) return;
-
+            ClaveAPI = claveAPI;
             NombreModelo = nombreModelo;
             Familia = ((Modelo)modelo).Familia;
             Razonamiento = razonamiento;
@@ -455,6 +454,11 @@ namespace Frugalia {
                 return null;
             }
 
+            if (string.IsNullOrWhiteSpace(instrucción)) {
+                error = "La instrucción del usuario no puede ser vacía.";
+                return null;
+            }
+
             if (instrucciónSistema == null) instrucciónSistema = "";
 
             try {
@@ -506,6 +510,11 @@ namespace Frugalia {
 
             if (consultasEnPocasHoras <= 0) {
                 error = "consultasEnPocasHoras debe ser mayor a 0.";
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(instrucción)) {
+                error = "La instrucción del usuario no puede ser vacía.";
                 return null;
             }
 
