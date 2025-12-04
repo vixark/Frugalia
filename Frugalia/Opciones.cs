@@ -47,10 +47,8 @@ namespace Frugalia {
 
                 OpcionesGPT = new ResponseCreationOptions();
 
-                EscribirInstrucciónSistema(instrucciónSistema);
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
-                
-                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
+
                 AcciónEscribirOpcionesRazonamiento = (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, nombreModelo2, largoInstrucciónÚtil2) => {
 
                     var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
@@ -93,6 +91,9 @@ namespace Frugalia {
                     }
 
                 };
+
+                EscribirInstrucciónSistema(instrucciónSistema);
+                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
 
                 OpcionesGPT.MaxOutputTokenCount = máximosTókenesSalida;
                 var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se hace la lista de los viejos porque se espera que los nuevos mantengan verbosidad configurable.
