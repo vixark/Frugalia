@@ -52,7 +52,7 @@ namespace Frugalia {
 
                 FunciónObtenerTextoPrimeraInstrucción = () => {
 
-                    var primeraInstrucción = ConversaciónGPT.OfType<MessageResponseItem>().FirstOrDefault();
+                    var primeraInstrucción = ConversaciónGPT.OfType<MessageResponseItem>().FirstOrDefault(m => m.Role == MessageRole.User);
                     if (primeraInstrucción != null) {
 
                         var texto = primeraInstrucción.Content?.FirstOrDefault(p => !string.IsNullOrEmpty(p.Text));
@@ -66,7 +66,7 @@ namespace Frugalia {
 
                 FunciónObtenerTextoÚltimaInstrucción = () => {
 
-                    var últimaInstrucción = ConversaciónGPT.OfType<MessageResponseItem>().LastOrDefault();
+                    var últimaInstrucción = ConversaciónGPT.OfType<MessageResponseItem>().LastOrDefault(m => m.Role == MessageRole.User);
                     if (últimaInstrucción != null) {
 
                         var texto = últimaInstrucción.Content?.LastOrDefault(p => !string.IsNullOrEmpty(p.Text));
