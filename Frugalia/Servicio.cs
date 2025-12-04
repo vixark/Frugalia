@@ -438,13 +438,15 @@ namespace Frugalia {
                 error = "No se ha iniciado correctamente el servicio.";
                 return null;
             }
-            
-            if (buscarEnInternet && (Razonamiento == Razonamiento.Ninguno || Razonamiento == Razonamiento.NingunoOMayor)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno o NingunoOMayor.
-                error = "No se puede ejecutar una búsqueda en internet con razonamiento ninguno o mínimo.";
-                return null;
-            }
 
             instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
+
+            var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, NombreModelo,
+                ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema));
+            if (buscarEnInternet && (razonamientoEfectivo == Razonamiento.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
+                error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
+                return null;
+            }
 
             try {
 
