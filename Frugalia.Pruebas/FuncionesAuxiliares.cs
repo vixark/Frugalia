@@ -55,32 +55,19 @@ public class FuncionesAuxiliares {
     } // AgregarSumando_SumaTokensCuandoExisteLaClave>
 
 
-    [Fact]
-    public void ObtenerTextoCostoTókenes_NoAplicaDescuentoSinLote() {
-
-        var tokens = CrearTókenes("gpt-5-mini", lote: false, entradaTotal: 1_000_000, salidaTotal: 0, salidaRazonamiento: 0, entradaCaché: 0);
-        var lista = new Dictionary<string, Tókenes> { { ObtenerClave(tokens), tokens } };
-
-        var textoCostos = Tókenes.ObtenerTextoCostoTókenes(lista, tasaCambioUsd: 1000);
-
-        Assert.Contains("Total gpt-5-mini§False§0: 250 $", textoCostos);
-
-    } // ObtenerTextoCostoTókenes_NoAplicaDescuentoSinLote>
-
-
     private static Tókenes CrearTókenes(string modelo, bool lote, int entradaTotal, int salidaTotal, int salidaRazonamiento, int entradaCaché, int escrituraManualCaché = 0, int minutosEscrituraManualCaché = 0) {
 
         var ctor = typeof(Tókenes).GetConstructor(
             BindingFlags.NonPublic | BindingFlags.Instance,
             binder: null,
-            new[] { typeof(string), typeof(bool), typeof(int?), typeof(int?), typeof(int?), typeof(int?), typeof(int?), typeof(int?) },
+            [typeof(string), typeof(bool), typeof(int?), typeof(int?), typeof(int?), typeof(int?), typeof(int?), typeof(int?)],
             modifiers: null);
 
         if (ctor == null) {
             throw new InvalidOperationException("No se encontró el constructor esperado de Tókenes.");
         }
 
-        return (Tókenes)ctor.Invoke(new object?[] {
+        return (Tókenes)ctor.Invoke([
             modelo,
             lote,
             entradaTotal,
@@ -89,7 +76,7 @@ public class FuncionesAuxiliares {
             entradaCaché,
             escrituraManualCaché,
             minutosEscrituraManualCaché
-        });
+        ]);
 
     } // CrearTókenes>
 

@@ -107,11 +107,9 @@ namespace Frugalia {
                 var modelo = Modelo.ObtenerModelo(nombreModelo);
                 var factorEntradaYSalida = tókenes.Lote ? modelo.FracciónDescuentoEntradaYSalidaPorLote : 1m;
                 var factorLecturaCaché = tókenes.Lote ? modelo.FracciónDescuentoLecturaCachePorLote : 1m;
-                var pesosNoCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaNoCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd)
-                    * factorEntradaYSalida;
-                var pesosCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaCaché, modelo.PrecioEntradaCaché, tasaCambioUsd)
-                    * factorLecturaCaché;
-                var pesosNoRazonamiento = CalcularCostoMonedaLocalTókenes(tókenes.SalidaNoRazonamiento, modelo.PrecioSalidaNoRazonamiento, tasaCambioUsd)
+                var pesosNoCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaNoCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd) * factorEntradaYSalida;
+                var pesosCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaCaché, modelo.PrecioEntradaCaché, tasaCambioUsd) * factorLecturaCaché;
+                var pesosNoRazonamiento = CalcularCostoMonedaLocalTókenes(tókenes.SalidaNoRazonamiento, modelo.PrecioSalidaNoRazonamiento, tasaCambioUsd) 
                     * factorEntradaYSalida;
                 var pesosRazonamiento = CalcularCostoMonedaLocalTókenes(tókenes.SalidaRazonamiento, modelo.PrecioSalidaRazonamiento, tasaCambioUsd)
                     * factorEntradaYSalida;
@@ -153,8 +151,8 @@ namespace Frugalia {
                 default:
                     throw new NotImplementedException();
                 }
-                var factorEscrituraCaché = tókenes.Lote ? (modelo.FracciónDescuentoEscrituraCachéPorLote ?? 1) : 1m;
-                pesosEscrituraManualCaché *= factorEscrituraCaché; // Si es vacío no hay descuento, entonces el factor es 1.
+                var factorEscrituraCaché = tókenes.Lote ? (modelo.FracciónDescuentoEscrituraCachéPorLote ?? 1) : 1m; // Si es vacío no hay descuento, entonces el factor es 1.
+                pesosEscrituraManualCaché *= factorEscrituraCaché; 
 
                 var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraManualCaché;
                 totalTodos += totalPesos;
