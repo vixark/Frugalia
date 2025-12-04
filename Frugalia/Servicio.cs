@@ -407,8 +407,9 @@ namespace Frugalia {
                 respuesta = ObtenerRespuesta(instrucción, conversación, opciones, NombreModelo, ref tókenes);
             }
 
-            respuestaTextoLimpio = modoCalidadAdaptable ?
-                respuesta.ObtenerTextoRespuesta(TratamientoNegritas).Replace(LoHiceBien, "") : respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
+            respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
+            respuestaTextoLimpio = modoCalidadAdaptable 
+                ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(MedioRecomendado, "").Replace(GrandeRecomendado, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
             return respuesta;
 
         } // Responder>
