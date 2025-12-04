@@ -31,3 +31,7 @@ void Procedimiento()
 
 8. Los comentarios de código siempre agrégalos en la misma línea del código que se está explicando. No los agregues solos en líneas independientes. Los comentarios de código no deben ser multilínea, siempre escríbelos en una sola línea.
 
+Instrucciones para generación de código por parte de Agentes:
+
+1. No agregues pruebas al proyecto de pruebas, si no se te ha pedido explícitamente que lo hagas.
+

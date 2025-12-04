@@ -73,7 +73,7 @@ namespace Frugalia {
                 foreach (var parámetro in función.Parámetros) {
 
                     var valorUsuario = parámetrosUsuario?.FirstOrDefault(nv => (nv.Nombre ?? "").ToLowerInvariant() == parámetro.Nombre).Valor;
-                    if (valorUsuario == null) {
+                    if (string.IsNullOrEmpty(valorUsuario)) {
 
                         if (parámetro.Requerido) {
                             error = (parámetro.Nombre, $"Falta el parámetro requerido {parámetro.Nombre} en la función {función.Nombre}.");

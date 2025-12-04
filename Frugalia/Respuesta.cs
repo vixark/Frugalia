@@ -44,7 +44,7 @@ namespace Frugalia {
 
                 FunciónObtenerTextoRespuesta = (tratamientoNegritas) => {
 
-                    var respuesta = RespuestaGPT.GetOutputText();
+                    var respuesta = RespuestaGPT.GetOutputText() ?? "";
 
                     if (respuesta.Contains("**")) {
 

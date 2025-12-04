@@ -315,7 +315,7 @@ namespace Frugalia {
 
         internal Opciones ObtenerOpciones(string instrucciónSistema, bool buscarEnInternet, int largoInstrucciónÚtil, List<Función> funciones) {
 
-            var máximosTókenesSalida = 1; // Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, generando altos costos.
+            int máximosTókenesSalida; // Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, generando altos costos.
 
             if (Verbosidad == Verbosidad.Baja) {
                 máximosTókenesSalida = 200;
@@ -323,10 +323,12 @@ namespace Frugalia {
                 máximosTókenesSalida = 350;
             } else if (Verbosidad == Verbosidad.Alta) {
                 máximosTókenesSalida = 500;
+            } else {
+                throw new Exception($"Valor de verbosidad no considerado: {Verbosidad}.");
             }
 
             return new Opciones(Familia, instrucciónSistema, NombreModelo, Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio,
-                largoInstrucciónÚtil, máximosTókenesSalida, Verbosidad, buscarEnInternet, funciones);
+                    largoInstrucciónÚtil, máximosTókenesSalida, Verbosidad, buscarEnInternet, funciones);
 
         } // ObtenerOpciones>
 
