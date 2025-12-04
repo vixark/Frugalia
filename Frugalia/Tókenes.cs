@@ -109,6 +109,8 @@ namespace Frugalia {
 
         public static string ObtenerTextoCostoTókenes(Dictionary<string, Tókenes> listaTókenes, decimal tasaCambioUsd) {
 
+            if (listaTókenes == null || listaTókenes.Count == 0) return "No hay tókenes para calcular costos.";
+
             var totalTodos = 0.0m;
             var texto = "";
             foreach (var kv in listaTókenes) {

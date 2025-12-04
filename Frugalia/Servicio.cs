@@ -450,6 +450,13 @@ namespace Frugalia {
                 return null;
             }
 
+            if (consultasEnPocasHoras <= 0) {
+                error = "consultasEnPocasHoras debe ser mayor a 0.";
+                return null;
+            }
+
+            if (instrucciónSistema == null) instrucciónSistema = "";
+
             try {
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
@@ -496,6 +503,13 @@ namespace Frugalia {
                 error = "No se ha iniciado correctamente el servicio.";
                 return null;
             }
+
+            if (consultasEnPocasHoras <= 0) {
+                error = "consultasEnPocasHoras debe ser mayor a 0.";
+                return null;
+            }
+
+            if (instrucciónSistema == null) instrucciónSistema = "";
 
             Archivador archivador = null;
             try {
@@ -551,6 +565,11 @@ namespace Frugalia {
                 return null;
             }
 
+            if (conversacionesEnPocasHoras <= 0) {
+                error = "conversacionesEnPocasHoras debe ser mayor a 0.";
+                return null;
+            }
+
             if (instruccionesPorConversación <= 0) {
                 error = "instruccionesPorConversación debe ser mayor a 0.";
                 return null;
@@ -570,6 +589,8 @@ namespace Frugalia {
                 error = "No se permite pasar objeto conversación en nulo. ConsultaConFunciones() debe reusar la conversación para su correcto funcionamiento.";
                 return null;
             }
+
+            if (instrucciónSistema == null) instrucciónSistema = "";
 
             var máximasConsultas = 5; // Limitación de iteraciones entre llamadas a la función y llamadas a la IA para evitar que se quede en un ciclo infinito.
             var consultas = 0;
