@@ -35,35 +35,35 @@ namespace Frugalia {
 
         internal const int FactorPrecioFuturo = 1; // Factor de seguridad que incrementa los precios de los tókenes para proyecciones a futuro. En 2025 no se aplica recargo porque los modelos pequeños y medianos siguen presionados por alternativas de código abierto y subir tarifas implicaría perder usuarios. Para simplificar se usa 1 para todos; si se quisiera ser más estricto se podría usar pequeños x1-x1.5 y medianos x1.5-x2. Los modelos grandes ya se ofrecen con márgenes altos y difícilmente aumenten más sus tarifas, así que ante la incertidumbre se asume un factor 1 para todos.
 
-        internal int EntradaTotal { get; }
+        public int EntradaTotal { get; }
 
-        internal int SalidaTotal { get; }
+        public int SalidaTotal { get; }
 
-        internal int SalidaRazonamiento { get; }
+        public int SalidaRazonamiento { get; }
 
-        internal int EntradaCaché { get; }
+        public int EntradaCaché { get; }
 
-        internal int SalidaNoRazonamiento { get; }
+        public int SalidaNoRazonamiento { get; }
 
-        internal int EntradaNoCaché { get; }
+        public int EntradaNoCaché { get; }
 
-        internal bool Lote { get; }
+        public bool Lote { get; }
 
-        internal string Error { get; } // Error al obtener los tókenes del servicio.
+        public string Error { get; } // Error al obtener los tókenes del servicio.
 
-        internal string NombreModelo { get; }
+        public string NombreModelo { get; }
 
-        internal int EscrituraManualCaché { get; }
+        public int EscrituraManualCaché { get; }
 
         /// <summary>
         /// Para Claude solo es válido 0, 5 o 60. Para Gemini puede ser cualquier valor entero.
         /// </summary>
-        internal int MinutosEscrituraManualCaché { get; }
+        public int MinutosEscrituraManualCaché { get; }
 
         /// <summary>
         /// Clave que identifica un grupo de tókenes sumables.
         /// </summary>
-        internal string Clave => $"{NombreModelo}§{Lote}§{MinutosEscrituraManualCaché}";
+        public string Clave => $"{NombreModelo}§{Lote}§{MinutosEscrituraManualCaché}";
 
 
         internal Tókenes(string nombreModelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché,
