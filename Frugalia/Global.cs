@@ -198,7 +198,7 @@ namespace Frugalia {
         } // ObtenerTamaño>
 
 
-        internal static Razonamiento ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
+        public static Razonamiento ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
             RestricciónRazonamiento restricciónRazonamientoMedio, string nombreModelo, int largoInstrucciónÚtil) {
 
             var largoLímite1 = 500; // Aproximadamente 166 tókenes. Los límites de 500 y 2000 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.

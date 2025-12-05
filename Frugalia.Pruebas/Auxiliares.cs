@@ -26,7 +26,7 @@ using System.Reflection;
 namespace Frugalia.Pruebas;
 
 
-public class FuncionesAuxiliares {
+public class Auxiliares {
 
 
     [Fact]
@@ -124,4 +124,4 @@ public class FuncionesAuxiliares {
     } // ObtenerClave>
 
 
-} // FuncionesAuxiliares>
+} // Auxiliares>
