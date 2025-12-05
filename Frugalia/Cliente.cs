@@ -44,15 +44,15 @@ namespace Frugalia {
 
         private Func<string, Conversación, Opciones, string, bool, (Respuesta, Tókenes)> FunciónObtenerRespuesta { get; }
 
-        public (Respuesta, Tókenes) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, string nombreModelo, bool lote)
+        internal (Respuesta, Tókenes) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, string nombreModelo, bool lote)
             => FunciónObtenerRespuesta(instrucción, conversación, opciones, nombreModelo, lote);
 
         private Func<Archivador> FunciónObtenerArchivador { get; }
 
-        public Archivador ObtenerArchivador() => FunciónObtenerArchivador();
+        internal Archivador ObtenerArchivador() => FunciónObtenerArchivador();
 
 
-        public Cliente(Familia familia, string claveAPI) {
+        internal Cliente(Familia familia, string claveAPI) {
 
             Familia = familia;
 

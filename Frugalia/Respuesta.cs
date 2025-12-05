@@ -46,15 +46,15 @@ namespace Frugalia {
 
         private Action<object> AcciónAsignarRespuesta { get; }
 
-        public void AgregarMensajeUsuario(object respuesta) => AcciónAsignarRespuesta(respuesta);
+        internal void AgregarMensajeUsuario(object respuesta) => AcciónAsignarRespuesta(respuesta);
 
         private Func<TratamientoNegritas, string> FunciónObtenerTextoRespuesta { get; }
 
-        public string ObtenerTextoRespuesta(TratamientoNegritas tratamientoNegritas) => FunciónObtenerTextoRespuesta(tratamientoNegritas);
+        internal string ObtenerTextoRespuesta(TratamientoNegritas tratamientoNegritas) => FunciónObtenerTextoRespuesta(tratamientoNegritas);
 
         private Func<List<ÍtemRespuesta>> FunciónObtenerÍtemsRespuesta { get; }
 
-        public List<ÍtemRespuesta> ObtenerÍtemsRespuesta() => FunciónObtenerÍtemsRespuesta();
+        internal List<ÍtemRespuesta> ObtenerÍtemsRespuesta() => FunciónObtenerÍtemsRespuesta();
 
 
         private Respuesta(Familia familia) {
@@ -113,7 +113,7 @@ namespace Frugalia {
         } // Respuesta>
 
 
-        public Respuesta(OpenAIResponse respuestaGPT) : this(Familia.GPT) => RespuestaGPT = respuestaGPT;
+        internal Respuesta(OpenAIResponse respuestaGPT) : this(Familia.GPT) => RespuestaGPT = respuestaGPT;
 
 
     } // Respuesta>

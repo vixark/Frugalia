@@ -46,20 +46,20 @@ namespace Frugalia {
 
         private Action<string> AcciónEscribirInstrucciónSistema { get; }
 
-        public void EscribirInstrucciónSistema(string instrucciónSistema) => AcciónEscribirInstrucciónSistema(instrucciónSistema);
+        internal void EscribirInstrucciónSistema(string instrucciónSistema) => AcciónEscribirInstrucciónSistema(instrucciónSistema);
 
         private Action<Razonamiento, RestricciónRazonamiento, RestricciónRazonamiento, string, int> AcciónEscribirOpcionesRazonamiento { get; }
 
-        public void EscribirOpcionesRazonamiento(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
+        internal void EscribirOpcionesRazonamiento(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
             RestricciónRazonamiento restricciónRazonamientoMedio, string nombreModelo, int largoInstrucciónÚtil)
                 => AcciónEscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
 
         private Func<string> FunciónObtenerInstrucciónSistema { get; }
 
-        public string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
+        internal string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
 
 
-        public Opciones(Familia familia, string instrucciónSistema, string nombreModelo, Razonamiento razonamiento,
+        internal Opciones(Familia familia, string instrucciónSistema, string nombreModelo, Razonamiento razonamiento,
             RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, int largoInstrucciónÚtil,
             int máximosTókenesSalida, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones) {
 
