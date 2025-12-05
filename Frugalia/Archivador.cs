@@ -48,13 +48,13 @@ namespace Frugalia {
 
         private Action AcciónEliminarArchivos { get; }
 
-        public void EliminarArchivos() => AcciónEliminarArchivos();
+        internal void EliminarArchivos() => AcciónEliminarArchivos();
 
         private void EliminarArchivosSubidosParcialmente() => AcciónEliminarArchivos();
 
         private Func<List<string>, string, TipoArchivo, (Conversación Conversación, string Error)> FunciónObtenerConversaciónConArchivos { get; }
 
-        public (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string instrucción, TipoArchivo tipoArchivo)
+        internal (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string instrucción, TipoArchivo tipoArchivo)
             => FunciónObtenerConversaciónConArchivos(rutasArchivos, instrucción, tipoArchivo);
 
 
