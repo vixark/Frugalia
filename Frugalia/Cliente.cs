@@ -34,11 +34,11 @@ namespace Frugalia {
     internal class Cliente {
 
 
-        internal OpenAIClient ClienteGPT { get; }
+        private OpenAIClient ClienteGPT { get; }
 
-        internal object ClienteGemini { get; }
+        private object ClienteGemini { get; }
 
-        internal object ClienteClaude { get; }
+        private object ClienteClaude { get; }
 
         private Familia Familia { get; }
 
