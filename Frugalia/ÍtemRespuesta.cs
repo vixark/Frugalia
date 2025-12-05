@@ -104,10 +104,10 @@ namespace Frugalia {
                 break;
 
             case Familia.Claude:
-                Suspender(); // Pendiente implementar.
+                Suspender(); // Implementación pendiente.
                 break;
             case Familia.Gemini:
-                Suspender(); // Pendiente implementar.
+                Suspender(); // Implementación pendiente.
                 break;
             case Familia.Mistral:
             case Familia.Llama:

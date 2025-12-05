@@ -630,7 +630,7 @@ namespace Frugalia {
 
             if (instrucciónSistema == null) instrucciónSistema = "";
 
-            var máximasConsultas = 5; // Limitación de iteraciones entre llamadas a la función y llamadas a la IA para evitar que se quede en un ciclo infinito.
+            var máximasConsultas = 5; // Límite de iteraciones entre llamadas a la función y a la IA para evitar que se quede en un ciclo infinito.
             var consultas = 0;
 
             try {
@@ -642,7 +642,7 @@ namespace Frugalia {
                 string respuestaTextoLimpio;
                 var funciónEjecutadaÚltimaConsulta = false;
 
-                do { // Se sigue llamando a la API mientras esta siga solicitando llamar funciones. Termina solo cuando el modelo ya contestó normalmente sin pedir más ejecuciones de funciones. El caso más común y simple es en el que el modelo se ejecuta dos veces: la primera que identifica que necesita una función y la segunda que usa el resultado de la función para dar la respuesta al usuario. Podrían haber casos que el modelo intente ejecutar varias funciones en cola, entonces se deja abierto a que se ejecute las veces necesarias, pero acotado a un número racional de ejecuciones.
+                do { // Se sigue llamando a la API mientras esta siga solicitando ejecutar funciones y termina cuando el modelo responde sin pedir más. Lo usual es que el modelo se ejecute dos veces: primero identifica que necesita una función y luego usa el resultado para responder al usuario. Podrían existir casos en los que intente varias funciones en cola, así que se permite repetirse las veces necesarias dentro de un límite razonable.
 
                     consultas++;
                     if (consultas > máximasConsultas) {

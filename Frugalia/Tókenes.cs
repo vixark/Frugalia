@@ -33,7 +33,7 @@ namespace Frugalia {
     public readonly struct Tókenes {
 
 
-        internal const int FactorPrecioFuturo = 1; // Factor de seguridad que incrementa los precios de los tókenes para proyecciones de presupuesto en el futuro. Por el momento en 2025 no se aplica recargo a precio futuro porque a mediano plazo los modelos pequeños y medianos están fuertemente presionados por modelos código abierto cada vez mejores lo que limita su capacidad de subir precios sin perder usuarios. Aunque los medianos menos, de todas maneras para simplificar se deja 1 para ambos. Si se quisiera ser más estricto se podría poner pequeños x1-x1.5 y medianos x1.5-x2. Los modelos grandes, en cambio, ya se ofrecen con márgenes altos y difícilmente aumenten más sus tarifas. En conjunto ante tanta incertidumbre una simplificación razonable es asumir un factor de 1 para todos los modelos.
+        internal const int FactorPrecioFuturo = 1; // Factor de seguridad que incrementa los precios de los tókenes para proyecciones a futuro. En 2025 no se aplica recargo porque los modelos pequeños y medianos siguen presionados por alternativas de código abierto y subir tarifas implicaría perder usuarios. Para simplificar se usa 1 para todos; si se quisiera ser más estricto se podría usar pequeños x1-x1.5 y medianos x1.5-x2. Los modelos grandes ya se ofrecen con márgenes altos y difícilmente aumenten más sus tarifas, así que ante la incertidumbre se asume un factor 1 para todos.
 
         internal int EntradaTotal { get; }
 
