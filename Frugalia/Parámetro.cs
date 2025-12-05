@@ -28,13 +28,13 @@ namespace Frugalia {
     public class Parámetro {
 
 
-        internal string Nombre { get; }
+        public string Nombre { get; }
 
-        internal string Tipo { get; }
+        public string Tipo { get; }
 
-        internal string Descripción { get; }
+        public string Descripción { get; }
 
-        internal bool Requerido { get; }
+        public bool Requerido { get; }
 
 
         public Parámetro(string nombre, string tipo, string descripción, bool requerido) {
