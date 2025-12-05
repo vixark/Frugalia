@@ -74,9 +74,9 @@ namespace Frugalia {
     }
 
     public enum TipoMensaje {
-        Todas,
+        Todos, // Mensajes tanto del asistente IA como del usuario. 
         Usuario,
-        AsistenteAI
+        AsistenteAI // Solo mensajes del asistente IA.
     } // TipoMensaje>
 
     public static class Global {
@@ -151,6 +151,33 @@ namespace Frugalia {
             => (instrucción?.Length ?? 0) / CarácteresPorTokenConversaciónTípicos 
                 + Math.Max((instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0) / CarácteresPorTokenInstrucciónSistemaTípicos 
                 + (rellenoInstrucciónSistema?.Length ?? 0) / CarácteresPorTokenRellenoMáximos;
+
+
+        public static string Reemplazar(this string texto, string valorAnterior, string nuevoValor, StringComparison comparisonType) {
+
+            if (string.IsNullOrEmpty(texto) || string.IsNullOrEmpty(valorAnterior)) return texto;
+
+            if (comparisonType == StringComparison.Ordinal) return texto.Replace(valorAnterior, nuevoValor);
+
+            int idx = 0;
+            int largoAnterior = valorAnterior.Length;
+            var respuesta = "";
+
+            while (idx < texto.Length) {
+
+                int found = texto.IndexOf(valorAnterior, idx, comparisonType);
+                if (found < 0) {
+                    respuesta += texto.Substring(idx);
+                    break;
+                }
+                respuesta += texto.Substring(idx, found - idx) + nuevoValor;
+                idx = found + largoAnterior;
+
+            }
+
+            return respuesta;
+
+        } // Reemplazar>
 
 
         internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento) {

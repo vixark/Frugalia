@@ -396,11 +396,23 @@ namespace Frugalia {
             if (string.IsNullOrEmpty(instrucción)) últimaInstruccion = ObtenerTextoÚltimaInstrucción(conversación);
             var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema);
             Respuesta respuesta;
-            var modoCalidadAdaptable
-                = ModoCalidadAdaptable == CalidadAdaptable.MejorarModelo || ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento;
+            var modoCalidadAdaptable = ModoCalidadAdaptable == CalidadAdaptable.MejorarModelo 
+                || ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento;
 
             var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones);
             if (modoCalidadAdaptable) {
+
+                if (instrucción.Contains(GrandeRecomendado) || instrucción.Contains(MedioRecomendado) || instrucción.Contains(LoHiceBien))
+                    instrucción = instrucción.Replace(GrandeRecomendado, " ").Replace(MedioRecomendado, " ").Replace(LoHiceBien, " ");
+
+                if (instrucción.IndexOf(GrandeRecomendado, StringComparison.OrdinalIgnoreCase) >= 0 
+                    || instrucción.IndexOf(MedioRecomendado, StringComparison.OrdinalIgnoreCase) >= 0
+                    || instrucción.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción de sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
+                    
+                    instrucción = instrucción.Reemplazar(GrandeRecomendado, " ", StringComparison.OrdinalIgnoreCase)
+                        .Reemplazar(MedioRecomendado, " ", StringComparison.OrdinalIgnoreCase).Reemplazar(LoHiceBien, " ", StringComparison.OrdinalIgnoreCase);
+
+                }
 
                 var instruccionesOriginales = opciones.ObtenerInstrucciónSistema();
                 opciones.EscribirInstrucciónSistema(instruccionesOriginales.Replace(Fin, ".\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +

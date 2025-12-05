@@ -118,7 +118,7 @@ namespace Frugalia {
                     case TipoMensaje.AsistenteAI:
                         filtrados = mensajes.Where(m => m.Role == MessageRole.Assistant);
                         break;
-                    case TipoMensaje.Todas:
+                    case TipoMensaje.Todos:
                     default:
                         filtrados = mensajes.Where(m => m.Role == MessageRole.User || m.Role == MessageRole.Assistant);
                         break;
@@ -164,7 +164,7 @@ namespace Frugalia {
 
         public double EstimarTókenesTotales() {
 
-            var textos = ObtenerTextosInstrucciones(TipoMensaje.Todas);
+            var textos = ObtenerTextosInstrucciones(TipoMensaje.Todos);
             var totalCarácteres = 0;
             if (textos != null) {
                 foreach (var t in textos) {
