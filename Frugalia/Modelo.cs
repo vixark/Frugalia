@@ -81,7 +81,13 @@ namespace Frugalia {
         /// En el caso de los otros modelos no es tan exacto porque el límite en GPT por ejemplo incluye la salida, entonces el límite real estaría un poco
         /// antes del especificado en TókenesEntradaMáximos.
         /// </summary>
-        internal int TókenesEntradaMáximos { get; }
+        private int TókenesEntradaMáximos { get; }
+
+        /// <summary>
+        /// Límite seguro de tókenes de entrada para evitar acercarse demasiado al límite máximo del modelo. Usado internamente para evitar errores por 
+        /// exceder el límite.
+        /// </summary>
+        internal double TókenesEntradaLímiteSeguro => FactorSeguridadTókenesEntradaMáximos * TókenesEntradaMáximos;
 
         /// <summary>
         /// Descuento aplicable por operaciones en lote (no en tiempo real) que típicamente se tardan 24 horas. Los descuentos aplican para los PreciosEntrada 

@@ -4,6 +4,8 @@
 
 Frugalia es una librería para .NET que permite integrar modelos de inteligencia artificial con un enfoque en la optimización de costos, manteniendo la calidad de las respuestas.
 
+Para ahorrar al máximo, lo mejor es usar modelos gratuitos. Aún así, en muchos casos es necesario usar modelos de pago más potentes, pero el gasto se puede subir rápidamente si no eres precavido.
+
 La idea es ayudarte a:
 
 - Gastar menos en tókenes y dinero.

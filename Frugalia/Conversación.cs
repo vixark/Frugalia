@@ -162,7 +162,7 @@ namespace Frugalia {
         public Conversación(List<ResponseItem> conversaciónGPT) : this(Familia.GPT) => ConversaciónGPT = conversaciónGPT;
 
 
-        public int EstimarTókenesTotales() {
+        public double EstimarTókenesTotales() {
 
             var textos = ObtenerTextosInstrucciones(TipoMensaje.Todas);
             var totalCarácteres = 0;
@@ -171,7 +171,7 @@ namespace Frugalia {
                     totalCarácteres += t?.Length ?? 0;
                 }                    
             }
-            return (int)Math.Ceiling(totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos);
+            return totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos;
 
         } // EstimarTókenesTotales>
 

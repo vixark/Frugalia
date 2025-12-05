@@ -491,8 +491,8 @@ namespace Frugalia {
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
 
                 var modelo = Modelo.ObtenerModelo(NombreModelo);
-                if (EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaMáximos) {
-                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaMáximos}) para el modelo {NombreModelo}. " +
+                if (EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaLímiteSeguro) {
+                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaLímiteSeguro}) para el modelo {NombreModelo}. " +
                         "Reduce el tamaño de la instrucción de sistema o la instrucción del usuario, o usa un modelo con límite mayor.";
                     return null;
                 }
@@ -582,9 +582,9 @@ namespace Frugalia {
                 if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
 
                 var modelo = Modelo.ObtenerModelo(NombreModelo);
-                if (EstimarTókenesEntradaArchivos(rutasArchivos) 
-                    + EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaMáximos) {
-                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaMáximos}) para el modelo {NombreModelo}. " +
+                if (EstimarTókenesEntradaArchivos(rutasArchivos)
+                    + EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaLímiteSeguro) {
+                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaLímiteSeguro}) para el modelo {NombreModelo}. " +
                         "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o los archivos adjuntos, o usa un modelo con un límite mayor.";
                     return null;
                 }
@@ -673,8 +673,8 @@ namespace Frugalia {
 
                 var modelo = Modelo.ObtenerModelo(NombreModelo);
                 if (conversación.EstimarTókenesTotales() + Función.EstimarTókenes(funciones) // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
-                    + EstimarTókenesEntradaInstrucciones("", instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaMáximos) {
-                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaMáximos}) para el modelo {NombreModelo}. " +
+                    + EstimarTókenesEntradaInstrucciones("", instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaLímiteSeguro) {
+                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaLímiteSeguro}) para el modelo {NombreModelo}. " +
                         "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o las funciones, o usa un modelo con un límite mayor.";
                     return null;
                 }
