@@ -73,6 +73,11 @@ namespace Frugalia {
         ConvertirEnHtml
     }
 
+    public enum TipoMensaje {
+        Todas,
+        Usuario,
+        AsistenteAI
+    } // TipoMensaje>
 
     public static class Global {
 
@@ -93,7 +98,7 @@ namespace Frugalia {
 
         internal const double FactorÉxitoCaché = 0.8; // Si OpenAI funcionara bien no debería pasar que no se active la caché en el segundo mensaje de una conversación que tiene instrucciones de sistema rellenadas desde el primer mensaje, pero sí pasa. En algunos casos OpenAI simplemente ignora la caché por razones desconocidas. Se hizo un experimento inflando más las instrucciones de sistema y queda demostrado que no es cuestión del tamaño de tokenes de la función ni que se cambie ni nada, simplemente a veces no lo coje, con 1294 tókenes hay más que suficiente para garantizar que toda la instruccion sistema es superior a 1024 . 1294 - 10 (o lo que sea de la instrucción de usuario) - 73 de la función  = 1211 1: ENC = 1294 EC = 0 SNR = 103 SR = 0 2: ENC = 1402 EC = 0 SNR = 222 SR = 0 OpenAI describe el prompt caching como una optimización de “best effort”, no determinista como un contrato fuerte tipo: “si el prefijo coincide, 100 % te voy a servir desde caché”. Así que básicamente dicen, si no funciona, no me culpen. Lo mejor entonces es asumir un % de éxito que se incorporá en la fórmula para solo engordar las instrucciones de sistema que considerando ese porcentaje de éxito de uso de la caché logren ahorros. 0.8 es un valor que se tira al aire basado en un pequeño experimento limitado: se ejecutó 10 veces una conversación de 6-7 mensajes y se obtuvo una tasa de fallo de 13%, es decir un factor de éxito de 0.87, sin embargo debido a que hay incertidumbre con este número y a que hay una ligera demesmejoría en el comportamiento del agente cuando se rellenan las instrucciones del sistema, se prefiere dejar en 0.8. Se usa el mismo valor para las otras familias de modelos porque no se conoce aún su funcionamiento.
 
-        internal const int CarácteresPorTokenConversaciónTípicos = 3;
+        internal const int CarácteresPorTokenConversaciónTípicos = 3; // Aplica para mensajes tanto del usuario como del asistente IA.
 
         internal const int CarácteresPorTokenInstrucciónSistemaTípicos = 4; // La necesidad o no de rellenar la instrucción de sistema se decide usando valor promedio de 4 carácteres por tókenes y la rellenada aw hace con un exceso de tokenes (carácteresPorTokenMáximos) para asegurar que se generen suficientes carácteres para que con seguridad supere el límite para activar la caché (tókenesObjetivo). El valor de 4 carácteres por token se obtuvo de controlar eliminando los tókenes que consumía la función, así 340 tókenes (-73 función) = 267 tókenes para 1061 carácteres = 3.97 char/tk (para el primer mensaje de mensaje de usuario + instrucción de sistema sin rellenar). Para textos más normales que no sean instrucciones de sistema (que suelen tener frases cortas densas, referencias, datos, etc) suelen ser 3 carácteres por token. Pero como aquí se está intentando ajustar es instrucciones de sistema se trabaja con 4.
 

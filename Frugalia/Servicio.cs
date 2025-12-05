@@ -671,6 +671,14 @@ namespace Frugalia {
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
                     conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
 
+                var modelo = Modelo.ObtenerModelo(NombreModelo);
+                if (conversación.EstimarTókenesTotales() + Función.EstimarTókenes(funciones) // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
+                    + EstimarTókenesEntradaInstrucciones("", instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaMáximos) {
+                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaMáximos}) para el modelo {NombreModelo}. " +
+                        "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o las funciones, o usa un modelo con un límite mayor.";
+                    return null;
+                }
+
                 Respuesta respuesta;
                 string respuestaTextoLimpio;
                 var funciónEjecutadaÚltimaConsulta = false;

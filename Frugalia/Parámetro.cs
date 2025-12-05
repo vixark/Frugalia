@@ -22,6 +22,9 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
+using static Frugalia.Global;
+
+
 namespace Frugalia {
 
 
@@ -45,6 +48,12 @@ namespace Frugalia {
             Requerido = requerido;
 
         } // Parámetro>
+
+
+        public double EstimarTókenes() {
+            var totalCarácteres = (Nombre?.Length ?? 0) + (Tipo?.Length ?? 0) + (Descripción?.Length ?? 0);
+            return totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos;
+        } // EstimarTókenes>
 
 
     } // Parámetro>

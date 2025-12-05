@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Frugalia.Global;
 
 
 namespace Frugalia {
@@ -117,6 +118,18 @@ namespace Frugalia {
             }
 
         } // ObtenerResultado>
+
+
+        internal double EstimarTókenes() {
+
+            var totalTókenesTextos = ((Nombre?.Length ?? 0) + (Descripción?.Length ?? 0))/ (double)CarácteresPorTokenConversaciónTípicos;
+            var totalTókenesParámetros = Parámetros.Sum(p => p.EstimarTókenes() / CarácteresPorTokenConversaciónTípicos);
+            return totalTókenesTextos + totalTókenesParámetros;
+
+        } // EstimarTókenes>
+
+
+        internal static double EstimarTókenes(List<Función> funciones) => funciones?.Sum(f => f.EstimarTókenes()) ?? 0;
 
 
     } // Función>

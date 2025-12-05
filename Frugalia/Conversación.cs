@@ -32,6 +32,7 @@ using static Frugalia.Global;
 namespace Frugalia {
 
 
+
     public class Conversación {
 
 
@@ -54,6 +55,10 @@ namespace Frugalia {
         private Func<string> FunciónObtenerTextoÚltimaInstrucción { get; }
 
         public string ObtenerTextoÚltimaInstrucción() => FunciónObtenerTextoÚltimaInstrucción();
+
+        private Func<TipoMensaje, List<string>> FunciónObtenerTextosInstrucciones { get; }
+
+        public List<string> ObtenerTextosInstrucciones(TipoMensaje tipoInstrucción) => FunciónObtenerTextosInstrucciones(tipoInstrucción);
 
         private Action<ÍtemRespuesta> AcciónAgregarÍtemRespuesta { get; }
 
@@ -101,6 +106,39 @@ namespace Frugalia {
 
                 };
 
+                FunciónObtenerTextosInstrucciones = tipo => {
+
+                    var mensajes = ConversaciónGPT.OfType<MessageResponseItem>();
+
+                    IEnumerable<MessageResponseItem> filtrados;
+                    switch (tipo) {
+                    case TipoMensaje.Usuario:
+                        filtrados = mensajes.Where(m => m.Role == MessageRole.User);
+                        break;
+                    case TipoMensaje.AsistenteAI:
+                        filtrados = mensajes.Where(m => m.Role == MessageRole.Assistant);
+                        break;
+                    case TipoMensaje.Todas:
+                    default:
+                        filtrados = mensajes.Where(m => m.Role == MessageRole.User || m.Role == MessageRole.Assistant);
+                        break;
+                    }
+
+                    var textosInstrucciones = new List<string>();
+                    foreach (var mensaje in filtrados) {
+
+                        if (mensaje.Content == null) continue;
+
+                        foreach (var parte in mensaje.Content) {
+                            var texto = parte?.Text;
+                            if (!string.IsNullOrEmpty(texto)) textosInstrucciones.Add(texto);
+                        }
+
+                    }
+                    return textosInstrucciones;
+
+                };
+
                 break;
 
             case Familia.Claude:
@@ -122,6 +160,20 @@ namespace Frugalia {
 
 
         public Conversación(List<ResponseItem> conversaciónGPT) : this(Familia.GPT) => ConversaciónGPT = conversaciónGPT;
+
+
+        public int EstimarTókenesTotales() {
+
+            var textos = ObtenerTextosInstrucciones(TipoMensaje.Todas);
+            var totalCarácteres = 0;
+            if (textos != null) {
+                foreach (var t in textos) {
+                    totalCarácteres += t?.Length ?? 0;
+                }                    
+            }
+            return (int)Math.Ceiling(totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos);
+
+        } // EstimarTókenesTotales>
 
 
     } // Conversación>
