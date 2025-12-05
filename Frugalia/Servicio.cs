@@ -57,7 +57,7 @@ namespace Frugalia {
 
         protected bool Lote { get; }
 
-        internal bool Iniciado { get; }
+        private bool Iniciado { get; }
 
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
@@ -356,7 +356,7 @@ namespace Frugalia {
         } // ObtenerOpciones>
 
 
-        internal Respuesta ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, string nombreModelo,
+        private Respuesta ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, string nombreModelo,
             ref Dictionary<string, Tókenes> tókenes) {
 
             if (!string.IsNullOrEmpty(instrucción) && conversación != null) throw new Exception("Debe haber instrucción o conversación, pero no ambas.");
@@ -383,7 +383,7 @@ namespace Frugalia {
         /// al modelo</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        internal Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
+        private Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
             bool buscarEnInternet, List<Función> funciones, out string respuestaTextoLimpio, ref Dictionary<string, Tókenes> tókenes) {
 
             if (!string.IsNullOrEmpty(instrucción) && conversación != null)

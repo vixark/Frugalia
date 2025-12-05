@@ -33,17 +33,17 @@ namespace Frugalia {
     public sealed class Función {
 
 
-        internal string Nombre { get; }
+        public string Nombre { get; }
 
-        internal string Descripción { get; }
+        public string Descripción { get; }
 
         /// <summary>
         /// El orden de adición de los parámetros en esta lista es el orden en el que se usan en la función. Si algún parámetro no es requerido,
         /// igual ocupa espacio en la lista de parámetros y se llama la función con null en su valor sin generar error.
         /// </summary>
-        internal IReadOnlyList<Parámetro> Parámetros { get; }
+        public IReadOnlyList<Parámetro> Parámetros { get; }
 
-        internal const int ParámetrosMáximos = 5;
+        public const int ParámetrosMáximos = 5;
 
         public delegate string FunciónDelegate(out (string ParámetroConError, string Descripción) error, string valor1 = null, string valor2 = null, 
             string valor3 = null, string valor4 = null, string valor5 = null);
