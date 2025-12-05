@@ -642,7 +642,7 @@ namespace Frugalia {
                 string respuestaTextoLimpio;
                 var funciónEjecutadaÚltimaConsulta = false;
 
-                do { // Se sigue llamando a la API mientras esta siga solicitando ejecutar funciones y termina cuando el modelo responde sin pedir más. Lo usual es que el modelo se ejecute dos veces: primero identifica que necesita una función y luego usa el resultado para responder al usuario. Podrían existir casos en los que intente varias funciones en cola, así que se permite repetirse las veces necesarias dentro de un límite razonable.
+                do { // Se sigue llamando a la API mientras esta siga solicitando ejecutar funciones y termina cuando el modelo ya no pida más; lo habitual es que el modelo se ejecute dos veces: primero identifica que necesita una función y luego usa el resultado para responder al usuario. Podrían existir casos en los que intente varias funciones en cola, así que se permite repetirse las veces necesarias dentro de un límite razonable.
 
                     consultas++;
                     if (consultas > máximasConsultas) {
@@ -665,7 +665,7 @@ namespace Frugalia {
                             } catch (JsonException) {
 
                                 var errorJson = JsonSerializer.Serialize(new {
-                                    error = "Error en Json: No construiste correctamente el archivo Json y falló su lectura. Revísalo e intenta nuevamente.",
+                                    error = "Error en JSON: no se construyó correctamente el archivo y falló su lectura. Revísalo e inténtalo nuevamente.",
                                 });
                                 conversación.AgregarÍtemRespuesta(ítemRespuesta.CrearÍtemRespuestaFunción(errorJson));
                                 funciónEjecutadaÚltimaConsulta = true;
@@ -677,7 +677,7 @@ namespace Frugalia {
 
                                 var resultado = Función.ObtenerResultado(funciones, ítemRespuesta.ObtenerNombreFunción(),
                                     out (string ParámetroConError, string Descripción) errorFunción, ExtraerParámetros(json));
-                                var hayErrorFunción = !string.IsNullOrEmpty(errorFunción.Descripción); // El valor default de la tupla errorFunción es (null, null), pero el usuario de la librería también podría devolver ("", ""), entonces se evalúa la existencia de error ante ambas opciones: "" y null.
+                                var hayErrorFunción = !string.IsNullOrEmpty(errorFunción.Descripción); // El valor predeterminado de la tupla errorFunción es (null, null), pero el usuario de la librería también podría devolver ("", ""), entonces se evalúa la existencia de error ante ambas opciones: "" y null.
 
                                 if (hayErrorFunción) {
 
