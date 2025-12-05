@@ -93,10 +93,10 @@ namespace Frugalia {
         } // ServicioIA>
 
 
-        private string ObtenerTextoPrimeraInstrucción(Conversación conversación) => conversación?.ObtenerTextoPrimeraInstrucción() ?? "";
+        private static string ObtenerTextoPrimeraInstrucción(Conversación conversación) => conversación?.ObtenerTextoPrimeraInstrucción() ?? "";
 
 
-        private string ObtenerTextoÚltimaInstrucción(Conversación conversación) => conversación?.ObtenerTextoÚltimaInstrucción() ?? "";
+        private static string ObtenerTextoÚltimaInstrucción(Conversación conversación) => conversación?.ObtenerTextoÚltimaInstrucción() ?? "";
 
 
         /// <summary>

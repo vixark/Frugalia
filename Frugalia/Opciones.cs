@@ -75,7 +75,9 @@ namespace Frugalia {
 
                     var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
                         nombreModelo2, largoInstrucciónÚtil2);
-                    var nombreModeloMinúsculas = (nombreModelo2 ?? "").ToLowerInvariant();
+
+                    if (string.IsNullOrWhiteSpace(nombreModelo2)) throw new ArgumentException("nombreModelo2 no puede ser nulo ni vacío.", nameof(nombreModelo2));
+                    var nombreModeloMinúsculas = nombreModelo2.ToLowerInvariant();
 
                     if (razonamientoEfectivo != Razonamiento.Alto && nombreModeloMinúsculas == "gpt-5-pro")
                         throw new InvalidOperationException("gpt-5-pro no permite nivel de razonamiento diferente de alto.");
@@ -104,7 +106,7 @@ namespace Frugalia {
                             textoRazonamiento = "high";
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException(nameof(razonamientoEfectivo), $"Razonamiento {razonamientoEfectivo} no considerado.");
+                            throw new ArgumentOutOfRangeException(nameof(razonamiento2), $"Razonamiento {razonamientoEfectivo} no considerado.");
                         }
 
                         OpcionesGPT.ReasoningOptions =
@@ -115,6 +117,7 @@ namespace Frugalia {
                 };
 
                 EscribirInstrucciónSistema(instrucciónSistema);
+
                 EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
 
                 OpcionesGPT.MaxOutputTokenCount = máximosTókenesSalida;
