@@ -123,8 +123,8 @@ namespace Frugalia {
 
         internal static Modelo? ObtenerModeloNulable(string nombreModelo) {
 
-            if (Modelos.ContainsKey(nombreModelo)) {
-                return Modelos[nombreModelo];
+            if (Modelos.TryGetValue(nombreModelo, out Modelo modelo)) {
+                return modelo;
             } else {
                 return null;
             }

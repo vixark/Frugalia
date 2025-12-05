@@ -91,6 +91,15 @@ namespace Frugalia {
 
         internal const string Fin = ".[fin].";
 
+        internal const double FactorÉxitoCaché = 0.8; // Si OpenAI funcionara bien no debería pasar que no se active la caché en el segundo mensaje de una conversación que tiene instrucciones de sistema rellenadas desde el primer mensaje, pero sí pasa. En algunos casos OpenAI simplemente ignora la caché por razones desconocidas. Se hizo un experimento inflando más las instrucciones de sistema y queda demostrado que no es cuestión del tamaño de tokenes de la función ni que se cambie ni nada, simplemente a veces no lo coje, con 1294 tókenes hay más que suficiente para garantizar que toda la instruccion sistema es superior a 1024 . 1294 - 10 (o lo que sea de la instrucción de usuario) - 73 de la función  = 1211 1: ENC = 1294 EC = 0 SNR = 103 SR = 0 2: ENC = 1402 EC = 0 SNR = 222 SR = 0 OpenAI describe el prompt caching como una optimización de “best effort”, no determinista como un contrato fuerte tipo: “si el prefijo coincide, 100 % te voy a servir desde caché”. Así que básicamente dicen, si no funciona, no me culpen. Lo mejor entonces es asumir un % de éxito que se incorporá en la fórmula para solo engordar las instrucciones de sistema que considerando ese porcentaje de éxito de uso de la caché logren ahorros. 0.8 es un valor que se tira al aire basado en un pequeño experimento limitado: se ejecutó 10 veces una conversación de 6-7 mensajes y se obtuvo una tasa de fallo de 13%, es decir un factor de éxito de 0.87, sin embargo debido a que hay incertidumbre con este número y a que hay una ligera demesmejoría en el comportamiento del agente cuando se rellenan las instrucciones del sistema, se prefiere dejar en 0.8. Se usa el mismo valor para las otras familias de modelos porque no se conoce aún su funcionamiento.
+
+        internal const int CarácteresPorTokenConversaciónTípicos = 3;
+
+        internal const int CarácteresPorTokenInstrucciónSistemaTípicos = 4; // La necesidad o no de rellenar la instrucción de sistema se decide usando valor promedio de 4 carácteres por tókenes y la rellenada aw hace con un exceso de tokenes (carácteresPorTokenMáximos) para asegurar que se generen suficientes carácteres para que con seguridad supere el límite para activar la caché (tókenesObjetivo). El valor de 4 carácteres por token se obtuvo de controlar eliminando los tókenes que consumía la función, así 340 tókenes (-73 función) = 267 tókenes para 1061 carácteres = 3.97 char/tk (para el primer mensaje de mensaje de usuario + instrucción de sistema sin rellenar). Para textos más normales que no sean instrucciones de sistema (que suelen tener frases cortas densas, referencias, datos, etc) suelen ser 3 carácteres por token. Pero como aquí se está intentando ajustar es instrucciones de sistema se trabaja con 4.
+
+        internal const double CarácteresPorTokenRellenoMáximos = 5.5; // Se usa 5.5 como caso límite. Se asegura agregar suficientes carácteres para que supere los tókenes requeridos. Se hizo un experimento y se encontró esto: Sin relleno 340 tk y 1061 char: 3.12 char/tk, con relleno 955 tk y 4183 char: 4.38 char/ tk, solo el relleno: 615tk y 3122 char: 5.07 char/ tk. Este mismo experimento se repitió para el caso de usar solo el texto relleno sin lorems (solo para fines de calcular su cantidad de carácteres por token) y se encontró que es 4.75 char/tk. También se hizo el experimento únicamente con lorems (sin texto introductorio) y dio otra vez 5.07 char/tk, así que esto es algo inconsistente matemáticamente porque podrían haber cosas desconocidas de cómo el modelo calcula los tókenes, entonces para pecar por seguro, se usa 5.5 carácteres por token para el texto de relleno. Esto asegura que el relleno garantiza con cierto margen de seguridad que se active la caché. Se debe poner un valor superior porque hay incertidumbre de que tal vez el modelo cambié la forma de cálculo de tókenes y de pronto llegue a ser 5.3 o 5.2, y si así fuera y se hubiera puesto un valor muy ajustado como 5.1, no se activaría la caché y se gastaría innecesariamente en tókenes inutiles no en caché.
+
+
         internal static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>() { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
             { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
             { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, 0.5m, 1, null, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
@@ -127,8 +136,14 @@ namespace Frugalia {
         } // LeerClave>
 
 
-        internal static int ObtenerLargoInstrucciónÚtil(string últimaInstrucción, string instrucciónSistema, string rellenoInstrucciónSistema)
-            => Math.Max((últimaInstrucción?.Length ?? 0) + (instrucciónSistema?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0);
+        internal static int ObtenerLargoInstrucciónÚtil(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema)
+            => Math.Max((instrucción?.Length ?? 0) + (instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0);
+
+
+        internal static double EstimarTókenesEntradaInstrucciones(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema)
+            => (instrucción?.Length ?? 0) / CarácteresPorTokenConversaciónTípicos 
+                + Math.Max((instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0) / CarácteresPorTokenInstrucciónSistemaTípicos 
+                + (rellenoInstrucciónSistema?.Length ?? 0) / CarácteresPorTokenRellenoMáximos;
 
 
         internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento) {

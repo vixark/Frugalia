@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using static Frugalia.Global;
 
@@ -131,7 +132,7 @@ namespace Frugalia {
             double proporciónRespuestasVsInstrucciones) {
 
             /* Cálculos de longitud límite para que salga más barato dadas K llamadas estimadas en las próximas horas
-            
+
             K: Número de consultas totales reusando las instrucciones de sistema.
             S: Tókenes iniciales de instrucciones de sistema.
             C: Costo por token.
@@ -188,11 +189,6 @@ namespace Frugalia {
             var factorDescuentoCaché = Modelo.ObtenerFactorDescuentoCaché(NombreModelo);
             if (factorDescuentoCaché > 0.9) return ""; // Se le pone este control para el caso de modelos que no tienen descuento para tókenes de entrada en caché.
 
-            var factorÉxitoCaché = 0.8; // Si OpenAI funcionara bien no debería pasar que no se active la caché en el segundo mensaje de una conversación que tiene instrucciones de sistema rellenadas desde el primer mensaje, pero sí pasa. En algunos casos OpenAI simplemente ignora la caché por razones desconocidas. Se hizo un experimento inflando más las instrucciones de sistema y queda demostrado que no es cuestión del tamaño de tokenes de la función ni que se cambie ni nada, simplemente a veces no lo coje, con 1294 tókenes hay más que suficiente para garantizar que toda la instruccion sistema es superior a 1024 . 1294 - 10 (o lo que sea de la instrucción de usuario) - 73 de la función  = 1211 1: ENC = 1294 EC = 0 SNR = 103 SR = 0 2: ENC = 1402 EC = 0 SNR = 222 SR = 0 OpenAI describe el prompt caching como una optimización de “best effort”, no determinista como un contrato fuerte tipo: “si el prefijo coincide, 100 % te voy a servir desde caché”. Así que básicamente dicen, si no funciona, no me culpen. Lo mejor entonces es asumir un % de éxito que se incorporá en la fórmula para solo engordar las instrucciones de sistema que considerando ese porcentaje de éxito de uso de la caché logren ahorros. 0.8 es un valor que se tira al aire basado en un pequeño experimento limitado: se ejecutó 10 veces una conversación de 6-7 mensajes y se obtuvo una tasa de fallo de 13%, es decir un factor de éxito de 0.87, sin embargo debido a que hay incertidumbre con este número y a que hay una ligera demesmejoría en el comportamiento del agente cuando se rellenan las instrucciones del sistema, se prefiere dejar en 0.8. Se usa el mismo valor para las otras familias de modelos porque no se conoce aún su funcionamiento.
-            var charPorTokenTípicosConversación = 3;
-            var charPorTokenTípicosInstrucciónSistema = 4; // La necesidad o no de rellenar la instrucción de sistema se decide usando valor promedio de 4 carácteres por tókenes y la rellenada aw hace con un exceso de tokenes (carácteresPorTokenMáximos) para asegurar que se generen suficientes carácteres para que con seguridad supere el límite para activar la caché (tókenesObjetivo). El valor de 4 carácteres por token se obtuvo de controlar eliminando los tókenes que consumía la función, así 340 tókenes (-73 función) = 267 tókenes para 1061 carácteres = 3.97 char/tk (para el primer mensaje de mensaje de usuario + instrucción de sistema sin rellenar). Para textos más normales que no sean instrucciones de sistema (que suelen tener frases cortas densas, referencias, datos, etc) suelen ser 3 carácteres por token. Pero como aquí se está intentando ajustar es instrucciones de sistema se trabaja con 4.
-            var charPorTokenRelleno = 5.5; // Se usa 5.5 como caso límite. Se asegura agregar suficientes carácteres para que supere los tókenes requeridos. Se hizo un experimento y se encontró esto: Sin relleno 340 tk y 1061 char: 3.12 char/tk, con relleno 955 tk y 4183 char: 4.38 char/ tk, solo el relleno: 615tk y 3122 char: 5.07 char/ tk. Este mismo experimento se repitió para el caso de usar solo el texto relleno sin lorems (solo para fines de calcular su cantidad de carácteres por token) y se encontró que es 4.75 char/tk. También se hizo el experimento únicamente con lorems (sin texto introductorio) y dio otra vez 5.07 char/tk, así que esto es algo inconsistente matemáticamente porque podrían haber cosas desconocidas de cómo el modelo calcula los tókenes, entonces para pecar por seguro, se usa 5.5 carácteres por token para el texto de relleno. Esto asegura que el relleno garantiza con cierto margen de seguridad que se active la caché. Se debe poner un valor superior porque hay incertidumbre de que tal vez el modelo cambié la forma de cálculo de tókenes y de pronto llegue a ser 5.3 o 5.2, y si así fuera y se hubiera puesto un valor muy ajustado como 5.1, no se activaría la caché y se gastaría innecesariamente en tókenes inutiles no en caché.
-
             var consultasEnPocasHoras = conversacionesEnPocasHoras * instruccionesPorConversación;
             var tókenesObjetivo = (int)modelo.LímiteTókenesActivaciónCachéAutomática + 1; // A partir de 1024 se activa la caché de tókenes de entrada https://platform.openai.com/docs/guides/prompt-caching para GPT.
             var evaluarRellenarInstruccionesSistema = true;
@@ -200,7 +196,7 @@ namespace Frugalia {
             if (conversación != null) { // En el uso típico de la conversación (como se hace en la función ObtenerConFunción()), lo usual es incluir las respuestas anteriores del modelo. Entonces se debe verificar en que casos la caché se activa sola y es económicamente más óptima que rellenar las instrucciones de sistema desde el principio. No se rellena en la mitad de la conversación porque eso implica un recálculo de la caché y la pérdida de todo el bloque de información repetida que puede ser guardable en caché, la decisión es o rellenarlo al principio o no hacerlo. En estos casos no se rellena las instrucciones del sistema.
 
                 /* Fórmula de cantidad de tókenes de entrada en el mensaje N. También se deriva una fórmula para el total de mensajes de entrada gastados hasta el mensaje N, pero esta fórmula aunque elegante matemáticamente no es útil porque no sirve para calcular el costo incluyendo el efecto de la caché.
-                        
+
                 N: cantidad de mensajes 
 
                 S: 100 tokenes sistema
@@ -236,12 +232,12 @@ namespace Frugalia {
                     var largoM1 = m1.Length;
                     var largoM = m1.Length / proporciónPrimerInstrucciónVsSiguientes;
                     var largoR = largoM * proporciónRespuestasVsInstrucciones;
-                    var tókenesS = (int)Math.Round(instrucciónSistema.Length / (double)charPorTokenTípicosInstrucciónSistema);
+                    var tókenesS = (int)Math.Round(instrucciónSistema.Length / (double)CarácteresPorTokenInstrucciónSistemaTípicos);
                     double obtenerTókenes(int n, int tókenesObjetivoSRellena) { // Cantidad de tókenes de entrada gastados en el mensaje n y guardables en caché en el mensaje n - 1.
 
                         if (n < 1) return 0;
                         var largoSRellena = tókenesS < tókenesObjetivoSRellena ? tókenesObjetivoSRellena : tókenesS;
-                        return largoSRellena + largoM1 / (double)charPorTokenTípicosConversación + (n - 1) * (largoM + largoR) / charPorTokenTípicosConversación;
+                        return largoSRellena + largoM1 / (double)CarácteresPorTokenConversaciónTípicos + (n - 1) * (largoM + largoR) / CarácteresPorTokenConversaciónTípicos;
 
                     } // obtenerTókenes>
 
@@ -252,7 +248,7 @@ namespace Frugalia {
                         if (tókenesAnteriores >= tókenesObjetivo) { // Entonces se usa caché.             
 
                             var tókenesPosiblementeEnCaché = 128 * (int)Math.Floor(tókenesAnteriores / 128.0); // En la caché se guardan tókenes en múltiplos de 128.
-                            costoTókenes += tókenesPosiblementeEnCaché * ((1 - factorÉxitoCaché) * 1 + factorÉxitoCaché * factorDescuentoCaché);
+                            costoTókenes += tókenesPosiblementeEnCaché * ((1 - FactorÉxitoCaché) * 1 + FactorÉxitoCaché * factorDescuentoCaché);
                             costoTókenes += tókenesAnteriores - tókenesPosiblementeEnCaché;
 
                         } else {
@@ -298,10 +294,10 @@ namespace Frugalia {
             } // conversación != null>
 
             var tókenesMínimoParaRellenar
-                = (tókenesObjetivo / (double)consultasEnPocasHoras) * (1 + (consultasEnPocasHoras - 1) * (1 - (1 - factorDescuentoCaché) * factorÉxitoCaché));
-            var largoMínimoParaRellenar = tókenesMínimoParaRellenar * charPorTokenTípicosInstrucciónSistema;
-            var tókenesActuales = instrucciónSistema.Length / charPorTokenTípicosInstrucciónSistema;
-            var carácteresObjetivo = (int)Math.Ceiling(instrucciónSistema.Length + (tókenesObjetivo - tókenesActuales) * charPorTokenRelleno);
+                = (tókenesObjetivo / (double)consultasEnPocasHoras) * (1 + (consultasEnPocasHoras - 1) * (1 - (1 - factorDescuentoCaché) * FactorÉxitoCaché));
+            var largoMínimoParaRellenar = tókenesMínimoParaRellenar * CarácteresPorTokenInstrucciónSistemaTípicos;
+            var tókenesActuales = instrucciónSistema.Length / CarácteresPorTokenInstrucciónSistemaTípicos;
+            var carácteresObjetivo = (int)Math.Ceiling(instrucciónSistema.Length + (tókenesObjetivo - tókenesActuales) * CarácteresPorTokenRellenoMáximos);
 
             if (evaluarRellenarInstruccionesSistema && instrucciónSistema.Length > largoMínimoParaRellenar && instrucciónSistema.Length < carácteresObjetivo) {
 
@@ -455,7 +451,7 @@ namespace Frugalia {
             }
 
             respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
-            respuestaTextoLimpio = modoCalidadAdaptable 
+            respuestaTextoLimpio = modoCalidadAdaptable
                 ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(MedioRecomendado, "").Replace(GrandeRecomendado, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
             return respuesta;
 
@@ -494,6 +490,13 @@ namespace Frugalia {
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, null, 1, 1, 1);
 
+                var modelo = Modelo.ObtenerModelo(NombreModelo);
+                if (EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaMáximos) {
+                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaMáximos}) para el modelo {NombreModelo}. " +
+                        "Reduce el tamaño de la instrucción de sistema o la instrucción del usuario, o usa un modelo con límite mayor.";
+                    return null;
+                }
+
                 var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, NombreModelo,
                     ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema));
                 if (buscarEnInternet && (razonamientoEfectivo == Razonamiento.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
@@ -514,6 +517,28 @@ namespace Frugalia {
             }
 
         } // Consulta>
+
+
+        private static int EstimarTókenesEntradaArchivos(List<string> rutasArchivos) {
+
+            var tókenesEstimados = 0;
+
+            if (rutasArchivos != null) {
+
+                foreach (var rutaArchivo in rutasArchivos) {
+
+                    if (string.IsNullOrWhiteSpace(rutaArchivo) || !File.Exists(rutaArchivo)) continue;
+
+                    var tamañoArchivoBytes = new FileInfo(rutaArchivo).Length;
+                    tókenesEstimados += (int)Math.Ceiling(tamañoArchivoBytes / 4.0); // Conversión aproximada de bytes a tókenes asumiendo 1 byte por carácter.
+
+                }
+
+            }
+
+            return tókenesEstimados;
+
+        } // EstimarTókenesEntradaArchivos>
 
 
         /// <summary>
@@ -556,6 +581,14 @@ namespace Frugalia {
 
                 if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
 
+                var modelo = Modelo.ObtenerModelo(NombreModelo);
+                if (EstimarTókenesEntradaArchivos(rutasArchivos) 
+                    + EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > modelo.TókenesEntradaMáximos) {
+                    error = $"Se supera el límite de tókenes de entrada permitidos ({modelo.TókenesEntradaMáximos}) para el modelo {NombreModelo}. " +
+                        "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o los archivos adjuntos, o usa un modelo con un límite mayor.";
+                    return null;
+                }
+
                 archivador = Cliente.ObtenerArchivador();
                 var conversaciónConArchivosYError = archivador.ObtenerConversaciónConArchivos(rutasArchivos, instrucción, tipoArchivo);
                 if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) {
@@ -593,7 +626,7 @@ namespace Frugalia {
         /// <param name="funciónEjecutada"></param>
         /// <returns></returns>
         public string Consulta(int conversacionesEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, Conversación conversación,
-            List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int instruccionesPorConversación, 
+            List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int instruccionesPorConversación,
             double proporciónPrimerInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones, out bool funciónEjecutada) {
 
             tókenes = new Dictionary<string, Tókenes>();
@@ -637,7 +670,7 @@ namespace Frugalia {
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
                     conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones);
-            
+
                 Respuesta respuesta;
                 string respuestaTextoLimpio;
                 var funciónEjecutadaÚltimaConsulta = false;
