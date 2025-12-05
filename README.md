@@ -2,7 +2,7 @@
 
 ## Librería .NET para consultas optimizadas y económicas a modelos de IA
 
-Frugalia es una librería para .NET que permite integrar modelos de inteligencia artificial con un enfoque en la optimización de costos manteniendo la calidad de las respuestas. 
+Frugalia es una librería para .NET que permite integrar modelos de inteligencia artificial con un enfoque en la optimización de costos, manteniendo la calidad de las respuestas.
 
 La idea es ayudarte a:
 
@@ -15,13 +15,13 @@ Actualmente está implementado OpenAI con una arquitectura preparada a corto pla
 
 ## ¿Por qué otro encapsulador/wrapper más?
 
-La mayoría de encapsuladores de modelos de IA hacen:
+La mayoría de los encapsuladores de modelos de IA hacen:
 
 > Consulta → Llamada a la API de la IA seleccionada → Respuesta
 
-Frugalia está pensada para actuar en el intermedio y ayudarte a resolver problemas de optimización de costos que surgen de la variedad de opciones que las API de IA proveen.  
+Frugalia está pensada para actuar como capa intermedia y ayudarte a resolver problemas de optimización de costos que surgen de la variedad de opciones que ofrecen las API de IA.
 
-> Consulta con más información del caso de uso →  Optimizaciones internas de Frugalia → Llamada optimizada a la API de la IA → Respuesta
+> Consulta con más información del caso de uso → Optimizaciones internas de Frugalia → Llamada optimizada a la API de la IA → Respuesta
 
 ## Características Diferenciadoras
 
@@ -105,11 +105,11 @@ Console.WriteLine(Tókenes.ObtenerTextoCostoTókenes(tokens, tasaCambioUsd: 4000
 
 ```
 
-Nota: Por diseño el constructor del objeto servicio tiene muchos parámetros no opcionales para obligarte a pensar qué quieres optimizar.
+Nota: Por diseño, el constructor del servicio tiene muchos parámetros no opcionales para obligarte a pensar qué quieres optimizar.
 
 
 ## ¿Por qué elegir Frugalia?
 
-Frugalia no solo facilita la integración de IA, sino que te permite controlar y reducir los costes de operación de forma inteligente, gracias a sus estrategias de optimización y arquitectura flexible. Es ideal para proyectos donde el control de presupuesto es muy importante.
+Frugalia no solo facilita la integración de la IA, sino que te permite controlar y reducir los costos de operación de forma inteligente, gracias a sus estrategias de optimización y arquitectura flexible. Es ideal para proyectos donde el control de presupuesto es muy importante.
 
 
