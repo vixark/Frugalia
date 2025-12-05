@@ -38,8 +38,8 @@ namespace Frugalia {
         internal string Descripción { get; }
 
         /// <summary>
-        /// El orden de adición de los parámetros en esta lista es el orden en el que se usan en la función. Si algún parámetro no es requerido, 
-        /// igual ocupa espacio en la lista de parámetros. En estos casos se llama la función con null en su valor sin sacar error.
+        /// El orden de adición de los parámetros en esta lista es el orden en el que se usan en la función. Si algún parámetro no es requerido,
+        /// igual ocupa espacio en la lista de parámetros y se llama la función con null en su valor sin generar error.
         /// </summary>
         internal IReadOnlyList<Parámetro> Parámetros { get; }
 
@@ -55,7 +55,7 @@ namespace Frugalia {
 
             Nombre = nombre.ToLowerInvariant();
             Descripción = descripción;
-            Parámetros = parámetros?.ToList() ?? new List<Parámetro>(); // Copia de la lista para que no el que llamó la función no pueda modificar posteriormente la lista Parámetros al modificar parámetros que sería el mismo objeto si no se hiciera la copia. La lista de parámetros podría ser una lista vacía si la función no requiere parámetros, por ejemplo, dar la hora.
+            Parámetros = parámetros?.ToList() ?? new List<Parámetro>(); // Copia de la lista para que quien llamó la función no pueda modificar posteriormente la lista Parámetros al alterar parámetros, lo que sucedería si se reutilizara el mismo objeto. La lista de parámetros podría ser una lista vacía si la función no requiere parámetros, por ejemplo, dar la hora.
             if (Parámetros.Count > ParámetrosMáximos) throw new ArgumentException($"La lista parámetros no puede tener más de {ParámetrosMáximos} parámetros.");
             DelegadoFunción = función;
 
@@ -63,9 +63,8 @@ namespace Frugalia {
 
 
         /// <summary>
-        /// No importa el orden de los parámetros que pase el usuario de esta función mientras se pasen con el nombre y valor correcto. 
+        /// No importa el orden de los parámetros que pase el usuario de esta función mientras se pasen con el nombre y valor correcto.
         /// La función elige el orden correcto según la lista Parámetros. Se pueden pasar parámetros con nombre incorrecto y serán ignorados.
-        /// </summary>
         /// </summary>
         /// <param name="funciones">Lista de funciones disponibles.</param>
         /// <param name="nombreFunción">Nombre de la función a ejecutar.</param>
