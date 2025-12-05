@@ -233,7 +233,8 @@ namespace Frugalia {
 
         internal static Tamaño ObtenerTamaño(string nombreModelo) {
 
-            var modelo = Modelo.ObtenerModeloNulable(nombreModelo) ?? throw new Exception($"No se pudo obtener el tamaño porque el modelo {nombreModelo} no existe.");
+            var modelo = Modelo.ObtenerModeloNulable(nombreModelo) 
+                ?? throw new Exception($"No se pudo obtener el tamaño porque el modelo {nombreModelo} no existe.");
             if (!string.IsNullOrEmpty(modelo.NombreModelo3NivelesSuperior)) {
                 return Tamaño.MuyPequeño;
             } else if (!string.IsNullOrEmpty(modelo.NombreModelo2NivelesSuperior)) {

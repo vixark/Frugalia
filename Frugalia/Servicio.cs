@@ -237,7 +237,8 @@ namespace Frugalia {
 
                         if (n < 1) return 0;
                         var largoSRellena = tókenesS < tókenesObjetivoSRellena ? tókenesObjetivoSRellena : tókenesS;
-                        return largoSRellena + largoM1 / (double)CarácteresPorTokenConversaciónTípicos + (n - 1) * (largoM + largoR) / CarácteresPorTokenConversaciónTípicos;
+                        return largoSRellena + largoM1 / (double)CarácteresPorTokenConversaciónTípicos 
+                            + (n - 1) * (largoM + largoR) / CarácteresPorTokenConversaciónTípicos;
 
                     } // obtenerTókenes>
 

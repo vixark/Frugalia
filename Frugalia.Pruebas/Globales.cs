@@ -82,12 +82,14 @@ public class Globales {
     } // AgregarSumando_SumaTokensCuandoExisteLaClave>
 
 
-    private static Tókenes CrearTókenes(string modelo, bool lote, int entradaTotal, int salidaTotal, int salidaRazonamiento, int entradaCaché, int escrituraManualCaché = 0, int minutosEscrituraManualCaché = 0) {
+    private static Tókenes CrearTókenes(string modelo, bool lote, int entradaTotal, int salidaTotal, int salidaRazonamiento, int entradaCaché, 
+        int escrituraManualCaché = 0, int minutosEscrituraManualCaché = 0) {
 
         var constructor = typeof(Tókenes).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, binder: null, [typeof(string), typeof(bool), typeof(int?), 
             typeof(int?), typeof(int?), typeof(int?), typeof(int?), typeof(int?)], modifiers: null);
         return constructor == null ? throw new InvalidOperationException("No se encontró el constructor esperado de Tókenes.")
-            : (Tókenes)constructor.Invoke([modelo, lote, entradaTotal, salidaTotal, salidaRazonamiento, entradaCaché, escrituraManualCaché, minutosEscrituraManualCaché ]);
+            : (Tókenes)constructor.Invoke([modelo, lote, entradaTotal, salidaTotal, salidaRazonamiento, entradaCaché, escrituraManualCaché, 
+                minutosEscrituraManualCaché ]);
 
     } // CrearTókenes>
 

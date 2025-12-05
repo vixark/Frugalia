@@ -33,9 +33,9 @@ Frugalia está pensada para actuar como capa intermedia y ayudarte a resolver pr
 
 •	Control y visualización de costos: Cada consulta devuelve el costo estimado en moneda local, desglosando el uso de tókenes en caché, no caché, razonamiento y almacenamiento, para una gestión transparente y precisa.
 
-### 2. Arquitectura de modelo portero
+### 2. Arquitectura de modelo portero mejorado
    
-•	Uso de modelos pequeños como filtro (Porter Model Strategy): Permite configurar un flujo donde un modelo pequeño y económico actúa como portero, filtrando o resolviendo consultas sencillas. Solo las consultas complejas se escalan a modelos superiores, maximizando el ahorro.
+•	Uso de modelos pequeños como filtro: Permite configurar un flujo donde un modelo pequeño económico actúa como portero respondiendo al usuario y a la vez autoevaluando su respuesta. Si la autoevaluación es positiva, acepta la respuesta y si no lo es, escala la consulta a modelos superiores. Este método de portero mejorado supera al tradicional porque requiere una sola respuesta autoevaluada para consultas simples en vez de dos.
 
 •	Ajuste inteligente de razonamiento: El nivel de razonamiento se adapta automáticamente según la longitud y complejidad de la consulta, evitando el gasto innecesario en tareas simples y garantizando calidad en las complejas.
 

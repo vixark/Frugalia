@@ -86,7 +86,8 @@ namespace Frugalia {
                     if (modelosSinRazonamiento.Contains(nombreModeloMinúsculas)) {
 
                         if (razonamientoEfectivo != Razonamiento.Ninguno) // No se debe agregar ReasoningOptions incluso con none en estos modelos porque saca error. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
-                            throw new NotSupportedException($"El modelo {nombreModeloMinúsculas} no soporta razonamiento. Solo se puede usar con Razonamiento = Ninguno.");
+                            throw new NotSupportedException($"El modelo {nombreModeloMinúsculas} no soporta razonamiento. Solo se puede usar con " +
+                                $"Razonamiento = Ninguno.");
 
                     } else {
 
