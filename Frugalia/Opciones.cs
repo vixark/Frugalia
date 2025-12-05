@@ -121,7 +121,7 @@ namespace Frugalia {
                 EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
 
                 OpcionesGPT.MaxOutputTokenCount = máximosTókenesSalida;
-                var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se hace la lista de los viejos porque se espera que los nuevos mantengan verbosidad configurable.
+                var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
                 if (modelosSinVerbosidad.Contains(nombreModelo.ToLowerInvariant())) {
                     if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {nombreModelo} no soporta configuración de la verbosidad.");
                 } else {
@@ -140,11 +140,11 @@ namespace Frugalia {
                     default:
                         throw new Exception($"Verbosidad {verbosidad} no considerada.");
                     }
-                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // Sí funciona. En unas pruebas se obtuvo con media 393 carácteres promedio. 249 caractéres promedio con baja y 657 carácteres promedio con alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .Net no incluya esta opción de manera estructurada.                    
+                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // Sí funciona. En unas pruebas se obtuvieron en promedio 393 caracteres; 249 con verbosidad baja y 657 con verbosidad alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET incluye esta opción de forma estructurada.
 
                 }
 
-                OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No he probado si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .Net no incluya esta opción de manera estructurada.
+                OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No he comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
 
                 if (buscarEnInternet) OpcionesGPT.Tools.Add(ResponseTool.CreateWebSearchTool());
 

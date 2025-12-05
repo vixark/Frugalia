@@ -78,7 +78,7 @@ namespace Frugalia {
                             respuesta = respuesta.Replace("**", "");
                             break;
                         case TratamientoNegritas.ConvertirEnHtml:
-                            respuesta = Regex.Replace(respuesta, @"\*\*(.+?)\*\*", "<b>$1</b>"); // Reemplaza todos los **alguna cosa** por <b>alguna cosa</b>.
+                            respuesta = Regex.Replace(respuesta, @"\*\*(.+?)\*\*", "<b>$1</b>"); // Reemplaza cualquier secuencia **texto** por <b>texto</b>.
                             break;
                         default:
                             throw new Exception("Caso de tratamiento negritas no considerado.");
