@@ -22,12 +22,12 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
-using static Frugalia.Demo.Global;
+using static Frugalia.Demostración.Global;
 using static Frugalia.Global;
-namespace Frugalia.Demo;
+namespace Frugalia.Demostración;
 
 
-internal class Demo {
+internal class Demostración {
 
 
     static void Main() {
@@ -243,7 +243,7 @@ internal class Demo {
             "F56-Avión F56, avión de instrucción avanzada con sistemas redundantes para prácticas de fallo controlado. " +
             "F57-Avión F57, modelo con instrumentación completa para entrenamiento IFR y procedimientos estándar de aerolínea. " +
             "F58-Avión F58, avión preparado para entrenamiento de aproximaciones de precisión en pistas cortas. " +
-            "F59-Avión F59, versión optimizada para vuelos de demostraciónstración y exhibiciones aéreas con maniobras suaves. " +
+            "F59-Avión F59, versión optimizada para vuelos de demostración y exhibiciones aéreas con maniobras suaves. " +
             "F60-Avión F60, bimotor ligero para rutas regionales con mejor desempeño en altura y temperatura elevada. " +
             "F61-Avión F61, variante del F60 con depósitos de combustible auxiliares para vuelos de mayor distancia. " +
             "F62-Avión F62, versión con cabina silenciosa y aislamiento acústico mejorado para pasajeros corporativos. " +
@@ -261,7 +261,7 @@ internal class Demo {
             "F74-Avión F74, avión de patrulla marítima ligera con equipos de comunicación adicionales. " +
             "F75-Avión F75, modelo preparado para operaciones en pistas no preparadas con tren de aterrizaje especial. " +
             "F76-Avión F76, versión con motores optimizados para baja emisión de ruido en zonas urbanas. " +
-            "F77-Avión F77, avión de demostraciónstración para fabricantes, con instrumentación adicional de pruebas. " +
+            "F77-Avión F77, avión de demostración para fabricantes, con instrumentación adicional de pruebas. " +
             "F78-Avión F78, configuración para escuelas militares con cabina en tándem y controles duplicados. " +
             "F79-Avión F79, prototipo de investigación aerodinámica con sensores distribuidos en alas y fuselaje. " +
             "M400-Motor M400, motor de pistón básico para aviación ligera con bajo costo de mantenimiento. " +
@@ -421,4 +421,4 @@ internal class Demo {
     } // ObtenerCatálogo>
 
 
-} // Demo>
+} // Demostración>

@@ -23,7 +23,7 @@
 //
 
 using System.Text;
-namespace Frugalia.Demo;
+namespace Frugalia.Demostración;
 
 
 internal static class Global {

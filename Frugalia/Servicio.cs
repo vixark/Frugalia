@@ -196,7 +196,7 @@ namespace Frugalia {
 
             var consultasEnPocasHoras = conversacionesEnPocasHoras * instruccionesPorConversación;
             var tókenesObjetivo = (int)Modelo.LímiteTókenesActivaciónCachéAutomática + 1 - tókenesAdicionales; // A partir de 1024 se activa la caché de tókenes de entrada https://platform.openai.com/docs/guides/prompt-caching para GPT.
-            if (tókenesObjetivo <= 1) tókenesObjetivo = 1;
+            if (tókenesObjetivo <= 1) return ""; // No es necesario realizar relleno porque con los tókenes adicionales ya se alcanzó el límite de tókenes para la activación de la caché.
             var evaluarRellenarInstruccionesSistema = true;
 
             if (conversación != null) { // En el uso típico de la conversación (como se hace en la función ObtenerConFunción()), lo usual es incluir las respuestas anteriores del modelo. Entonces se debe verificar en que casos la caché se activa sola y es económicamente más óptima que rellenar las instrucciones de sistema desde el principio. No se rellena en la mitad de la conversación porque eso implica un recálculo de la caché y la pérdida de todo el bloque de información repetida que puede ser guardable en caché, la decisión es o rellenarlo al principio o no hacerlo. En estos casos no se rellena las instrucciones del sistema.
