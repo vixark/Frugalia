@@ -127,6 +127,9 @@ namespace Frugalia {
         } // ModeloIA>
 
 
+        public override string ToString() => Nombre;
+
+
         internal static Modelo? ObtenerModeloNulable(string nombreModelo) {
 
             if (Modelos.TryGetValue(nombreModelo, out Modelo modelo)) {
@@ -150,48 +153,33 @@ namespace Frugalia {
         } // ObtenerModelo>
 
 
-        internal static double ObtenerFactorDescuentoCaché(string nombreModelo) {
-
-            var modelo = ObtenerModeloNulable(nombreModelo);
-            if (modelo == null) {
-                return 1;
-            } else {
-                return (double)(((Modelo)modelo).PrecioEntradaCaché / ((Modelo)modelo).PrecioEntradaNoCaché);
-            }
-
-        } // ObtenerFactorDescuentoCaché>
+        internal static double ObtenerFactorDescuentoCaché(Modelo modelo) 
+            => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
 
 
-        internal static string ObtenerModeloMejorado(string nombreModeloOriginal, int nivelesMejoramiento) {
+        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento) {
 
             if (nivelesMejoramiento <= 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
-            var modeloNulable = ObtenerModeloNulable(nombreModeloOriginal);
-            if (modeloNulable == null) {
-                throw new Exception("Modelo original no encontrado en tabla de modelos. No se puede encontrar el modelo mejorado");
-            } else {
+ 
+            reintentar:
+            var nombreModeloMejorado = nivelesMejoramiento == 2 ? modeloOriginal.NombreModelo2NivelesSuperior : modeloOriginal.NombreModelo1NivelSuperior;
+            if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
+            var modeloMejorado = ObtenerModeloNulable(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
+            if (modeloMejorado == null && nivelesMejoramiento == 2) {
+                nivelesMejoramiento = 1; // Si no hay un modelo 2 niveles superior, se usa el que es un nivel superior.
+                goto reintentar;
+            }
 
-                var modelo = (Modelo)modeloNulable;
-                reintentar:
-                var nombreModeloMejorado = nivelesMejoramiento == 2 ? modelo.NombreModelo2NivelesSuperior : modelo.NombreModelo1NivelSuperior;
-                if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
-                var modeloMejorado = ObtenerModeloNulable(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
-                if (modeloMejorado == null && nivelesMejoramiento == 2) {
-                    nivelesMejoramiento = 1; // Si no hay un modelo 2 niveles superior, se usa el que es un nivel superior.
-                    goto reintentar;
-                }
+            if (modeloMejorado == null) {
 
-                if (modeloMejorado == null) {
-
-                    if (string.IsNullOrEmpty(nombreModeloMejorado)) {
-                        return ""; // Se acepta que sea vacío porque es posible que no haya modelos superiores a este.
-                    } else {
-                        throw new Exception("Nombre del modelo mejorado no encontrado en tabla de modelos.");
-                    }
-
+                if (string.IsNullOrEmpty(nombreModeloMejorado)) {
+                    return null; // Se acepta que sea vacío porque es posible que no haya modelos superiores a este.
                 } else {
-                    return ((Modelo)modeloMejorado).Nombre;
+                    throw new Exception("Nombre del modelo mejorado no encontrado en tabla de modelos.");
                 }
 
+            } else {
+                return modeloMejorado;
             }
 
         } // ObtenerModeloMejorado>

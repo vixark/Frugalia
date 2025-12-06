@@ -48,18 +48,18 @@ namespace Frugalia {
 
         internal void EscribirInstrucciónSistema(string instrucciónSistema) => AcciónEscribirInstrucciónSistema(instrucciónSistema);
 
-        private Action<Razonamiento, RestricciónRazonamiento, RestricciónRazonamiento, string, int> AcciónEscribirOpcionesRazonamiento { get; }
+        private Action<Razonamiento, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int> AcciónEscribirOpcionesRazonamiento { get; }
 
         internal void EscribirOpcionesRazonamiento(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, string nombreModelo, int largoInstrucciónÚtil)
-                => AcciónEscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil)
+                => AcciónEscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
 
         private Func<string> FunciónObtenerInstrucciónSistema { get; }
 
         internal string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
 
 
-        internal Opciones(Familia familia, string instrucciónSistema, string nombreModelo, Razonamiento razonamiento,
+        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento,
             RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, int largoInstrucciónÚtil,
             int máximosTókenesSalida, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones) {
 
@@ -71,13 +71,12 @@ namespace Frugalia {
 
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
-                AcciónEscribirOpcionesRazonamiento = (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, nombreModelo2, largoInstrucciónÚtil2) => {
+                AcciónEscribirOpcionesRazonamiento = (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, largoInstrucciónÚtil2) => {
 
                     var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
-                        nombreModelo2, largoInstrucciónÚtil2);
+                        modelo2, largoInstrucciónÚtil2);
 
-                    if (string.IsNullOrWhiteSpace(nombreModelo2)) throw new ArgumentException("nombreModelo2 no puede ser nulo ni vacío.", nameof(nombreModelo2));
-                    var nombreModeloMinúsculas = nombreModelo2.ToLowerInvariant();
+                    var nombreModeloMinúsculas = modelo2.Nombre.ToLowerInvariant();
 
                     if (razonamientoEfectivo != Razonamiento.Alto && nombreModeloMinúsculas == "gpt-5-pro")
                         throw new InvalidOperationException("gpt-5-pro no permite nivel de razonamiento diferente de alto.");
@@ -119,12 +118,12 @@ namespace Frugalia {
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, nombreModelo, largoInstrucciónÚtil);
+                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
 
                 OpcionesGPT.MaxOutputTokenCount = máximosTókenesSalida;
                 var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
-                if (modelosSinVerbosidad.Contains(nombreModelo.ToLowerInvariant())) {
-                    if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {nombreModelo} no soporta configuración de la verbosidad.");
+                if (modelosSinVerbosidad.Contains(modelo.Nombre.ToLowerInvariant())) {
+                    if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {modelo} no soporta configuración de la verbosidad.");
                 } else {
 
                     var textoVerbosidad = ""; // https://platform.openai.com/docs/guides/latest-model#verbosity.

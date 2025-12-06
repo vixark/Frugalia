@@ -42,10 +42,10 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Func<string, Conversación, Opciones, string, bool, (Respuesta, Tókenes)> FunciónObtenerRespuesta { get; }
+        private Func<string, Conversación, Opciones, Modelo, bool, (Respuesta, Tókenes)> FunciónObtenerRespuesta { get; }
 
-        internal (Respuesta, Tókenes) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, string nombreModelo, bool lote)
-            => FunciónObtenerRespuesta(instrucción, conversación, opciones, nombreModelo, lote);
+        internal (Respuesta, Tókenes) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, bool lote)
+            => FunciónObtenerRespuesta(instrucción, conversación, opciones, modelo, lote);
 
         private Func<Archivador> FunciónObtenerArchivador { get; }
 
@@ -61,8 +61,9 @@ namespace Frugalia {
 
                 ClienteGPT = new OpenAIClient(claveAPI);
 
-                FunciónObtenerRespuesta = (instrucción, conversación, opciones, nombreModelo, lote) => {
+                FunciónObtenerRespuesta = (instrucción, conversación, opciones, modelo, lote) => {
 
+                    var nombreModelo = modelo.Nombre;
                     var respondedorInicial = ClienteGPT.GetOpenAIResponseClient(nombreModelo);
                     OpenAIResponse respuestaGPT;
                     if (!string.IsNullOrEmpty(instrucción)) {

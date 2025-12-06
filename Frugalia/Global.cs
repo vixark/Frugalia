@@ -133,11 +133,13 @@ namespace Frugalia {
                 error = "No se encontró el archivo con la clave de la API.";
                 return null;
             }
+
             var contenido = File.ReadAllText(rutaArchivo).Trim();
             if (string.IsNullOrWhiteSpace(contenido)) {
                 error = "El archivo de la API key está vacío.";
                 return null;
             }
+
             return contenido;
 
         } // LeerClave>
@@ -231,10 +233,8 @@ namespace Frugalia {
         } // ObtenerRazonamientoMejorado>
 
 
-        internal static Tamaño ObtenerTamaño(string nombreModelo) {
+        internal static Tamaño ObtenerTamaño(Modelo modelo) {
 
-            var modelo = Modelo.ObtenerModeloNulable(nombreModelo) 
-                ?? throw new Exception($"No se pudo obtener el tamaño porque el modelo {nombreModelo} no existe.");
             if (!string.IsNullOrEmpty(modelo.NombreModelo3NivelesSuperior)) {
                 return Tamaño.MuyPequeño;
             } else if (!string.IsNullOrEmpty(modelo.NombreModelo2NivelesSuperior)) {
@@ -249,7 +249,7 @@ namespace Frugalia {
 
 
         public static Razonamiento ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, string nombreModelo, int largoInstrucciónÚtil) {
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil) {
 
             var largoLímite1 = 500; // Aproximadamente 166 tókenes. Los límites de 500 y 2000 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
             var largoLímite2 = 2000; // Aproximadamente 666 tokenes.
@@ -285,7 +285,7 @@ namespace Frugalia {
 
             }
 
-            var tamaño = ObtenerTamaño(nombreModelo);
+            var tamaño = ObtenerTamaño(modelo);
 
             if (razonamientoEfectivo == Razonamiento.Alto && restricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna) {
 
