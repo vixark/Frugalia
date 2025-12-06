@@ -26,7 +26,7 @@ using System.Text;
 namespace Frugalia.Demo;
 
 
-internal class Global {
+internal static class Global {
 
 
     internal static readonly string Separador = new('_', 100);
@@ -41,6 +41,47 @@ internal class Global {
         EscribirGris("", espaciosMargen);
 
     } // EscribirSeparador>
+
+
+    internal static void EstablecerAltoVentana(int líneasVerticales = 60) {
+
+        try { 
+            #if WINDOWS
+                Console.WindowHeight = líneasVerticales; // Se quería también establecer la posición de la ventana en Windows, pero fue un lio que no se pudo solucionar porque sacaba error con la recarga activa del depurador.
+            #endif
+        } catch {
+            // Solo para mi computador, en otros es posible que no funcione. No importa.
+        }
+
+    } // EstablecerAltoVentana>
+
+
+    internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? instrucción, string? respuesta, string? archivo) {
+
+        Console.SetCursorPosition(0, Console.CursorTop);
+
+        if (!string.IsNullOrEmpty(instrucciónSistema)) {
+            EscribirSeparador();
+            EscribirMultilíneaGrisOscuro($"Sistema: {instrucciónSistema}");
+        }
+
+        if (!string.IsNullOrEmpty(rellenoInstrucciónSistema)) {
+            EscribirSeparador();
+            EscribirMultilíneaGrisOscuro($"Relleno Sistema: {rellenoInstrucciónSistema}");
+        }
+
+        EscribirSeparador();
+        EscribirMultilíneaGrisOscuro($"Usuario: {instrucción}");
+
+        if (!string.IsNullOrEmpty(archivo)) {
+            EscribirSeparador();
+            EscribirMultilíneaGrisOscuro($"Archivo Usuario: {archivo}");
+        }
+
+        EscribirSeparador();
+        EscribirMultilíneaGrisOscuro($"AI: {respuesta}");
+
+    } // EscribirMensajes>
 
 
     internal static void Escribir(string mensaje, int espaciosMargen = 3) => Console.WriteLine($"{new string(' ', espaciosMargen)}{mensaje}");

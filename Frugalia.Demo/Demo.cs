@@ -22,8 +22,8 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
-using static Frugalia.Global;
 using static Frugalia.Demo.Global;
+using static Frugalia.Global;
 namespace Frugalia.Demo;
 
 
@@ -32,30 +32,37 @@ internal class Demo {
 
     static void Main() {
 
+        EstablecerAltoVentana();
+
         EscribirVerde(""); // Rojo: errores, magenta: mensajes del programa, verde: información de costos, cian oscuro: información de parametros y gris oscuro: instrucciones y respuestas del modelo.
-        EscribirVerde("¡Hola soy el programa de pruebas de Frugalia!");
+        EscribirVerde("¡Hola soy el programa de demostración de Frugalia!");
         EscribirVerde("");
 
         reiniciar:
-        EscribirMagenta("Selecciona el número de demo a ejecutar:");
-        EscribirMagenta("1. Consulta de texto.");
-        EscribirMagenta("2. Consulta con archivos.");
-        EscribirMagenta("3. Consulta buscando en internet con error por Razonamiento = Ninguno.");
-        EscribirMagenta("4. Consulta usando funciones.");
-        EscribirMagenta("");   
-        
-        var demoID = LeerNúmero();
-        if (demoID == 0) goto reiniciar;
+        EscribirMagenta("Selecciona el número de demostración a ejecutar:");
+        EscribirMagenta("1. Consulta de texto con gpt-5.1.");
+        EscribirMagenta("2. Consulta de texto con gpt-5-mini.");
+        EscribirMagenta("3. Consulta de texto con gpt-5-nano.");
+        EscribirMagenta("4. Consulta con archivos.");
+        EscribirMagenta("5. Consulta buscando en internet con error por Razonamiento = Ninguno.");
+        EscribirMagenta("6. Consulta usando funciones.");
+        EscribirMagenta("");
 
-        _ = demoID switch { // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
-            1 => Consultar(ConsultaTexto),
-            2 => Consultar(ConsultaConArchivos),
-            3 => Consultar(ConsultaBuscandoEnInternet),
-            4 => Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false)),
-            _ => $"No se ha escrito código para la demo número {demoID}.",
+        var demostraciónID = LeerNúmero();
+        if (demostraciónID <= 0) goto reiniciar;
+
+        _ = demostraciónID switch { // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
+            1 => Consultar(ConsultaTexto, "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
+            2 => Consultar(ConsultaTexto, "gpt-5-mini", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
+            3 => Consultar(ConsultaTexto, "gpt-5-nano", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
+            4 => Consultar(ConsultaConArchivos, "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
+            5 => Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
+            6 => Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false),
+                "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
+            _ => $"No se ha escrito código para la demostración número {demostraciónID}.",
         };
 
-        EscribirMagenta("Presiona enter para volver al menú de pruebas.");
+        EscribirMagenta("Presiona enter para volver al menú de demostraciones.");
         Escribir("");
         Leer();
         goto reiniciar;
@@ -63,12 +70,13 @@ internal class Demo {
     } // Main>
 
 
-    internal static string Consultar(Func<Servicio, Modelo,
-        (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error)> consulta) {
+    internal static string Consultar(Func<Servicio, Modelo, (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, 
+        string Información)> consulta, string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
+        RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosMuyPequeños) {
 
-        var modelo = Modelo.ObtenerModelo("gpt-5.1");
+        var modelo = Modelo.ObtenerModelo(nombreModelo);
         if (modelo == null) {
-            var noDisponibleModelo = "El modelo no está disponible.";
+            var noDisponibleModelo = $"El modelo {nombreModelo} no está disponible.";
             EscribirMultilíneaRojo(noDisponibleModelo);
             return noDisponibleModelo;
         }
@@ -79,28 +87,35 @@ internal class Demo {
             return errorClaveAPI;
         }
 
-        var servicio = new Servicio(((Modelo)modelo).Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
-            RestricciónRazonamiento.ModelosMuyPequeños, TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
+        var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, modoCalidadAdaptable, restricciónRazonamientoAlto,
+            TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
 
         Escribir("");
-        var parámetros = $"Iniciando consulta con {servicio.Descripción}";
+        var parámetros = $"Iniciando {consulta.Method.Name}() con {servicio.Descripción}";
         EscribirMultilíneaCianOscuro(parámetros);
         Console.SetCursorPosition(3, Console.CursorTop);
 
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
 
-            (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, (Modelo)modelo);
+            (respuesta, var tókenes, var detalleCosto, var error, var información) = consulta(servicio, (Modelo)modelo);
 
-            if (!string.IsNullOrEmpty(error)) {                
+            if (!string.IsNullOrEmpty(error)) {
                 EscribirMultilíneaRojo(error);
                 respuesta = error;
             } else {
 
                 var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
-                detallesAdicionales = (string.IsNullOrEmpty(detallesAdicionales) ? "" : DobleLínea + detallesAdicionales);
-                EscribirMultilíneaVerde(costoTókenes + detallesAdicionales);                
-                respuesta = $"{parámetros}{DobleLínea}{respuesta}{Environment.NewLine}{Separador}{Environment.NewLine}{costoTókenes}{detallesAdicionales}";
+                detalleCosto = (string.IsNullOrEmpty(detalleCosto) ? "" : DobleLínea + detalleCosto);
+                EscribirMultilíneaVerde(costoTókenes + detalleCosto);
+                EscribirSeparador();
+
+                if (!string.IsNullOrEmpty(información)) {
+                    EscribirMultilíneaCianOscuro(información);
+                    EscribirSeparador();
+                }
+
+                respuesta = $"{parámetros}{DobleLínea}{respuesta}{DobleLínea}{costoTókenes}{detalleCosto}";
 
             }
 
@@ -116,57 +131,60 @@ internal class Demo {
     } // Consultar>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaTexto(Servicio servicio, 
-        Modelo modelo) {
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+        ConsultaTexto(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
         var instrucciónSistema = "Eres grosero y seco. Respondes displicentemente al usuario por no saber lo que preguntó.";
         var instrucción = "Dime la hora en españa cuando en tagandamdapio son las 4 pm";
         var consultasEnPocasHoras = 10;
-        var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error, 
-            out Dictionary<string, Tókenes> tókenes);
 
-        Console.SetCursorPosition(0, Console.CursorTop);
-        EscribirSeparador();
-        EscribirMultilíneaGrisOscuro($"Sistema: {instrucciónSistema}");
-        EscribirSeparador();
-        EscribirMultilíneaGrisOscuro($"Usuario: {instrucción}");
-        EscribirSeparador();
-        EscribirMultilíneaGrisOscuro($"AI: {respuesta}");
+        var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error,
+            out Dictionary<string, Tókenes> tókenes, out string información);
+
+        EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: null);
         EscribirSeparador();
 
-        return (respuesta, tókenes, "", error);
+        return (respuesta, tókenes, "", error, información);
 
     } // ConsultaTexto>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaConArchivos(Servicio servicio,
-        Modelo modelo) {
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+        ConsultaConArchivos(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
-        var respuesta = servicio.Consulta(10, "Eres cuidadoso y detectas adecuadamente si hay varios elementos en una foto y " +
-            "obtienes el tamaño/cantidad total del producto considerando esto que observas.", ref rellenoInstrucciónSistema,
-            "Dime el tamaño algodón en discos familia", [@"D:\Proyectos\Frugalia\Archivos Pruebas\algodón-en-discos-familia-120unidad.jpg"],
-            out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo.Imagen);
-        return (respuesta, tókenes, "", error);
+        var instrucciónSistema = "Eres cuidadoso y detectas adecuadamente si hay varios elementos en una foto y obtienes el tamaño/cantidad total del producto considerando esto que observas.";
+        var instrucción = "Dime el tamaño algodón en discos familia";
+        var consultasEnPocasHoras = 10;
+        var archivos = new List<string> { @"D:\Proyectos\Frugalia\Archivos Pruebas\algodón-en-discos-familia-120unidad.jpg" };
+        var tipoArchivo = TipoArchivo.Imagen;
+
+        var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, archivos, out string error,
+            out Dictionary<string, Tókenes> tókenes, tipoArchivo, out string información);
+
+        EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: $"{tipoArchivo}: {archivos[0]}");
+        EscribirSeparador();
+
+        return (respuesta, tókenes, "", error, información);
 
     } // ConsultaConArchivos>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaBuscandoEnInternet(Servicio servicio, 
-        Modelo modelo) {
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+        ConsultaBuscandoEnInternet(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
         var respuesta = servicio.Consulta(10, "Eres un investigador de mercado de productos de consumo diario en Colombia", ref rellenoInstrucciónSistema,
             "¿La marca Boggy existe? Sí existe, dame fuentes de su existencia", out string error, out Dictionary<string, Tókenes> tókenes,
-            buscarEnInternet: true);
-        return (respuesta, tókenes, "", error);
+            out string información, buscarEnInternet: true);
+        return (respuesta, tókenes, "", error, información);
 
     } // ConsultaBuscandoEnInternet>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error) ConsultaUsandoFunciones(Servicio servicio,
-        Modelo modelo, bool usarInstrucciónMuyLarga, bool usarInstrucciónSistemaMuyLarga) {
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+        ConsultaUsandoFunciones(Servicio servicio, Modelo modelo, bool usarInstrucciónMuyLarga, bool usarInstrucciónSistemaMuyLarga) {
 
         var instrucción = "Hola, estoy interesado en conocer el precio de un accesorio Ala para el avión F40.";
         var instrucciónMuyLarga = @"Hola, mira, me levanté algo apestado de la gripa, con la nariz toda tapada, la garganta raspada y esa sensación de que uno durmió pero no descansó, el tinto se me quemó porque me quedé mirando el celular como un zombi mientras la cafetera sonaba y yo ni caso, y en medio de todo ese desorden mental me puse a pensar que la vida a veces se siente como un avión que despega con turbulencia, medio desbalanceado, pero igual tiene que seguir su ruta, y entonces me acordé de que anoche estuve viendo videos de aviones, documentales raros de gente que restaura avionetas viejas y las deja como nuevas, y eso me dejó con la idea dando vueltas en la cabeza de que tal vez lo que necesito para salir de esta racha es hacer algo grande, algo que me saque de la rutina, algo completamente absurdo como, no sé, comprar un avión.
@@ -185,6 +203,7 @@ internal class Demo {
         var respuesta = "";
         var conversación = new Conversación(modelo.Familia);
         var tókenes = new Dictionary<string, Tókenes>();
+        var información = "";
         var detalleTókenes = "";
         var separadorMensajes = $"{Environment.NewLine}--------------------------------------------------------{Environment.NewLine}";
         var númeroAleatorio = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en llamadas siguientes porque se cambia la instrucción de sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
@@ -224,7 +243,7 @@ internal class Demo {
             "F56-Avión F56, avión de instrucción avanzada con sistemas redundantes para prácticas de fallo controlado. " +
             "F57-Avión F57, modelo con instrumentación completa para entrenamiento IFR y procedimientos estándar de aerolínea. " +
             "F58-Avión F58, avión preparado para entrenamiento de aproximaciones de precisión en pistas cortas. " +
-            "F59-Avión F59, versión optimizada para vuelos de demostración y exhibiciones aéreas con maniobras suaves. " +
+            "F59-Avión F59, versión optimizada para vuelos de demostraciónstración y exhibiciones aéreas con maniobras suaves. " +
             "F60-Avión F60, bimotor ligero para rutas regionales con mejor desempeño en altura y temperatura elevada. " +
             "F61-Avión F61, variante del F60 con depósitos de combustible auxiliares para vuelos de mayor distancia. " +
             "F62-Avión F62, versión con cabina silenciosa y aislamiento acústico mejorado para pasajeros corporativos. " +
@@ -242,7 +261,7 @@ internal class Demo {
             "F74-Avión F74, avión de patrulla marítima ligera con equipos de comunicación adicionales. " +
             "F75-Avión F75, modelo preparado para operaciones en pistas no preparadas con tren de aterrizaje especial. " +
             "F76-Avión F76, versión con motores optimizados para baja emisión de ruido en zonas urbanas. " +
-            "F77-Avión F77, avión de demostración para fabricantes, con instrumentación adicional de pruebas. " +
+            "F77-Avión F77, avión de demostraciónstración para fabricantes, con instrumentación adicional de pruebas. " +
             "F78-Avión F78, configuración para escuelas militares con cabina en tándem y controles duplicados. " +
             "F79-Avión F79, prototipo de investigación aerodinámica con sensores distribuidos en alas y fuselaje. " +
             "M400-Motor M400, motor de pistón básico para aviación ligera con bajo costo de mantenimiento. " +
@@ -316,7 +335,9 @@ internal class Demo {
             [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
                 [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
             out string error, out Dictionary<string, Tókenes> tókenesConsulta, instruccionesPorConversación: 6, proporciónPrimerInstrucciónVsSiguientes: 3,
-            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
+            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out string informaciónConsulta) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
+
+        información += $"{informaciónConsulta}{Environment.NewLine}";
 
         var contadorTókenesConsulta = 1;
         foreach (var iTókenesConsulta in tókenesConsulta.Values) {
@@ -353,9 +374,9 @@ internal class Demo {
         detalleTókenes = $"{detalleTókenes}{separadorMensajes}";
         var detalleAñadidoPrecio = rellenoInstrucciónSistema.Length == 0 ? ""
             : $"Relleno de instrucción de sistema para forzar el uso de la caché de {rellenoInstrucciónSistema.Length} carácteres.{DobleLínea}";
-        var detallesAdicionales = $"{detalleAñadidoPrecio}{detalleTókenes}";
+        var detalleCosto = $"{detalleAñadidoPrecio}{detalleTókenes}";
 
-        return (respuesta, tókenes, detallesAdicionales, error);
+        return (respuesta, tókenes, detalleCosto, error, información);
 
     } // ConsultaUsandoFunciones>
 

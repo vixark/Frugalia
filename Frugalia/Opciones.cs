@@ -144,7 +144,10 @@ namespace Frugalia {
 
                 }
 
-                OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No he comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
+                var modelosSinCachéConfigurableA24Horas = new List<string> {
+                    "gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" };
+                if (!modelosSinCachéConfigurableA24Horas.Contains(modelo.Nombre.ToLowerInvariant()))
+                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No he comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
 
                 if (buscarEnInternet) OpcionesGPT.Tools.Add(ResponseTool.CreateWebSearchTool());
 

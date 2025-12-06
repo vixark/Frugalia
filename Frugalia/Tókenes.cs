@@ -68,8 +68,8 @@ namespace Frugalia {
         public string Clave => $"{NombreModelo}|{Lote}|{MinutosEscrituraManualCaché}";
 
 
-        internal Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché,
-            int? escrituraManualCaché, int? minutosEscrituraManualCaché) {
+        internal Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché, int? escrituraManualCaché, 
+            int? minutosEscrituraManualCaché) {
 
             MinutosEscrituraManualCaché = minutosEscrituraManualCaché ?? 0;
             var minutosCachéVálidosClaude = new List<int>() { 0, 5, 60 };
