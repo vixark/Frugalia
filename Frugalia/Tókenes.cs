@@ -51,7 +51,9 @@ namespace Frugalia {
 
         public string Error { get; } // Error al obtener los tókenes del servicio.
 
-        public string NombreModelo { get; }
+        private Modelo Modelo { get; }
+
+        public string NombreModelo => Modelo.Nombre;
 
         public int EscrituraManualCaché { get; }
 
@@ -63,20 +65,19 @@ namespace Frugalia {
         /// <summary>
         /// Clave que identifica un grupo de tókenes sumables.
         /// </summary>
-        public string Clave => $"{NombreModelo}§{Lote}§{MinutosEscrituraManualCaché}";
+        public string Clave => $"{NombreModelo}|{Lote}|{MinutosEscrituraManualCaché}";
 
 
-        internal Tókenes(string nombreModelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché,
+        internal Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché,
             int? escrituraManualCaché, int? minutosEscrituraManualCaché) {
 
             MinutosEscrituraManualCaché = minutosEscrituraManualCaché ?? 0;
-            var modelo = Modelo.ObtenerModelo(nombreModelo);
             var minutosCachéVálidosClaude = new List<int>() { 0, 5, 60 };
             if (modelo.Familia == Familia.Claude && !minutosCachéVálidosClaude.Contains(MinutosEscrituraManualCaché))
                 throw new Exception("No se pueden usar MinutosEscrituraManualCaché diferentes de 0, 5 o 60 para modelos de tipo Claude.");
 
             Lote = lote;
-            NombreModelo = nombreModelo;
+            Modelo = modelo;
             EntradaTotal = entradaTotal ?? 0;
             SalidaTotal = salidaTotal ?? 0;
             SalidaRazonamiento = salidaRazonamiento ?? 0;
@@ -92,7 +93,7 @@ namespace Frugalia {
         /// <param name="nombreModelo"></param>
         /// <param name="lote"></param>
         /// <param name="error"></param>
-        internal Tókenes(string nombreModelo, bool lote, string error) : this(nombreModelo, lote, null, null, null, null, null, null) {
+        internal Tókenes(Modelo modelo, bool lote, string error) : this(modelo, lote, null, null, null, null, null, null) {
             Error = error;
         } // Tókenes>
 
@@ -107,7 +108,7 @@ namespace Frugalia {
                 throw new Exception("No se pueden sumar tókenes que tuvieron escritura manual en caché con diferente duración de almacenamiento en caché.");
 
             return new Tókenes(
-                tókenes1.NombreModelo,
+                tókenes1.Modelo,
                 tókenes2.Lote,
                 tókenes1.EntradaTotal + tókenes2.EntradaTotal,
                 tókenes1.SalidaTotal + tókenes2.SalidaTotal,
@@ -142,8 +143,7 @@ namespace Frugalia {
                 var tókenes = kv.Value;
                 if (tókenes.Lote) Suspender(); // Verificar funcionamiento.
                 var clave = tókenes.Clave;
-                var nombreModelo = clave.Substring(0, clave.IndexOf("§"));
-                var modelo = Modelo.ObtenerModelo(nombreModelo);
+                var modelo = tókenes.Modelo;
                 var factorEntradaYSalida = tókenes.Lote ? modelo.FracciónDescuentoEntradaYSalidaPorLote : 1m;
                 var factorLecturaCaché = tókenes.Lote ? modelo.FracciónDescuentoLecturaCachePorLote : 1m;
                 var pesosNoCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaNoCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd) * factorEntradaYSalida;

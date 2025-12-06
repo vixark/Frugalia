@@ -130,24 +130,12 @@ namespace Frugalia {
         public override string ToString() => Nombre;
 
 
-        internal static Modelo? ObtenerModeloNulable(string nombreModelo) {
+        public static Modelo? ObtenerModelo(string nombreModelo) {
 
             if (Modelos.TryGetValue(nombreModelo, out Modelo modelo)) {
                 return modelo;
             } else {
                 return null;
-            }
-
-        } // ObtenerModeloNulable>
-
-
-        public static Modelo ObtenerModelo(string nombreModelo) {
-
-            var modelo = ObtenerModeloNulable(nombreModelo);
-            if (modelo == null) {
-                throw new Exception($"No se encontró el modelo: {nombreModelo}");
-            } else {
-                return (Modelo)modelo;
             }
 
         } // ObtenerModelo>
@@ -164,7 +152,7 @@ namespace Frugalia {
             reintentar:
             var nombreModeloMejorado = nivelesMejoramiento == 2 ? modeloOriginal.NombreModelo2NivelesSuperior : modeloOriginal.NombreModelo1NivelSuperior;
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
-            var modeloMejorado = ObtenerModeloNulable(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
+            var modeloMejorado = ObtenerModelo(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
             if (modeloMejorado == null && nivelesMejoramiento == 2) {
                 nivelesMejoramiento = 1; // Si no hay un modelo 2 niveles superior, se usa el que es un nivel superior.
                 goto reintentar;

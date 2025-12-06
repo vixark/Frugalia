@@ -63,8 +63,7 @@ namespace Frugalia {
 
                 FunciónObtenerRespuesta = (instrucción, conversación, opciones, modelo, lote) => {
 
-                    var nombreModelo = modelo.Nombre;
-                    var respondedorInicial = ClienteGPT.GetOpenAIResponseClient(nombreModelo);
+                    var respondedorInicial = ClienteGPT.GetOpenAIResponseClient(modelo.Nombre);
                     OpenAIResponse respuestaGPT;
                     if (!string.IsNullOrEmpty(instrucción)) {
                         respuestaGPT = (OpenAIResponse)respondedorInicial.CreateResponse(instrucción, opciones.OpcionesGPT);
@@ -76,9 +75,9 @@ namespace Frugalia {
 
                     Tókenes tókenes;
                     if (respuestaGPT.Usage == null) {
-                        tókenes = new Tókenes(nombreModelo, lote, "respuestaGPT.Usage es nulo.");
+                        tókenes = new Tókenes(modelo, lote, "respuestaGPT.Usage es nulo.");
                     } else {
-                        tókenes = new Tókenes(nombreModelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
+                        tókenes = new Tókenes(modelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
                             respuestaGPT.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGPT.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
                     }
                         

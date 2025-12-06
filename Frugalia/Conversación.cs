@@ -44,9 +44,9 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Action<string> AcciónAgregarMensajeUsuario { get; }
+        private Action<string> AcciónAgregarInstrucción { get; }
 
-        public void AgregarMensajeUsuario(string mensaje) => AcciónAgregarMensajeUsuario(mensaje);
+        public void AgregarInstrucción(string instrucción) => AcciónAgregarInstrucción(instrucción);
 
         private Func<string> FunciónObtenerTextoPrimeraInstrucción { get; }
 
@@ -74,7 +74,7 @@ namespace Frugalia {
 
                 ConversaciónGPT = new List<ResponseItem>();
 
-                AcciónAgregarMensajeUsuario = mensaje => ConversaciónGPT.Add(ResponseItem.CreateUserMessageItem(mensaje));
+                AcciónAgregarInstrucción = instrucción => ConversaciónGPT.Add(ResponseItem.CreateUserMessageItem(instrucción));
 
                 AcciónAgregarÍtemRespuesta = ítemRespuesta => ConversaciónGPT.Add(ítemRespuesta.ÍtemRespuestaGPT);
 

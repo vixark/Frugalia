@@ -64,16 +64,18 @@ internal class Demo {
         (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error)> consulta) {
 
         var modelo = Modelo.ObtenerModelo("gpt-5.1");
+        if (modelo == null) return "El modelo no está disponible.";
+
         var claveAPI = LeerClave(@"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt", out string errorClaveAPI);
         if (!string.IsNullOrEmpty(errorClaveAPI)) return errorClaveAPI;
 
-        var servicio = new Servicio(modelo.Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
+        var servicio = new Servicio(((Modelo)modelo).Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
             RestricciónRazonamiento.ModelosMuyPequeños, TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
 
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
 
-            (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, modelo);
+            (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, (Modelo)modelo);
             if (!string.IsNullOrEmpty(error)) respuesta = error;
             respuesta = $"Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}{Environment.NewLine}" +
                 $"{detallesAdicionales}{respuesta}{Environment.NewLine}";
@@ -151,7 +153,7 @@ internal class Demo {
 
         continuarConversación:
 
-        conversación.AgregarMensajeUsuario(instrucción);
+        conversación.AgregarInstrucción(instrucción);
         var instrucciónSistema = "Eres una representante comercial amable que se expresa con pocas palabras. Te refieres a los " +
             "clientes con usted, no usas tú ni vos. No inventes datos para las funciones si el usuario no te los ha dado. Cuando una función devuelve un " +
             "JSON con error, interpreta el error, explica brevemente el problema al usuario y pide los datos faltantes. No inventes valores ni vuelvas a " +

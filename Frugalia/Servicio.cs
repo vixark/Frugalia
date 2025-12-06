@@ -65,7 +65,7 @@ namespace Frugalia {
             RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna) { // A propósito solo se provee un constructor con muchos parámetros para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
 
             error = null;
-            var modelo = Modelo.ObtenerModeloNulable(nombreModelo);
+            var modelo = Modelo.ObtenerModelo(nombreModelo);
             if (modelo == null) {
                 error = $"El modelo '{nombreModelo}' no es válido.";
                 Iniciado = false;
@@ -393,7 +393,7 @@ namespace Frugalia {
 
             if (tókenes == null) tókenes = new Dictionary<string, Tókenes>();
             var últimaInstruccion = instrucción;
-            if (string.IsNullOrEmpty(instrucción)) últimaInstruccion = ObtenerTextoÚltimaInstrucción(conversación);
+            if (conversación != null) últimaInstruccion = ObtenerTextoÚltimaInstrucción(conversación);
             var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema);
             Respuesta respuesta;
             var modoCalidadAdaptable = ModoCalidadAdaptable == CalidadAdaptable.MejorarModelo 
@@ -402,15 +402,22 @@ namespace Frugalia {
             var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones);
             if (modoCalidadAdaptable) {
 
-                if (instrucción.Contains(GrandeRecomendado) || instrucción.Contains(MedioRecomendado) || instrucción.Contains(LoHiceBien))
-                    instrucción = instrucción.Replace(GrandeRecomendado, " ").Replace(MedioRecomendado, " ").Replace(LoHiceBien, " ");
+                var instrucciónAplicable = string.IsNullOrEmpty(instrucción) ? últimaInstruccion : instrucción;
+                if (instrucciónAplicable.Contains(GrandeRecomendado) || instrucciónAplicable.Contains(MedioRecomendado) || instrucciónAplicable.Contains(LoHiceBien))
+                    instrucciónAplicable = instrucciónAplicable.Replace(GrandeRecomendado, " ").Replace(MedioRecomendado, " ").Replace(LoHiceBien, " ");
 
-                if (instrucción.IndexOf(GrandeRecomendado, StringComparison.OrdinalIgnoreCase) >= 0 
-                    || instrucción.IndexOf(MedioRecomendado, StringComparison.OrdinalIgnoreCase) >= 0
-                    || instrucción.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción de sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
+                if (instrucciónAplicable.IndexOf(GrandeRecomendado, StringComparison.OrdinalIgnoreCase) >= 0 
+                    || instrucciónAplicable.IndexOf(MedioRecomendado, StringComparison.OrdinalIgnoreCase) >= 0
+                    || instrucciónAplicable.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción de sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
                     
-                    instrucción = instrucción.Reemplazar(GrandeRecomendado, " ", StringComparison.OrdinalIgnoreCase)
+                    instrucciónAplicable = instrucciónAplicable.Reemplazar(GrandeRecomendado, " ", StringComparison.OrdinalIgnoreCase)
                         .Reemplazar(MedioRecomendado, " ", StringComparison.OrdinalIgnoreCase).Reemplazar(LoHiceBien, " ", StringComparison.OrdinalIgnoreCase);
+
+                    if (conversación != null) {
+                        throw new Exception("El usuario ha escrito palabras protegidas."); // No se controla del todo este caso porque implicaría recrear el objeto Conversación o sobreescribirlo para agregar la instrucción del usuario limpia sin las palabras clave y se prefiere no agregar esa complejidad en el momento.
+                    } else {
+                        instrucción = instrucciónAplicable; // En el caso que no hay conversación es más fácil hacer la limpieza de la instrucción del usuario.
+                    }
 
                 }
 

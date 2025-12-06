@@ -44,10 +44,6 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Action<object> AcciónAsignarRespuesta { get; }
-
-        internal void AgregarMensajeUsuario(object respuesta) => AcciónAsignarRespuesta(respuesta);
-
         private Func<TratamientoNegritas, string> FunciónObtenerTextoRespuesta { get; }
 
         internal string ObtenerTextoRespuesta(TratamientoNegritas tratamientoNegritas) => FunciónObtenerTextoRespuesta(tratamientoNegritas);
@@ -62,8 +58,6 @@ namespace Frugalia {
             Familia = familia;
             switch (Familia) {
             case Familia.GPT:
-
-                AcciónAsignarRespuesta = respuesta => RespuestaGPT = (OpenAIResponse)respuesta;
 
                 FunciónObtenerTextoRespuesta = (tratamientoNegritas) => {
 
