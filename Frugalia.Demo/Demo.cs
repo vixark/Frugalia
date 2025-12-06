@@ -32,23 +32,22 @@ internal class Demo {
 
     static void Main() {
 
-        Console.ForegroundColor = ConsoleColor.Magenta;
-        Escribir("");
-        Escribir("¡Hola soy el programa de pruebas de Frugalia!");
-        Escribir("");
+        EscribirVerde(""); // Rojo: errores, magenta: mensajes del programa, verde: información de costos, cian oscuro: información de parametros y gris oscuro: instrucciones y respuestas del modelo.
+        EscribirVerde("¡Hola soy el programa de pruebas de Frugalia!");
+        EscribirVerde("");
 
         reiniciar:
-        Console.ForegroundColor = ConsoleColor.Green;
-        Escribir("Selecciona el número de demo a ejecutar:");
-        Escribir("1. Consulta de texto.");
-        Escribir("2. Consulta con archivos.");
-        Escribir("3. Consulta buscando en internet con error por Razonamiento = Ninguno.");
-        Escribir("4. Consulta usando funciones.");
-        Escribir("");    
+        EscribirMagenta("Selecciona el número de demo a ejecutar:");
+        EscribirMagenta("1. Consulta de texto.");
+        EscribirMagenta("2. Consulta con archivos.");
+        EscribirMagenta("3. Consulta buscando en internet con error por Razonamiento = Ninguno.");
+        EscribirMagenta("4. Consulta usando funciones.");
+        EscribirMagenta("");   
+        
         var demoID = LeerNúmero();
-        Console.ResetColor();
+        if (demoID == 0) goto reiniciar;
 
-        var respuesta = demoID switch {
+        _ = demoID switch {
             1 => Consultar(ConsultaTexto),
             2 => Consultar(ConsultaConArchivos),
             3 => Consultar(ConsultaBuscandoEnInternet),
@@ -56,12 +55,8 @@ internal class Demo {
             _ => $"No se ha escrito código para la demo número {demoID}.",
         };
 
-        Console.ForegroundColor = ConsoleColor.Cyan;
+        EscribirMagenta("Presiona enter para volver al menú de pruebas.");
         Escribir("");
-        EscribirMultilínea(respuesta);
-
-        Console.ForegroundColor = ConsoleColor.Magenta;
-        Escribir("Presiona enter para volver al menú de pruebas.");
         Leer();
         goto reiniciar;
 
@@ -80,15 +75,27 @@ internal class Demo {
         var servicio = new Servicio(((Modelo)modelo).Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
             RestricciónRazonamiento.ModelosMuyPequeños, TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
 
+        Escribir("");
+        EscribirMultilíneaCianOscuro($"Iniciando consulta con {servicio.Descripción}");
+        Console.SetCursorPosition(3, Console.CursorTop);
+
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
 
             (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, (Modelo)modelo);
-            if (!string.IsNullOrEmpty(error)) respuesta = error;
-            respuesta = $"{respuesta}{DobleLínea}{new string('_', 100)}" +
-                $"{DobleLínea}Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}" +
-                $"{(string.IsNullOrEmpty(detallesAdicionales) ? "" : DobleLínea + detallesAdicionales)}";
+
+            if (!string.IsNullOrEmpty(error)) {                
+                EscribirMultilíneaRojo(error);
+                respuesta = error;
+            }
             
+            var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
+            detallesAdicionales = (string.IsNullOrEmpty(detallesAdicionales) ? "" : DobleLínea + detallesAdicionales);
+            EscribirMultilíneaVerde(costoTókenes + detallesAdicionales);
+            Escribir("");
+
+            respuesta = $"{respuesta}{DobleLínea}{Separador}{DobleLínea}{costoTókenes}{detallesAdicionales}";
+
         } else {
             respuesta = errorInicio;
         }
@@ -102,9 +109,21 @@ internal class Demo {
         Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
-        var respuesta = servicio.Consulta(10, "Eres grosero y seco. Respondes displicentemente al usuario por no saber lo que preguntó.",
-            ref rellenoInstrucciónSistema, "Dime la hora en españa cuando en tagandamdapio son las 4 pm", out string error,
+        var instrucciónSistema = "Eres grosero y seco. Respondes displicentemente al usuario por no saber lo que preguntó.";
+        var instrucción = "Dime la hora en españa cuando en tagandamdapio son las 4 pm";
+        var consultasEnPocasHoras = 10;
+        var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error, 
             out Dictionary<string, Tókenes> tókenes);
+
+        Console.SetCursorPosition(0, Console.CursorTop);
+        EscribirSeparador();
+        EscribirMultilíneaGrisOscuro($"Sistema: {instrucciónSistema}");
+        EscribirSeparador();
+        EscribirMultilíneaGrisOscuro($"Usuario: {instrucción}");
+        EscribirSeparador();
+        EscribirMultilíneaGrisOscuro($"AI: {respuesta}");
+        EscribirSeparador();
+
         return (respuesta, tókenes, "", error);
 
     } // ConsultaTexto>

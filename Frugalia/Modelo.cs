@@ -99,6 +99,8 @@ namespace Frugalia {
 
         internal decimal FracciónDescuentoLecturaCachePorLote { get; } // Gemini y OpenAI no aplican descuento, pero Claude sí.
 
+        public string Descripción => $"{Familia} {Nombre}";
+
 
         internal Modelo(string nombre, Familia familia, decimal precioEntradaNoCaché, decimal precioEntradaCaché, decimal precioSalidaNoRazonamiento,
             decimal precioSalidaRazonamiento, decimal? precioEscrituraManualCachéRefrescablePor5Minutos, decimal? precioEscrituraManualCachéRefrescablePor60Minutos,

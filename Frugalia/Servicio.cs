@@ -59,6 +59,9 @@ namespace Frugalia {
 
         private bool Iniciado { get; }
 
+        public string Descripción => $"Modelo: {Modelo}, Lote: {Lote}, Razonamiento: {Razonamiento}, Verbosidad: {Verbosidad}, " +
+            $"Calidad Adaptable: {ModoCalidadAdaptable}, Restricción Razonamiento Alto: {RestricciónRazonamientoAlto}.";
+
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
             RestricciónRazonamiento restricciónRazonamientoAlto, TratamientoNegritas tratamientoNegritas, string claveAPI, out string error,

@@ -209,7 +209,7 @@ namespace Frugalia {
 
             }
 
-            return $"{texto}{Environment.NewLine}Total Todos: {FormatearMoneda(totalTodos)}";
+            return $"Costo:{Environment.NewLine}{texto}{Environment.NewLine}Total Todos: {FormatearMoneda(totalTodos)}";
 
         } // ObtenerTextoCostoTókenes>
 
