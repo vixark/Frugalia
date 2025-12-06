@@ -23,6 +23,7 @@
 //
 
 using static Frugalia.Global;
+using static Frugalia.Demo.Global;
 namespace Frugalia.Demo;
 
 
@@ -32,20 +33,20 @@ internal class Demo {
     static void Main() {
 
         Console.ForegroundColor = ConsoleColor.Magenta;
-        Console.WriteLine("");
-        Console.WriteLine("¡Hola soy el programa de pruebas de Frugalia!");
-        Console.WriteLine("");
+        Escribir("");
+        Escribir("¡Hola soy el programa de pruebas de Frugalia!");
+        Escribir("");
 
+        reiniciar:
         Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("Selecciona el número de demo a ejecutar:");
-        Console.WriteLine("1. Consulta de texto.");
-        Console.WriteLine("2. Consulta con archivos.");
-        Console.WriteLine("3. Consulta buscando en internet con error por Razonamiento = Ninguno.");
-        Console.WriteLine("4. Consulta usando funciones.");
-        Console.WriteLine("");
+        Escribir("Selecciona el número de demo a ejecutar:");
+        Escribir("1. Consulta de texto.");
+        Escribir("2. Consulta con archivos.");
+        Escribir("3. Consulta buscando en internet con error por Razonamiento = Ninguno.");
+        Escribir("4. Consulta usando funciones.");
+        Escribir("");    
+        var demoID = LeerNúmero();
         Console.ResetColor();
-        var input = Console.ReadLine();
-        int demoID = int.TryParse(input, out var id) ? id : 1;
 
         var respuesta = demoID switch {
             1 => Consultar(ConsultaTexto),
@@ -55,7 +56,14 @@ internal class Demo {
             _ => $"No se ha escrito código para la demo número {demoID}.",
         };
 
-        Console.WriteLine(respuesta);
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Escribir("");
+        EscribirMultilínea(respuesta);
+
+        Console.ForegroundColor = ConsoleColor.Magenta;
+        Escribir("Presiona enter para volver al menú de pruebas.");
+        Leer();
+        goto reiniciar;
 
     } // Main>
 
@@ -77,8 +85,9 @@ internal class Demo {
 
             (respuesta, var tókenes, var detallesAdicionales, var error) = consulta(servicio, (Modelo)modelo);
             if (!string.IsNullOrEmpty(error)) respuesta = error;
-            respuesta = $"Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}{Environment.NewLine}" +
-                $"{detallesAdicionales}{respuesta}{Environment.NewLine}";
+            respuesta = $"{respuesta}{DobleLínea}{new string('_', 100)}" +
+                $"{DobleLínea}Precio:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000)}" +
+                $"{(string.IsNullOrEmpty(detallesAdicionales) ? "" : DobleLínea + detallesAdicionales)}";
             
         } else {
             respuesta = errorInicio;

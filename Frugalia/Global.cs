@@ -129,16 +129,10 @@ namespace Frugalia {
         public static string LeerClave(string rutaArchivo, out string error) {
 
             error = null;
-            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) {
-                error = "No se encontró el archivo con la clave de la API.";
-                return null;
-            }
+            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) { error = "No se encontró el archivo con la clave de la API."; return null; }
 
             var contenido = File.ReadAllText(rutaArchivo).Trim();
-            if (string.IsNullOrWhiteSpace(contenido)) {
-                error = "El archivo de la API key está vacío.";
-                return null;
-            }
+            if (string.IsNullOrWhiteSpace(contenido)) { error = "El archivo de la API key está vacío."; return null; }
 
             return contenido;
 
@@ -321,6 +315,7 @@ namespace Frugalia {
             } else {
                 diccionario.Add(clave, tókenes);
             }
+
             return diccionario;
 
         } // AgregarSumando>
@@ -329,12 +324,14 @@ namespace Frugalia {
         internal static List<(string Nombre, string Valor)> ExtraerParámetros(JsonDocument json) {
 
             if (json == null) return new List<(string Nombre, string Valor)> { };
+
             var resultado = new List<(string Nombre, string Valor)>();
             foreach (var propiedad in json.RootElement.EnumerateObject()) {
                 var nombre = propiedad.Name.ToLowerInvariant();
                 var valor = ATexto(propiedad.Value);
                 resultado.Add((nombre, valor));
             }
+
             return resultado;
 
         } // ExtraerParámetros>

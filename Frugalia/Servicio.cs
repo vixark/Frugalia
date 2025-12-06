@@ -312,10 +312,7 @@ namespace Frugalia {
 
                 var carácteresFaltantes = carácteresObjetivo - instrucciónSistema.Length;
                 if (inicioRelleno.Length > carácteresFaltantes) {
-
-                    Suspender(); // Verificar cuando suceda.
                     rellenoInstrucciónSistema = inicioRelleno; // En estos casos se puede pasar un poco, pero no es grave. Se prefiere que este mensaje esté siempre completo para no confundir al modelo.
-
                 } else {
 
                     var carácteresFaltantesConLorem = carácteresObjetivo - instrucciónSistema.Length - inicioRelleno.Length;
@@ -422,12 +419,15 @@ namespace Frugalia {
                 }
 
                 var instruccionesOriginales = opciones.ObtenerInstrucciónSistema();
-                opciones.EscribirInstrucciónSistema(instruccionesOriginales.Replace(Fin, ".\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +
+                var instrucciónAutoevaluación = "\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +
                     "propia respuesta y en la última línea escribe exactamente una de estas etiquetas, sola, sin dar explicaciones de tu elección:\n\n" +
                     $"{LoHiceBien}\n{MedioRecomendado}\n{GrandeRecomendado}\n\nUsa:\n{LoHiceBien}: Si tu respuesta fue buena, tiene " +
                     $"sentido y es completa. Entendiste bien la consulta y es relativamente sencilla.\n{MedioRecomendado}: Si tu respuesta no fue " +
                     "buena en calidad, sentido o completitud, o si a la consulta le faltan detalles, contexto o no la entiendes bien.\n" +
-                    $"{GrandeRecomendado}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados{Fin}"));
+                    $"{GrandeRecomendado}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados.";
+                var nuevasInstruccionesSistema = instruccionesOriginales.Contains(Fin) ? instruccionesOriginales.Replace(Fin, $"{instrucciónAutoevaluación}{Fin}")
+                    : $"{instruccionesOriginales}.{instrucciónAutoevaluación}";
+                opciones.EscribirInstrucciónSistema(nuevasInstruccionesSistema);
 
                 var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes);
                 var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(TratamientoNegritas);
@@ -472,6 +472,7 @@ namespace Frugalia {
             respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
             respuestaTextoLimpio = modoCalidadAdaptable
                 ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(MedioRecomendado, "").Replace(GrandeRecomendado, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
+            respuestaTextoLimpio = respuestaTextoLimpio.TrimEnd();
             return respuesta;
 
         } // Responder>
@@ -488,20 +489,9 @@ namespace Frugalia {
             out string error, out Dictionary<string, Tókenes> tókenes, bool buscarEnInternet = false) {
 
             tókenes = new Dictionary<string, Tókenes>();
-            if (!Iniciado) {
-                error = "No se ha iniciado correctamente el servicio.";
-                return null;
-            }
-
-            if (consultasEnPocasHoras <= 0) {
-                error = "consultasEnPocasHoras debe ser mayor a 0.";
-                return null;
-            }
-
-            if (string.IsNullOrWhiteSpace(instrucción)) {
-                error = "La instrucción del usuario no puede ser vacía.";
-                return null;
-            }
+            if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
+            if (consultasEnPocasHoras <= 0) { error = "consultasEnPocasHoras debe ser mayor a 0."; return null; }
+            if (string.IsNullOrWhiteSpace(instrucción)) { error = "La instrucción del usuario no puede ser vacía."; return null; }
 
             if (instrucciónSistema == null) instrucciónSistema = "";
 
@@ -575,20 +565,9 @@ namespace Frugalia {
             List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo) {
 
             tókenes = new Dictionary<string, Tókenes>();
-            if (!Iniciado) {
-                error = "No se ha iniciado correctamente el servicio.";
-                return null;
-            }
-
-            if (consultasEnPocasHoras <= 0) {
-                error = "consultasEnPocasHoras debe ser mayor a 0.";
-                return null;
-            }
-
-            if (string.IsNullOrWhiteSpace(instrucción)) {
-                error = "La instrucción del usuario no puede ser vacía.";
-                return null;
-            }
+            if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
+            if (consultasEnPocasHoras <= 0) { error = "consultasEnPocasHoras debe ser mayor a 0."; return null; }
+            if (string.IsNullOrWhiteSpace(instrucción)) { error = "La instrucción del usuario no puede ser vacía."; return null; }
 
             if (instrucciónSistema == null) instrucciónSistema = "";
 
@@ -608,10 +587,7 @@ namespace Frugalia {
 
                 archivador = Cliente.ObtenerArchivador();
                 var conversaciónConArchivosYError = archivador.ObtenerConversaciónConArchivos(rutasArchivos, instrucción, tipoArchivo);
-                if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) {
-                    error = conversaciónConArchivosYError.Error;
-                    return null;
-                }
+                if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) { error = conversaciónConArchivosYError.Error; return null; }
 
                 var respuesta = Responder(instrucción: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
                     buscarEnInternet: false, funciones: null, out string respuestaTextoLimpio, ref tókenes);
@@ -648,35 +624,12 @@ namespace Frugalia {
 
             tókenes = new Dictionary<string, Tókenes>();
             funciónEjecutada = false;
-            if (!Iniciado) {
-                error = "No se ha iniciado correctamente el servicio.";
-                return null;
-            }
-
-            if (conversacionesEnPocasHoras <= 0) {
-                error = "conversacionesEnPocasHoras debe ser mayor a 0.";
-                return null;
-            }
-
-            if (instruccionesPorConversación <= 0) {
-                error = "instruccionesPorConversación debe ser mayor a 0.";
-                return null;
-            }
-
-            if (proporciónPrimerInstrucciónVsSiguientes <= 0) {
-                error = "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0.";
-                return null;
-            }
-
-            if (proporciónRespuestasVsInstrucciones < 0) {
-                error = "proporciónRespuestasVsInstrucciones no puede ser negativo.";
-                return null;
-            }
-
-            if (conversación == null) {
-                error = "No se permite pasar objeto conversación en nulo. ConsultaConFunciones() debe reusar la conversación para su correcto funcionamiento.";
-                return null;
-            }
+            if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
+            if (conversacionesEnPocasHoras <= 0) { error = "conversacionesEnPocasHoras debe ser mayor a 0."; return null; }
+            if (instruccionesPorConversación <= 0) { error = "instruccionesPorConversación debe ser mayor a 0."; return null; }
+            if (proporciónPrimerInstrucciónVsSiguientes <= 0) { error = "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0."; return null; }
+            if (proporciónRespuestasVsInstrucciones < 0) { error = "proporciónRespuestasVsInstrucciones no puede ser negativo."; return null; }
+            if (conversación == null) { error = "No se permite pasar objeto conversación en nulo. Se debe reusar la conversación."; return null; }
 
             if (instrucciónSistema == null) instrucciónSistema = "";
 

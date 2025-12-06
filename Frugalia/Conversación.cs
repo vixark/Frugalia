@@ -135,6 +135,7 @@ namespace Frugalia {
                         }
 
                     }
+
                     return textosInstrucciones;
 
                 };
@@ -171,6 +172,7 @@ namespace Frugalia {
                     totalCarácteres += t?.Length ?? 0;
                 }                    
             }
+
             return totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos;
 
         } // EstimarTókenesTotales>

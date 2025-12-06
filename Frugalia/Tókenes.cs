@@ -204,12 +204,12 @@ namespace Frugalia {
                        $"{clave}: {tókenes.SalidaRazonamiento} tókenes de salida razonamiento a {FormatearMoneda(pesosRazonamiento)}" + Environment.NewLine +
                        $"{clave}: {tókenes.EscrituraManualCaché} tókenes de escritura manual en caché por {tókenes.MinutosEscrituraManualCaché} minutos " +
                        $"a {FormatearMoneda(pesosEscrituraManualCaché)}" + Environment.NewLine +
-                       $"Total {clave}: {FormatearMoneda(totalPesos)}" + Environment.NewLine;
+                       $"{clave}: Total {FormatearMoneda(totalPesos)}" + Environment.NewLine;
                 }
 
             }
 
-            return $"{texto}{Environment.NewLine}Total Todos:{FormatearMoneda(totalTodos)}";
+            return $"{texto}{Environment.NewLine}Total Todos: {FormatearMoneda(totalTodos)}";
 
         } // ObtenerTextoCostoTókenes>
 

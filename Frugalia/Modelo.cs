@@ -141,8 +141,7 @@ namespace Frugalia {
         } // ObtenerModelo>
 
 
-        internal static double ObtenerFactorDescuentoCaché(Modelo modelo) 
-            => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
+        internal static double ObtenerFactorDescuentoCaché(Modelo modelo) => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
 
 
         internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento) {
@@ -154,7 +153,7 @@ namespace Frugalia {
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
             var modeloMejorado = ObtenerModelo(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
             if (modeloMejorado == null && nivelesMejoramiento == 2) {
-                nivelesMejoramiento = 1; // Si no hay un modelo 2 niveles superior, se usa el que es un nivel superior.
+                nivelesMejoramiento = 1; // Si no hay un modelo dos niveles superior, se usa el que es un nivel superior.
                 goto reintentar;
             }
 
