@@ -47,7 +47,7 @@ internal class Demo {
         var demoID = LeerNúmero();
         if (demoID == 0) goto reiniciar;
 
-        _ = demoID switch {
+        _ = demoID switch { // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
             1 => Consultar(ConsultaTexto),
             2 => Consultar(ConsultaConArchivos),
             3 => Consultar(ConsultaBuscandoEnInternet),
@@ -67,16 +67,24 @@ internal class Demo {
         (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetallesAdicionales, string Error)> consulta) {
 
         var modelo = Modelo.ObtenerModelo("gpt-5.1");
-        if (modelo == null) return "El modelo no está disponible.";
+        if (modelo == null) {
+            var noDisponibleModelo = "El modelo no está disponible.";
+            EscribirMultilíneaRojo(noDisponibleModelo);
+            return noDisponibleModelo;
+        }
 
         var claveAPI = LeerClave(@"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt", out string errorClaveAPI);
-        if (!string.IsNullOrEmpty(errorClaveAPI)) return errorClaveAPI;
+        if (!string.IsNullOrEmpty(errorClaveAPI)) {
+            EscribirMultilíneaRojo(errorClaveAPI);
+            return errorClaveAPI;
+        }
 
         var servicio = new Servicio(((Modelo)modelo).Nombre, lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
             RestricciónRazonamiento.ModelosMuyPequeños, TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
 
         Escribir("");
-        EscribirMultilíneaCianOscuro($"Iniciando consulta con {servicio.Descripción}");
+        var parámetros = $"Iniciando consulta con {servicio.Descripción}";
+        EscribirMultilíneaCianOscuro(parámetros);
         Console.SetCursorPosition(3, Console.CursorTop);
 
         string respuesta;
@@ -87,16 +95,19 @@ internal class Demo {
             if (!string.IsNullOrEmpty(error)) {                
                 EscribirMultilíneaRojo(error);
                 respuesta = error;
+            } else {
+
+                var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
+                detallesAdicionales = (string.IsNullOrEmpty(detallesAdicionales) ? "" : DobleLínea + detallesAdicionales);
+                EscribirMultilíneaVerde(costoTókenes + detallesAdicionales);                
+                respuesta = $"{parámetros}{DobleLínea}{respuesta}{Environment.NewLine}{Separador}{Environment.NewLine}{costoTókenes}{detallesAdicionales}";
+
             }
-            
-            var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
-            detallesAdicionales = (string.IsNullOrEmpty(detallesAdicionales) ? "" : DobleLínea + detallesAdicionales);
-            EscribirMultilíneaVerde(costoTókenes + detallesAdicionales);
+
             Escribir("");
 
-            respuesta = $"{respuesta}{DobleLínea}{Separador}{DobleLínea}{costoTókenes}{detallesAdicionales}";
-
         } else {
+            EscribirMultilíneaRojo(errorInicio);
             respuesta = errorInicio;
         }
 
