@@ -45,15 +45,30 @@ internal static class Global {
 
     internal static void EstablecerAltoVentana(int líneasVerticales = 60) {
 
-        try { 
-            #if WINDOWS
-                Console.WindowHeight = líneasVerticales; // Se quería también establecer la posición de la ventana en Windows, pero fue un lio que no se pudo solucionar porque sacaba error con la recarga activa del depurador.
-            #endif
+        if (!OperatingSystem.IsWindows()) return;
+
+        try {
+            Console.WindowHeight = líneasVerticales; // Se quería también establecer la posición de la ventana en Windows, pero fue un lio que no se pudo solucionar porque sacaba error con la recarga activa del depurador.
         } catch {
             // Solo para mi computador, en otros es posible que no funcione. No importa.
         }
 
     } // EstablecerAltoVentana>
+
+
+    internal static void DesplazarContenidoHaciaArriba(int líneasVisibles = 2) {
+
+        if (!OperatingSystem.IsWindows()) return;
+
+        if (Console.BufferHeight < Console.WindowHeight) Console.BufferHeight = Console.WindowHeight;
+        var líneaCursor = Console.CursorTop;
+        var topDeseado = líneaCursor - líneasVisibles;
+        if (topDeseado < 0) topDeseado = 0;
+        var topMáximo = Console.BufferHeight - Console.WindowHeight;
+        if (topDeseado > topMáximo) topDeseado = topMáximo;
+        Console.SetWindowPosition(0, topDeseado);
+
+    } // DesplazarContenidoHaciaArriba>
 
 
     internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? instrucción, string? respuesta, string? archivo) {

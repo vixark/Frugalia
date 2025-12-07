@@ -48,11 +48,22 @@ namespace Frugalia {
 
         internal void EscribirInstrucciónSistema(string instrucciónSistema) => AcciónEscribirInstrucciónSistema(instrucciónSistema);
 
-        private Action<Razonamiento, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int> AcciónEscribirOpcionesRazonamiento { get; }
+        private Action<int> AcciónEscribirMáximosTókenesSalida { get; }
+
+        internal void EscribirMáximosTókenesSalida(int máximosTókenesSalida) => AcciónEscribirMáximosTókenesSalida(máximosTókenesSalida);
+
+        private Func<Razonamiento, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, string> 
+            FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
 
         internal void EscribirOpcionesRazonamiento(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil)
-                => AcciónEscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, ref string información) {
+
+            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamiento, restricciónRazonamientoAlto, 
+                restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
+            if (!string.IsNullOrEmpty(informaciónOpcionesRazonamiento))
+                información += $"{informaciónOpcionesRazonamiento.TrimEnd()}{Environment.NewLine}";
+
+        } // EscribirOpcionesRazonamiento>
 
         private Func<string> FunciónObtenerInstrucciónSistema { get; }
 
@@ -61,7 +72,7 @@ namespace Frugalia {
 
         internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento,
             RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, int largoInstrucciónÚtil,
-            int máximosTókenesSalida, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones) {
+            int máximosTókenesSalida, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref string información) {
 
             Familia = familia;
             switch (Familia) {
@@ -71,10 +82,12 @@ namespace Frugalia {
 
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
-                AcciónEscribirOpcionesRazonamiento = (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, largoInstrucciónÚtil2) => {
+                FunciónEscribirOpcionesRazonamientoYObtenerInformación = 
+                    (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, largoInstrucciónÚtil2) => {
 
+                    var información2 = "";
                     var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
-                        modelo2, largoInstrucciónÚtil2);
+                        modelo2, largoInstrucciónÚtil2, ref información2);
 
                     var nombreModeloMinúsculas = modelo2.Nombre.ToLowerInvariant();
 
@@ -114,13 +127,18 @@ namespace Frugalia {
 
                     }
 
+                    return información2;
+
                 };
+    
+                AcciónEscribirMáximosTókenesSalida = máximos => OpcionesGPT.MaxOutputTokenCount = máximos;
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
+                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil, ref información);
+   
+                EscribirMáximosTókenesSalida(máximosTókenesSalida);
 
-                OpcionesGPT.MaxOutputTokenCount = máximosTókenesSalida;
                 var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
                 if (modelosSinVerbosidad.Contains(modelo.Nombre.ToLowerInvariant())) {
                     if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {modelo} no soporta configuración de la verbosidad.");

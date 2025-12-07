@@ -22,6 +22,7 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
+using System.Diagnostics;
 using static Frugalia.Demostración.Global;
 using static Frugalia.Global;
 namespace Frugalia.Demostración;
@@ -30,49 +31,88 @@ namespace Frugalia.Demostración;
 internal class Demostración {
 
 
+    internal static readonly Dictionary<int, string> Demostraciones = new() {
+        { 1, "Consulta de texto media complejidad con gpt-5.1." },
+        { 2, "Consulta de texto media complejidad con gpt-5-mini." },
+        { 3, "Consulta de texto media complejidad con gpt-5-nano." },
+        { 4, "Consulta de texto alta complejidad legal con gpt-5-mini." },
+        { 5, "Consulta de texto alta complejidad legal con gpt-5-nano." },
+        { 6, "Consulta de texto alta complejidad matemática con gpt-5-nano." },
+        { 7, "Consulta de texto baja complejidad con gpt-5-mini." },
+        { 8, "Consulta de texto baja complejidad con gpt-5-nano." },
+        { 9, "Consulta con archivos." },
+        { 10, "Consulta buscando en internet con error por Razonamiento = Ninguno." },
+        { 11, "Consulta usando funciones." }
+    };
+
+
     static void Main() {
 
         EstablecerAltoVentana();
 
-        EscribirVerde(""); // Rojo: errores, magenta: mensajes del programa, verde: información de costos, cian oscuro: información de parametros y gris oscuro: instrucciones y respuestas del modelo.
+        EscribirVerde(""); // Rojo: errores. Magenta: mensajes del programa importantes para el funcionamiento. Verde: información de costos. Cian oscuro: información de parametros. Gris oscuro: instrucciones y respuestas del modelo.
         EscribirVerde("¡Hola soy el programa de demostración de Frugalia!");
         EscribirVerde("");
 
         reiniciar:
-        EscribirMagenta("Selecciona el número de demostración a ejecutar:");
-        EscribirMagenta("1. Consulta de texto con gpt-5.1.");
-        EscribirMagenta("2. Consulta de texto con gpt-5-mini.");
-        EscribirMagenta("3. Consulta de texto con gpt-5-nano.");
-        EscribirMagenta("4. Consulta con archivos.");
-        EscribirMagenta("5. Consulta buscando en internet con error por Razonamiento = Ninguno.");
-        EscribirMagenta("6. Consulta usando funciones.");
+        for (var i = 1; i <= Demostraciones.Count; i++) {
+            EscribirMagenta($"{i}. {Demostraciones[i]}");
+        }
         EscribirMagenta("");
 
-        var demostraciónID = LeerNúmero();
-        if (demostraciónID <= 0) goto reiniciar;
+        var númeroDemostración = LeerNúmero();       
+        if (númeroDemostración <= 0) goto reiniciar;
 
-        _ = demostraciónID switch { // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
-            1 => Consultar(ConsultaTexto, "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
-            2 => Consultar(ConsultaTexto, "gpt-5-mini", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
-            3 => Consultar(ConsultaTexto, "gpt-5-nano", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
-            4 => Consultar(ConsultaConArchivos, "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
-            5 => Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
-            6 => Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false),
-                "gpt-5.1", lote: false, Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento),
-            _ => $"No se ha escrito código para la demostración número {demostraciónID}.",
+        reiniciarConNúmero:
+        _ = númeroDemostración switch { // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
+            1 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.1", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,                
+                númeroDemostración, lote: false),
+            2 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false),
+            3 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false),
+            4 => Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.NingunoOMayor, Verbosidad.Media, CalidadAdaptable.MejorarRazonamiento,
+                númeroDemostración, lote: false),
+            5 => Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Media, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false, RestricciónMáximosTókenesSalida.Baja),
+            6 => Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Media, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false), // Se encontró nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
+            7 => Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false),
+            8 => Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false),
+            9 => Consultar(ConsultaConArchivos, "gpt-5.1", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false),
+            10 => Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración, lote: false),
+            11 => Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false),
+                "gpt-5.1", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
+                númeroDemostración, lote: false),
+            _ => $"No se ha escrito código para la demostración número {númeroDemostración}.",
         };
 
-        EscribirMagenta("Presiona enter para volver al menú de demostraciones.");
+        EscribirMagenta("Presiona enter para volver al menú de demostraciones o el número de demostración para ejecutarla:");
         Escribir("");
-        Leer();
-        goto reiniciar;
+
+        var númeroDemostración2 = LeerNúmero();
+        DesplazarContenidoHaciaArriba();
+        if (númeroDemostración2 >= 1) {
+            númeroDemostración = númeroDemostración2;
+            goto reiniciarConNúmero;
+        } else {
+            goto reiniciar;
+        }                  
 
     } // Main>
 
 
-    internal static string Consultar(Func<Servicio, Modelo, (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, 
-        string Información)> consulta, string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
-        RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosMuyPequeños) {
+    internal static string Consultar(Func<Servicio, Modelo, 
+        (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado resultado)> consulta, 
+        string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
+        int númeroDemostración, bool lote, RestricciónMáximosTókenesSalida restricciónMáximosTókenesSalida = RestricciónMáximosTókenesSalida.Alta) {
+
+        var temporizador = new Stopwatch();
+        temporizador.Start();
 
         var modelo = Modelo.ObtenerModelo(nombreModelo);
         if (modelo == null) {
@@ -87,27 +127,33 @@ internal class Demostración {
             return errorClaveAPI;
         }
 
-        var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, modoCalidadAdaptable, restricciónRazonamientoAlto,
-            TratamientoNegritas.Eliminar, claveAPI, out string errorInicio);
+        var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, modoCalidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
+            out string errorInicio, restricciónMáximosTókenesSalida: restricciónMáximosTókenesSalida);
 
         Escribir("");
-        var parámetros = $"Iniciando {consulta.Method.Name}() con {servicio.Descripción}";
+        var parámetros = $"Iniciando {Demostraciones[númeroDemostración].ToLower()} con {servicio.Descripción}";
         EscribirMultilíneaCianOscuro(parámetros);
         Console.SetCursorPosition(3, Console.CursorTop);
 
         string respuesta;
         if (string.IsNullOrEmpty(errorInicio)) {
 
-            (respuesta, var tókenes, var detalleCosto, var error, var información) = consulta(servicio, (Modelo)modelo);
+            (respuesta, var tókenes, var detalleCosto, var error, var información, var resultado) = consulta(servicio, (Modelo)modelo);
 
             if (!string.IsNullOrEmpty(error)) {
+
                 EscribirMultilíneaRojo(error);
                 respuesta = error;
+
             } else {
+
+                temporizador.Stop();
+                var tiempo = temporizador.Elapsed;
+                var detalleTiempo = $"Tiempo consulta: {tiempo.Minutes} minutos {tiempo.Seconds} segundos.";
 
                 var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
                 detalleCosto = (string.IsNullOrEmpty(detalleCosto) ? "" : DobleLínea + detalleCosto);
-                EscribirMultilíneaVerde(costoTókenes + detalleCosto);
+                EscribirMultilíneaVerde($"{costoTókenes}{detalleCosto}{DobleLínea}{detalleTiempo}");
                 EscribirSeparador();
 
                 if (!string.IsNullOrEmpty(información)) {
@@ -117,6 +163,11 @@ internal class Demostración {
 
                 respuesta = $"{parámetros}{DobleLínea}{respuesta}{DobleLínea}{costoTókenes}{detalleCosto}";
 
+            }
+
+            if (resultado != Resultado.Respondido) {
+                EscribirMultilíneaRojo($"Resultado: {resultado}");
+                EscribirSeparador();
             }
 
             Escribir("");
@@ -131,26 +182,41 @@ internal class Demostración {
     } // Consultar>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
-        ConsultaTexto(Servicio servicio, Modelo modelo) {
+    #pragma warning disable IDE0060 // Quitar el parámetro no utilizado
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado)
+        ConsultaTexto(Servicio servicio, Modelo modelo, int dificultadInstrucción) {
+    #pragma warning restore IDE0060 // Quitar el parámetro no utilizado
 
         var rellenoInstrucciónSistema = "";
         var instrucciónSistema = "Eres grosero y seco. Respondes displicentemente al usuario por no saber lo que preguntó.";
-        var instrucción = "Dime la hora en españa cuando en tagandamdapio son las 4 pm";
+
+        var instrucción = dificultadInstrucción switch {
+            1 => "¿Cuánto es 1 + 1?",
+            2 => "Dime la hora en españa cuando en tagandamdapio son las 4 pm",
+            3 => "Analiza y compara las implicaciones fiscales en IVA, retención en la fuente y precios de transferencia para una multinacional del sector " +
+            "tecnológico que opera en Colombia, México, Brasil y España, considerando los convenios para evitar la doble imposición y las normas BEPS. " +
+            "Propón una estructura óptima de facturación intercompany y repatriación de utilidades que minimice la carga fiscal sin incumplir ninguna " +
+            "regulación local ni internacional. Quiero un resumen ejecutivo de un solo parrafo por el momento.",
+            4 => "Calcula el determinante exacto de la matriz 5×5 con filas: Fila 1: 2, -1, 3, 0, 4; Fila 2: -2, 5, 1, -3, 2; Fila 3: 1, 0, -4, 2, -1; " +
+            "Fila 4: 3, -2, 0, 1, 5; Fila 5: 0, 4, -1, -2, 3; responde en una sola línea dando solo el número entero resultado, y si no " +
+            "puedes estar 100% seguro responde exactamente",
+            _ => throw new NotImplementedException(),
+        };
+
         var consultasEnPocasHoras = 10;
 
         var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error,
-            out Dictionary<string, Tókenes> tókenes, out string información);
+            out Dictionary<string, Tókenes> tókenes, out string información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: null);
         EscribirSeparador();
 
-        return (respuesta, tókenes, "", error, información);
+        return (respuesta, tókenes, "", error, información, resultado);
 
     } // ConsultaTexto>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado)
         ConsultaConArchivos(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
@@ -161,29 +227,30 @@ internal class Demostración {
         var tipoArchivo = TipoArchivo.Imagen;
 
         var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, archivos, out string error,
-            out Dictionary<string, Tókenes> tókenes, tipoArchivo, out string información);
+            out Dictionary<string, Tókenes> tókenes, tipoArchivo, out string información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: $"{tipoArchivo}: {archivos[0]}");
         EscribirSeparador();
 
-        return (respuesta, tókenes, "", error, información);
+        return (respuesta, tókenes, "", error, información, resultado);
 
     } // ConsultaConArchivos>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado) 
         ConsultaBuscandoEnInternet(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
         var respuesta = servicio.Consulta(10, "Eres un investigador de mercado de productos de consumo diario en Colombia", ref rellenoInstrucciónSistema,
             "¿La marca Boggy existe? Sí existe, dame fuentes de su existencia", out string error, out Dictionary<string, Tókenes> tókenes,
-            out string información, buscarEnInternet: true);
-        return (respuesta, tókenes, "", error, información);
+            out string información, out Resultado resultado, buscarEnInternet: true);
+        return (respuesta, tókenes, "", error, información, resultado);
 
     } // ConsultaBuscandoEnInternet>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información) 
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado) 
         ConsultaUsandoFunciones(Servicio servicio, Modelo modelo, bool usarInstrucciónMuyLarga, bool usarInstrucciónSistemaMuyLarga) {
 
         var instrucción = "Hola, estoy interesado en conocer el precio de un accesorio Ala para el avión F40.";
@@ -208,6 +275,7 @@ internal class Demostración {
         var separadorMensajes = $"{Environment.NewLine}--------------------------------------------------------{Environment.NewLine}";
         var númeroAleatorio = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en llamadas siguientes porque se cambia la instrucción de sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
         var rellenoInstrucciónSistema = "";
+        var resultado = Resultado.Respondido;
 
         continuarConversación:
 
@@ -335,8 +403,10 @@ internal class Demostración {
             [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
                 [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
             out string error, out Dictionary<string, Tókenes> tókenesConsulta, instruccionesPorConversación: 6, proporciónPrimerInstrucciónVsSiguientes: 3,
-            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out string informaciónConsulta) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
+            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out string informaciónConsulta, out Resultado resultadoConsulta) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
 
+        if (resultado == Resultado.Respondido && resultadoConsulta != Resultado.Respondido) resultado = resultadoConsulta; // Al primer resultado diferente de Respondido se queda con ese para reportar el resumen de este procedimiento. Si bien no es estrictamente correcto, sirve para fines de prueba poder registrar la aparición de un caso problemático en toda la conversación, así existan otros.
+     
         información += $"{informaciónConsulta}{Environment.NewLine}";
 
         var contadorTókenesConsulta = 1;
@@ -376,7 +446,7 @@ internal class Demostración {
             : $"Relleno de instrucción de sistema para forzar el uso de la caché de {rellenoInstrucciónSistema.Length} carácteres.{DobleLínea}";
         var detalleCosto = $"{detalleAñadidoPrecio}{detalleTókenes}";
 
-        return (respuesta, tókenes, detalleCosto, error, información);
+        return (respuesta, tókenes, detalleCosto, error, información, resultado);
 
     } // ConsultaUsandoFunciones>
 

@@ -146,15 +146,17 @@ namespace Frugalia {
         internal static double ObtenerFactorDescuentoCaché(Modelo modelo) => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
 
 
-        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento) {
+        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento, ref string información) {
 
-            if (nivelesMejoramiento <= 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
+            if (nivelesMejoramiento == 0) return modeloOriginal;
+            if (nivelesMejoramiento < 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
  
             reintentar:
             var nombreModeloMejorado = nivelesMejoramiento == 2 ? modeloOriginal.NombreModelo2NivelesSuperior : modeloOriginal.NombreModelo1NivelSuperior;
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
             var modeloMejorado = ObtenerModelo(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
             if (modeloMejorado == null && nivelesMejoramiento == 2) {
+                información += $"No se encontró un modelo dos niveles superior a {modeloOriginal}, se usó un modelo un nivel superior.{Environment.NewLine}";
                 nivelesMejoramiento = 1; // Si no hay un modelo dos niveles superior, se usa el que es un nivel superior.
                 goto reintentar;
             }
@@ -172,6 +174,21 @@ namespace Frugalia {
             }
 
         } // ObtenerModeloMejorado>
+
+
+        internal Tamaño ObtenerTamaño() {
+
+            if (!string.IsNullOrEmpty(NombreModelo3NivelesSuperior)) {
+                return Tamaño.MuyPequeño;
+            } else if (!string.IsNullOrEmpty(NombreModelo2NivelesSuperior)) {
+                return Tamaño.Pequeño;
+            } else if (!string.IsNullOrEmpty(NombreModelo1NivelSuperior)) {
+                return Tamaño.Medio;
+            } else {
+                return Tamaño.Grande;
+            }
+
+        } // ObtenerTamaño>
 
 
     } // Modelo>

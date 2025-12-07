@@ -39,7 +39,12 @@ namespace Frugalia {
 
     public enum Verbosidad { Baja, Media, Alta }
 
-    public enum CalidadAdaptable { Ninguna, MejorarModelo, MejorarModeloYRazonamiento }; // Si se usa un modo de calidad adaptable, el modelo contestará con alguno de estos textos [LoHiceBien], [ModeloMedioRecomendado] o [ModeloGrandeRecomendado]. Si se tiene el modo MejorarModelo se realizará nuevamente la consulta usando un modelo inmediatamente superior al actual (si es posible). Si se tiene el modo MejorarModeloYRazonamiento se mejora tanto el modelo como el razonamiento (si es posible). Si responde  [ModeloGrandeRecomendado] se hacen dos incrementos de nivel de golpe.
+    public enum CalidadAdaptable {  // Si se usa un modo de calidad adaptable, el modelo contestará con alguno de estos textos [LoHiceBien], [ModeloMedioRecomendado] o [ModeloGrandeRecomendado]. Si se tiene el modo MejorarModelo se realizará nuevamente la consulta usando un modelo inmediatamente superior al actual (si es posible). Si se tiene el modo MejorarModeloYRazonamiento se mejora tanto el modelo como el razonamiento (si es posible). Si responde  [ModeloGrandeRecomendado] se hacen dos incrementos de nivel de golpe.
+        Ninguna, 
+        MejorarModelo, 
+        MejorarRazonamiento,
+        MejorarModeloYRazonamiento 
+    };
 
     public enum RestricciónRazonamiento { // Al cambiar de gpt-5.1 a gpt-5-nano manteniendo Razonamiento = Alto en un experimento se disparó la cantidad de tókenes de salida, incluso con respuestas muy cortas, y la calidad fue peor. Esto pasa porque el razonamiento genera muchos pasos de pensamiento internos (tókenes ocultos pero facturados). En modelos muy pequeños como nano, el modelo necesita más pasos para llegar a la misma conclusión, gastando muchos tókenes y contrarrestando en parte el ahorro esperado por el menor precio del modelo. Por eso, para gpt-5-nano se debe considerar restringir el razonamiento alto.
         Ninguna,
@@ -67,6 +72,22 @@ namespace Frugalia {
         GLM // Familia de Zhipu, centrada en razonamiento y agentes, alternativa china de bajo costo.
     }
 
+    public enum Resultado {
+        Respondido,
+        Abortado,        
+        MáximosTókenesAlcanzados,
+        MáximasIteracionesConFunción,
+        SinAutoevaluación,
+        OtroError
+    }
+
+    public enum RestricciónMáximosTókenesSalida {
+        Alta,
+        Media,
+        Baja,
+        Ninguna
+    }
+
     public enum TratamientoNegritas {
         Ninguno, // Mantiene el formato de negritas que devuelve el modelo. Por ejemplo en el caso de ChatGPT mantiene los dobles asteriscos: **negrita**.
         Eliminar,
@@ -88,9 +109,9 @@ namespace Frugalia {
 
         internal const string LoHiceBien = "[lo-hice-bien]";
 
-        internal const string MedioRecomendado = "[modelo-medio-recomendado]";
+        internal const string UsaModeloMejor = "[usa-modelo-mejor]";
 
-        internal const string GrandeRecomendado = "[modelo-grande-recomendado]";
+        internal const string UsaModeloMuchoMejor = "[usa-modelo-mucho-mejor]";
 
         internal const string Deshabilitado = "[deshabilitado]";
 
@@ -144,8 +165,8 @@ namespace Frugalia {
 
 
         internal static double EstimarTókenesEntradaInstrucciones(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema)
-            => (instrucción?.Length ?? 0) / CarácteresPorTokenConversaciónTípicos 
-                + Math.Max((instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0) / CarácteresPorTokenInstrucciónSistemaTípicos 
+            => (instrucción?.Length ?? 0) / CarácteresPorTokenConversaciónTípicos
+                + Math.Max((instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0) / CarácteresPorTokenInstrucciónSistemaTípicos
                 + (rellenoInstrucciónSistema?.Length ?? 0) / CarácteresPorTokenRellenoMáximos;
 
 
@@ -176,77 +197,87 @@ namespace Frugalia {
         } // Reemplazar>
 
 
-        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento) {
+        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento, ref string información) {
 
             if (nivelesMejoramiento <= 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
+            
+            Razonamiento nuevoRazonamiento;
 
             if (nivelesMejoramiento == 1) {
 
                 switch (razonamiento) {
                 case Razonamiento.Ninguno:
-                    return Razonamiento.Bajo;
+                    nuevoRazonamiento = Razonamiento.Bajo;
+                    break;
                 case Razonamiento.Bajo:
-                    return Razonamiento.Medio;
+                    nuevoRazonamiento = Razonamiento.Medio;
+                    break;
                 case Razonamiento.Medio:
-                    return Razonamiento.Alto;
+                    nuevoRazonamiento = Razonamiento.Alto;
+                    break;
                 case Razonamiento.Alto:
-                    return Razonamiento.Alto; // Permanece igual.
+                    nuevoRazonamiento = Razonamiento.Alto;  // Permanece igual.
+                    break;
                 case Razonamiento.NingunoOMayor:
-                    return Razonamiento.BajoOMayor;
+                    nuevoRazonamiento = Razonamiento.BajoOMayor;
+                    break;
                 case Razonamiento.BajoOMayor:
-                    return Razonamiento.MedioOMayor;
+                    nuevoRazonamiento = Razonamiento.MedioOMayor;
+                    break;
                 case Razonamiento.MedioOMayor:
-                    return Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    nuevoRazonamiento = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
                 }
 
-            } else { // Caso 2.
+
+            } else { // nivelesMejoramiento == 2.
 
                 switch (razonamiento) {
                 case Razonamiento.Ninguno:
-                    return Razonamiento.Medio;
+                    nuevoRazonamiento = Razonamiento.Medio;
+                    break;
                 case Razonamiento.Bajo:
-                    return Razonamiento.Alto;
+                    nuevoRazonamiento = Razonamiento.Alto;
+                    break;
                 case Razonamiento.Medio:
-                    return Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    nuevoRazonamiento = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    break;
                 case Razonamiento.Alto:
-                    return Razonamiento.Alto; // Permanece igual.
+                    nuevoRazonamiento = Razonamiento.Alto; // Permanece igual.
+                    break;
                 case Razonamiento.NingunoOMayor:
-                    return Razonamiento.MedioOMayor;
+                    nuevoRazonamiento = Razonamiento.MedioOMayor;
+                    break;
                 case Razonamiento.BajoOMayor:
-                    return Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    nuevoRazonamiento = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    break;
                 case Razonamiento.MedioOMayor:
-                    return Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    nuevoRazonamiento = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
                 }
 
             }
+
+            if (razonamiento != nuevoRazonamiento) {
+                información += $"Se cambió el razonamiento un nivel desde {razonamiento} hasta {nuevoRazonamiento}.{Environment.NewLine}";
+            } else {
+                información += $"No se cambió el razonamiento {razonamiento}.{Environment.NewLine}";
+            }
+
+            return nuevoRazonamiento;
 
         } // ObtenerRazonamientoMejorado>
 
 
-        internal static Tamaño ObtenerTamaño(Modelo modelo) {
-
-            if (!string.IsNullOrEmpty(modelo.NombreModelo3NivelesSuperior)) {
-                return Tamaño.MuyPequeño;
-            } else if (!string.IsNullOrEmpty(modelo.NombreModelo2NivelesSuperior)) {
-                return Tamaño.Pequeño;
-            } else if (!string.IsNullOrEmpty(modelo.NombreModelo1NivelSuperior)) {
-                return Tamaño.Medio;
-            } else {
-                return Tamaño.Grande;
-            }
-
-        } // ObtenerTamaño>
-
-
         public static Razonamiento ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil) {
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, ref string información) {
 
-            var largoLímite1 = 500; // Aproximadamente 166 tókenes. Los límites de 500 y 2000 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
-            var largoLímite2 = 2000; // Aproximadamente 666 tokenes.
+            var largoLímite1 = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
+            var largoLímite2 = 2400; // Aproximadamente 800 tokenes.
 
             var razonamientoEfectivo = razonamiento; // Se hace esta copia porque se reescribirá en esta función.
             if (razonamientoEfectivo == Razonamiento.NingunoOMayor) {
@@ -279,14 +310,15 @@ namespace Frugalia {
 
             }
 
-            var tamaño = ObtenerTamaño(modelo);
+            var tamaño = modelo.ObtenerTamaño();
+            var aplicadaRestricción = false;
 
             if (razonamientoEfectivo == Razonamiento.Alto && restricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna) {
 
                 if (restricciónRazonamientoAlto == RestricciónRazonamiento.ModelosPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) razonamientoEfectivo = Razonamiento.Medio;
+                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Medio; }
                 } else if (restricciónRazonamientoAlto == RestricciónRazonamiento.ModelosMuyPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño) razonamientoEfectivo = Razonamiento.Medio;
+                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Medio; }
                 }
 
             }
@@ -294,12 +326,16 @@ namespace Frugalia {
             if (razonamientoEfectivo == Razonamiento.Medio && restricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna) { // Se debe poner después de la revisión de razonamiento Alto porque es posible que tenga doble restricción, entonces el anterior código lo pasa a razonamiento medio y el siguiente verifica si se debe pasar a razonamiento bajo.
 
                 if (restricciónRazonamientoMedio == RestricciónRazonamiento.ModelosPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) razonamientoEfectivo = Razonamiento.Bajo;
+                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Bajo; }
                 } else if (restricciónRazonamientoMedio == RestricciónRazonamiento.ModelosMuyPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño) razonamientoEfectivo = Razonamiento.Bajo;
+                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Bajo; }
                 }
 
             }
+
+            if (razonamiento != razonamientoEfectivo)
+                información += $"Razonamiento efectivo: {razonamientoEfectivo}, Razonamiento Original: {razonamiento}, " +
+                    $"Largo instrucción útil: {largoInstrucciónÚtil}{(aplicadaRestricción ? ", Aplicada restricción de razonamiento" : "")}.{Environment.NewLine}";
 
             return razonamientoEfectivo;
 

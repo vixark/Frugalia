@@ -42,9 +42,9 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Func<string, Conversación, Opciones, Modelo, bool, (Respuesta, Tókenes)> FunciónObtenerRespuesta { get; }
+        private Func<string, Conversación, Opciones, Modelo, bool, (Respuesta, Tókenes, Resultado)> FunciónObtenerRespuesta { get; }
 
-        internal (Respuesta, Tókenes) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, bool lote)
+        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, bool lote)
             => FunciónObtenerRespuesta(instrucción, conversación, opciones, modelo, lote);
 
         private Func<Archivador> FunciónObtenerArchivador { get; }
@@ -80,8 +80,12 @@ namespace Frugalia {
                         tókenes = new Tókenes(modelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
                             respuestaGPT.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGPT.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
                     }
-                        
-                    return (new Respuesta(respuestaGPT), tókenes);
+
+                    var resultado = Resultado.Respondido;
+                    if (respuestaGPT?.IncompleteStatusDetails?.Reason.Value.ToString() == "max_output_tokens")
+                        resultado = Resultado.MáximosTókenesAlcanzados;
+
+                    return (new Respuesta(respuestaGPT), tókenes, resultado);
 
                 };
 

@@ -47,6 +47,8 @@ namespace Frugalia {
 
         public RestricciónRazonamiento RestricciónRazonamientoMedio { get; }
 
+        public RestricciónMáximosTókenesSalida RestricciónMáximosTókenesSalida { get; }
+
         public Verbosidad Verbosidad { get; }
 
         public CalidadAdaptable ModoCalidadAdaptable { get; }
@@ -59,13 +61,16 @@ namespace Frugalia {
 
         private bool Iniciado { get; }
 
-        public string Descripción => $"Modelo: {Modelo}, Lote: {Lote}, Razonamiento: {Razonamiento}, Verbosidad: {Verbosidad}, " +
-            $"Calidad Adaptable: {ModoCalidadAdaptable}, Restricción Razonamiento Alto: {RestricciónRazonamientoAlto}.";
+        public string Descripción => $"Modelo: {Modelo}. Lote: {Lote}. Razonamiento: {Razonamiento}. Verbosidad: {Verbosidad}. " +
+            $"Calidad adaptable: {ModoCalidadAdaptable}. Restricción razonamiento alto: {RestricciónRazonamientoAlto}. " +
+            $"Restricción máximos tókenes de salida: {RestricciónMáximosTókenesSalida}.";
 
 
-        public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
-            RestricciónRazonamiento restricciónRazonamientoAlto, TratamientoNegritas tratamientoNegritas, string claveAPI, out string error,
-            RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna) { // A propósito solo se provee un constructor con muchos parámetros para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
+        public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable, 
+            TratamientoNegritas tratamientoNegritas, string claveAPI, out string error,
+            RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosMuyPequeños,
+            RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna, 
+            RestricciónMáximosTókenesSalida restricciónMáximosTókenesSalida = RestricciónMáximosTókenesSalida.Alta) { // A propósito solo se provee un constructor con muchos parámetros para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
 
             error = null;
             var modelo = Modelo.ObtenerModelo(nombreModelo);
@@ -86,6 +91,7 @@ namespace Frugalia {
             Familia = Modelo.Familia;
             Razonamiento = razonamiento;
             Verbosidad = verbosidad;
+            RestricciónMáximosTókenesSalida = restricciónMáximosTókenesSalida;
             ModoCalidadAdaptable = modoCalidadAdaptable;
             TratamientoNegritas = tratamientoNegritas;
             Lote = lote;
@@ -340,32 +346,63 @@ namespace Frugalia {
         } // ObtenerRellenoInstrucciónSistema>
 
 
-        internal Opciones ObtenerOpciones(string instrucciónSistema, bool buscarEnInternet, int largoInstrucciónÚtil, List<Función> funciones) {
+        /// <summary>
+        /// Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, 
+        /// generando altos costos.
+        /// </summary>
+        /// <param name="restricciónMáximosTókenesSalida"></param>
+        /// <param name="verbosidad"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        internal static int ObtenerMáximosTókenesSalida(RestricciónMáximosTókenesSalida restricciónMáximosTókenesSalida, Verbosidad verbosidad) {
 
-            int máximosTókenesSalida; // Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, generando altos costos.
-
-            if (Verbosidad == Verbosidad.Baja) {
-                máximosTókenesSalida = 200;
-            } else if (Verbosidad == Verbosidad.Media) {
-                máximosTókenesSalida = 350;
-            } else if (Verbosidad == Verbosidad.Alta) {
-                máximosTókenesSalida = 500;
-            } else {
-                throw new Exception($"Valor de verbosidad no considerado: {Verbosidad}.");
+            int multiplicadorMáximosTókenesSalida;
+            switch (restricciónMáximosTókenesSalida) {
+            case RestricciónMáximosTókenesSalida.Alta:
+                multiplicadorMáximosTókenesSalida = 1;
+                break;
+            case RestricciónMáximosTókenesSalida.Media:
+                multiplicadorMáximosTókenesSalida = 2;
+                break;
+            case RestricciónMáximosTókenesSalida.Baja:
+                multiplicadorMáximosTókenesSalida = 3;
+                break;
+            case RestricciónMáximosTókenesSalida.Ninguna:
+                multiplicadorMáximosTókenesSalida = int.MaxValue;
+                break;
+            default:
+                throw new Exception($"Valor de RestricciónMáximosTókenesSalida no considerado: {restricciónMáximosTókenesSalida}");
             }
 
-            return new Opciones(Familia, instrucciónSistema, Modelo, Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio,
-                    largoInstrucciónÚtil, máximosTókenesSalida, Verbosidad, buscarEnInternet, funciones);
+            int máximosTókenesSalida; // Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, generando altos costos.
+            if (verbosidad == Verbosidad.Baja) {
+                máximosTókenesSalida = 300 * multiplicadorMáximosTókenesSalida; // Antes se tenía 200, pero se encontró que con preguntas un poco más complejas el modelo en verbosidad baja podía superar este límite.
+            } else if (verbosidad == Verbosidad.Media) {
+                máximosTókenesSalida = 500 * multiplicadorMáximosTókenesSalida;
+            } else if (verbosidad == Verbosidad.Alta) {
+                máximosTókenesSalida = 750 * multiplicadorMáximosTókenesSalida;
+            } else {
+                throw new Exception($"Valor de verbosidad no considerado: {verbosidad}.");
+            }
 
-        } // ObtenerOpciones>
+            return máximosTókenesSalida;
+
+        } // ObtenerMáximosTókenesSalida>
+
+
+        internal Opciones ObtenerOpciones(string instrucciónSistema, bool buscarEnInternet, int largoInstrucciónÚtil, List<Función> funciones, 
+            ref string información) 
+                => new Opciones(Familia, instrucciónSistema, Modelo, Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, largoInstrucciónÚtil,
+                    ObtenerMáximosTókenesSalida(RestricciónMáximosTókenesSalida, Verbosidad), Verbosidad, buscarEnInternet, funciones, ref información);
 
 
         private Respuesta ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, 
-            ref Dictionary<string, Tókenes> tókenes) {
+            ref Dictionary<string, Tókenes> tókenes, out Resultado resultado) {
 
             if (!string.IsNullOrEmpty(instrucción) && conversación != null) throw new Exception("Debe haber instrucción o conversación, pero no ambas.");
 
-            var (respuesta, tókenesUsadosEnConsulta) = Cliente.ObtenerRespuesta(instrucción, conversación, opciones, modelo, Lote);
+            var (respuesta, tókenesUsadosEnConsulta, resultado2) = Cliente.ObtenerRespuesta(instrucción, conversación, opciones, modelo, Lote);
+            resultado = resultado2;
             tókenes = tókenes.AgregarSumando(tókenesUsadosEnConsulta); // Se asigna a si mismo para que funcione cuando viene nulo.
 
             return respuesta;
@@ -389,8 +426,9 @@ namespace Frugalia {
         /// <exception cref="Exception"></exception>
         private Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
             bool buscarEnInternet, List<Función> funciones, out string respuestaTextoLimpio, ref Dictionary<string, Tókenes> tókenes, 
-            ref string información) {
+            ref string información, out Resultado resultado) {
 
+            resultado = Resultado.Respondido;
             void agregar(ref string información2, string mensaje) => información2 += $"{mensaje}{Environment.NewLine}";
 
             if (!string.IsNullOrEmpty(instrucción) && conversación != null)
@@ -404,23 +442,23 @@ namespace Frugalia {
             var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema);
             Respuesta respuesta;
             var modoCalidadAdaptable = ModoCalidadAdaptable == CalidadAdaptable.MejorarModelo 
-                || ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento;
+                || ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento || ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento;
 
-            var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones);
+            var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones, ref información);
             if (modoCalidadAdaptable) {
 
                 var instrucciónAplicable = string.IsNullOrEmpty(instrucción) ? últimaInstruccion : instrucción;
-                if (instrucciónAplicable.Contains(GrandeRecomendado) || instrucciónAplicable.Contains(MedioRecomendado) || instrucciónAplicable.Contains(LoHiceBien))
-                    instrucciónAplicable = instrucciónAplicable.Replace(GrandeRecomendado, " ").Replace(MedioRecomendado, " ").Replace(LoHiceBien, " ");
+                if (instrucciónAplicable.Contains(UsaModeloMuchoMejor) || instrucciónAplicable.Contains(UsaModeloMejor) || instrucciónAplicable.Contains(LoHiceBien))
+                    instrucciónAplicable = instrucciónAplicable.Replace(UsaModeloMuchoMejor, " ").Replace(UsaModeloMejor, " ").Replace(LoHiceBien, " ");
 
-                if (instrucciónAplicable.IndexOf(GrandeRecomendado, StringComparison.OrdinalIgnoreCase) >= 0 
-                    || instrucciónAplicable.IndexOf(MedioRecomendado, StringComparison.OrdinalIgnoreCase) >= 0
+                if (instrucciónAplicable.IndexOf(UsaModeloMuchoMejor, StringComparison.OrdinalIgnoreCase) >= 0 
+                    || instrucciónAplicable.IndexOf(UsaModeloMejor, StringComparison.OrdinalIgnoreCase) >= 0
                     || instrucciónAplicable.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción de sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
 
                     agregar(ref información, "El usuario escribió palabras protegidas.");
 
-                    instrucciónAplicable = instrucciónAplicable.Reemplazar(GrandeRecomendado, " ", StringComparison.OrdinalIgnoreCase)
-                        .Reemplazar(MedioRecomendado, " ", StringComparison.OrdinalIgnoreCase).Reemplazar(LoHiceBien, " ", StringComparison.OrdinalIgnoreCase);
+                    instrucciónAplicable = instrucciónAplicable.Reemplazar(UsaModeloMuchoMejor, " ", StringComparison.OrdinalIgnoreCase)
+                        .Reemplazar(UsaModeloMejor, " ", StringComparison.OrdinalIgnoreCase).Reemplazar(LoHiceBien, " ", StringComparison.OrdinalIgnoreCase);
 
                     if (conversación != null) {
                         throw new Exception("El usuario ha escrito palabras protegidas."); // No se controla del todo este caso porque implicaría recrear el objeto Conversación o sobreescribirlo para agregar la instrucción del usuario limpia sin las palabras clave y se prefiere no agregar esa complejidad en el momento.
@@ -433,37 +471,93 @@ namespace Frugalia {
                 var instruccionesOriginales = opciones.ObtenerInstrucciónSistema();
                 var instrucciónAutoevaluación = "\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +
                     "propia respuesta y en la última línea escribe exactamente una de estas etiquetas, sola, sin dar explicaciones de tu elección:\n\n" +
-                    $"{LoHiceBien}\n{MedioRecomendado}\n{GrandeRecomendado}\n\nUsa:\n{LoHiceBien}: Si tu respuesta fue buena, tiene " +
-                    $"sentido y es completa. Entendiste bien la consulta y es relativamente sencilla.\n{MedioRecomendado}: Si tu respuesta no fue " +
+                    $"{LoHiceBien}\n{UsaModeloMejor}\n{UsaModeloMuchoMejor}\n\nUsa:\n{LoHiceBien}: Si tu respuesta fue buena, tiene " +
+                    $"sentido y es completa. Entendiste bien la consulta y es relativamente sencilla.\n{UsaModeloMejor}: Si tu respuesta no fue " +
                     "buena en calidad, sentido o completitud, o si a la consulta le faltan detalles, contexto o no la entiendes bien.\n" +
-                    $"{GrandeRecomendado}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados.";
+                    $"{UsaModeloMuchoMejor}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados.";
                 var nuevasInstruccionesSistema = instruccionesOriginales.Contains(Fin) ? instruccionesOriginales.Replace(Fin, $"{instrucciónAutoevaluación}{Fin}")
                     : $"{instruccionesOriginales}.{instrucciónAutoevaluación}";
                 opciones.EscribirInstrucciónSistema(nuevasInstruccionesSistema);
+                var restricciónMáximosTókenesSalida = RestricciónMáximosTókenesSalida; // Hace copia para no reemplazar la propiedad original.
 
-                var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes);
+                reintentarMenosRestrictiva:
+                var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out Resultado resultadoInicial);
                 var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(TratamientoNegritas);
 
                 int nivelesMejoramiento;
                 if (textoRespuesta.Contains(LoHiceBien)) {
                     agregar(ref información, $"El modelo se autoevaluó con {LoHiceBien}.");
                     nivelesMejoramiento = 0;
-                } else if (textoRespuesta.Contains(MedioRecomendado)) {
-                    agregar(ref información, $"El modelo se autoevaluó con {MedioRecomendado}.");
+                } else if (textoRespuesta.Contains(UsaModeloMejor)) {
+                    agregar(ref información, $"El modelo sugirió {UsaModeloMejor}.");
                     nivelesMejoramiento = 1;
-                } else if (textoRespuesta.Contains(GrandeRecomendado)) {
-                    agregar(ref información, $"El modelo se autoevaluó con {GrandeRecomendado}.");
+                } else if (textoRespuesta.Contains(UsaModeloMuchoMejor)) {
+                    agregar(ref información, $"El modelo sugirió {UsaModeloMuchoMejor}.");
                     nivelesMejoramiento = 2;
                 } else {
-                    Suspender(); // Verificar cuando pase. El modelo no contestó con la etiqueta correcta.
-                    throw new Exception("La respuesta del modelo no incluyó la etiqueta de autoevaluación esperada.");
-                }
+
+                    if (resultadoInicial == Resultado.MáximosTókenesAlcanzados) { // Aquí puede entrar por traer el texto vacío o truncado. El vacío sucede cuando se llega al máximo de tókenes de salida solo con razonamiento y aún no había empezado a generar la respuesta de texto. Pueden suceder los dos casos de con OpenAI. Por lo tanto la etiqueta de autoevaluación puede estar truncada o no estar. El intento de solución más inmediato es reintantar la consulta con menos restricción en la cantidad de máximos tókenes de salida.
+
+                        var informaciónMáximosTókenesAlcanzados = $"El modelo {Modelo} no pudo terminar la respuesta en los tókenes máximos " +
+                            $"permitidos con restricción {restricciónMáximosTókenesSalida}";
+
+                        if (Modelo.ObtenerTamaño() == Tamaño.Pequeño || Modelo.ObtenerTamaño() == Tamaño.MuyPequeño) {
+                                                      
+                            var modificadaRestricción = false;
+
+                            switch (restricciónMáximosTókenesSalida) { // Debido a que normalmente el modoCalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
+                            case RestricciónMáximosTókenesSalida.Alta:
+                                
+                                restricciónMáximosTókenesSalida = RestricciónMáximosTókenesSalida.Media;
+                                modificadaRestricción = true;
+                                break;
+
+                            case RestricciónMáximosTókenesSalida.Media:
+
+                                restricciónMáximosTókenesSalida = RestricciónMáximosTókenesSalida.Baja;
+                                modificadaRestricción = true;
+                                break;
+
+                            case RestricciónMáximosTókenesSalida.Baja:
+                            case RestricciónMáximosTókenesSalida.Ninguna:                                
+                                break;
+                            default:
+                                throw new NotImplementedException();
+                            }
+
+                            if (modificadaRestricción) {
+
+                                agregar(ref información, $"{informaciónMáximosTókenesAlcanzados}. Se intentó nuevamente con una restricción menor.");
+                                opciones.EscribirMáximosTókenesSalida(ObtenerMáximosTókenesSalida(restricciónMáximosTókenesSalida, Verbosidad));
+                                goto reintentarMenosRestrictiva;
+
+                            } else {
+                                agregar(ref información, $"{informaciónMáximosTókenesAlcanzados}. Cómo ya estaba muy baja la restricción, no se reintentó.");
+                                nivelesMejoramiento = 0;
+                            }
+
+                        } else {
+                            agregar(ref información, $"{informaciónMáximosTókenesAlcanzados}. Cómo el modelo no era muy pequeño o pequeño, no se reintentó.");
+                            nivelesMejoramiento = 0; // Para modelos medios o grandes, puede no justificar el costo extra de la llamada adicionales para intentar corregir este problema usando una menor restricción de máximos tókenes de salida.
+                        }
+                                               
+                    } else { // El modelo olvidó agregar la etiqueta de autoevaluación. No tiene problemas de máximos tókenes de salida alcanzados.
+
+                        resultado = Resultado.SinAutoevaluación; // El modelo no contestó con la etiqueta correcta. No debería pasar mucho. Se devuelve el estado apropiado al usuario librería para que pueda llevar un registro de cuándo sucede esto y tomar las acciones necesarias. Al usuario del programa se le responde normalmente sin realizar ningún mejoramiento del modelo. Lo peor que puede pasa es que el usuario a veces obtenga resultados no tan buenos con un modelo más pequeño, es similar a lo que sucede cuando el modelo es ignorantemente confidente y se califica [lo-hice-bien] sin haberlo hecho bien.
+                        nivelesMejoramiento = 0;
+                        agregar(ref información, "La respuesta del modelo no incluyó la etiqueta de autoevaluación esperada.");
+
+                    }
+
+                } // textoRespuesta.Contains(Etiqueta)>
 
                 if (nivelesMejoramiento == 0) {
                     respuesta = respuestaInicial;
+                    resultado = resultadoInicial;
                 } else {
 
-                    var modeloMejorado = Modelo.ObtenerModeloMejorado(Modelo, nivelesMejoramiento);
+                    var nivelesMejoramientoModelo = ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento ? 0 : nivelesMejoramiento; // Cuando solo se está mejorando razonamiento no se incrementa el nivel del modelo.
+                    var modeloMejorado = Modelo.ObtenerModeloMejorado(Modelo, nivelesMejoramientoModelo, ref información);
                     if (modeloMejorado == null) {
                         agregar(ref información, $"No hay modelos disponibles por encima de {Modelo}.");
                         respuesta = respuestaInicial; // No hay modelos disponibles por encima del usado inicialmente.
@@ -472,24 +566,30 @@ namespace Frugalia {
                         agregar(ref información, $"Se repitió consulta con {modeloMejorado}.");
                         opciones.EscribirInstrucciónSistema(instruccionesOriginales); // Con el nuevo modelo usa las instrucciones originales, sin la instrucción de autoevaluacion porque solo se autoevaluará una vez.
                         var razonamientoAUsar = Razonamiento;
-                        if (ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento)
-                            razonamientoAUsar = ObtenerRazonamientoMejorado(razonamientoAUsar, nivelesMejoramiento);
+                        if (ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento || ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento)
+                            razonamientoAUsar = ObtenerRazonamientoMejorado(razonamientoAUsar, nivelesMejoramiento, ref información);
                         opciones.EscribirOpcionesRazonamiento(razonamientoAUsar, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, (Modelo)modeloMejorado, 
-                            largoInstrucciónÚtil);
-                        respuesta = ObtenerRespuesta(instrucción, conversación, opciones, (Modelo)modeloMejorado, ref tókenes);
+                            largoInstrucciónÚtil, ref información);
+                        respuesta = ObtenerRespuesta(instrucción, conversación, opciones, (Modelo)modeloMejorado, ref tókenes, out resultado);
+                        if (resultado == Resultado.MáximosTókenesAlcanzados) 
+                            agregar(ref información, $"Se alcanzó la cantidad máxima de tókenes en la consulta mejorada. " +
+                                $"Se recomienda aumentar los tókenes máximos de razonamiento o la verbosidad si en tu caso de uso estás encontrando frecuentemente esta situación."); // Se prefiere no reintentar con una restricción menor en máximos tókenes de salida en estos casos porque al ser un modelo mejorado no solo es más caro si no que también puede generar más tókenes de razonamiento. Entonces repetir de manera automática la consulta con menos restricción de tókenes podría ser costoso para el usuario de la librería.
 
                     }
 
                 }
 
             } else {
-                respuesta = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes);
+                respuesta = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out resultado);
             }
 
             respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
             respuestaTextoLimpio = modoCalidadAdaptable
-                ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(MedioRecomendado, "").Replace(GrandeRecomendado, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
+                ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(UsaModeloMejor, "").Replace(UsaModeloMuchoMejor, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
             respuestaTextoLimpio = respuestaTextoLimpio.TrimEnd();
+            if (resultado == Resultado.MáximosTókenesAlcanzados) 
+                respuestaTextoLimpio = "No pude completar la respuesta porque se alcanzó el límite de texto. " +
+                    "Intenta hacer una consulta más sencilla, concreta o separarla en varias preguntas."; // Este mensaje no sigue el tono especificado por el usuario de la libreria en instrucciones sistema, pero se acepta por ser algo que no debería suceder mucho. Se prefiere responder al usuario del programa con un tono diferente esperado que no responderle nada.
             return respuesta;
 
         } // Responder>
@@ -503,10 +603,11 @@ namespace Frugalia {
         /// <param name="error"></param>
         /// <returns></returns>
         public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
-            out string error, out Dictionary<string, Tókenes> tókenes, out string información, bool buscarEnInternet = false) {
+            out string error, out Dictionary<string, Tókenes> tókenes, out string información, out Resultado resultado, bool buscarEnInternet = false) {
 
             información = "";
             tókenes = new Dictionary<string, Tókenes>();
+            resultado = Resultado.Abortado;
             if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
             if (consultasEnPocasHoras <= 0) { error = "consultasEnPocasHoras debe ser mayor a 0."; return null; }
             if (string.IsNullOrWhiteSpace(instrucción)) { error = "La instrucción del usuario no puede ser vacía."; return null; }
@@ -524,21 +625,23 @@ namespace Frugalia {
                     return null;
                 }
 
+                var informaciónDescartable = "";
                 var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, Modelo,
-                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema));
+                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema), ref informaciónDescartable); // No se agrega a la información el resultado de esta función porque esta función se vuelve a llamar internamente en Responder().
                 if (buscarEnInternet && (razonamientoEfectivo == Razonamiento.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
                     error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
                     return null;
                 }
 
                 Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
-                    out string respuestaTextoLimpio, ref tókenes, ref información);
+                    out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
             } catch (Exception ex) {
 
                 error = ex.Message;
+                resultado = Resultado.OtroError;
                 return null;
 
             }
@@ -581,8 +684,10 @@ namespace Frugalia {
         /// <param name="tipoArchivo"></param>
         /// <returns></returns>
         public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
-            List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo, out string información) {
+            List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo, out string información, 
+            out Resultado resultado) {
 
+            resultado = Resultado.Abortado;
             información = "";
             tókenes = new Dictionary<string, Tókenes>();
             if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
@@ -614,13 +719,14 @@ namespace Frugalia {
                 if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) { error = conversaciónConArchivosYError.Error; return null; }
 
                 var respuesta = Responder(instrucción: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
-                    buscarEnInternet: false, funciones: null, out string respuestaTextoLimpio, ref tókenes, ref información);
+                    buscarEnInternet: false, funciones: null, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
             } catch (Exception ex) {
 
                 error = ex.Message;
+                resultado = Resultado.OtroError;
                 return null;
 
             } finally {
@@ -644,8 +750,10 @@ namespace Frugalia {
         /// <returns></returns>
         public string Consulta(int conversacionesEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, Conversación conversación,
             List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int instruccionesPorConversación,
-            double proporciónPrimerInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones, out bool funciónEjecutada, out string información) {
+            double proporciónPrimerInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones, out bool funciónEjecutada, out string información, 
+            out Resultado resultado) {
 
+            resultado = Resultado.Abortado;
             información = "";
             tókenes = new Dictionary<string, Tókenes>();
             funciónEjecutada = false;
@@ -683,11 +791,12 @@ namespace Frugalia {
 
                     consultas++;
                     if (consultas > máximasConsultas) {
+                        resultado = Resultado.MáximasIteracionesConFunción;
                         error = $"Se llegó al máximo de {máximasConsultas} consultas en la función ConsultaConFunciones() y no se pudo llegar a una solución.";
                         return null;
                     }
                     respuesta = Responder(instrucción: null, conversación, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet: false,
-                        funciones, out respuestaTextoLimpio, ref tókenes, ref información);
+                        funciones, out respuestaTextoLimpio, ref tókenes, ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
                     funciónEjecutadaÚltimaConsulta = false;
 
                     foreach (var ítemRespuesta in respuesta.ObtenerÍtemsRespuesta()) {
@@ -712,7 +821,7 @@ namespace Frugalia {
 
                             using (json) {
 
-                                var resultado = Función.ObtenerResultado(funciones, ítemRespuesta.ObtenerNombreFunción(),
+                                var resultadoFunción = Función.ObtenerResultado(funciones, ítemRespuesta.ObtenerNombreFunción(),
                                     out (string ParámetroConError, string Descripción) errorFunción, ExtraerParámetros(json));
                                 var hayErrorFunción = !string.IsNullOrEmpty(errorFunción.Descripción); // El valor predeterminado de la tupla errorFunción es (null, null), pero el usuario de la librería también podría devolver ("", ""), entonces se evalúa la existencia de error ante ambas opciones: "" y null.
 
@@ -725,7 +834,7 @@ namespace Frugalia {
 
                                 } else {
 
-                                    conversación.AgregarÍtemRespuesta(ítemRespuesta.CrearÍtemRespuestaFunción(resultado));
+                                    conversación.AgregarÍtemRespuesta(ítemRespuesta.CrearÍtemRespuestaFunción(resultadoFunción));
                                     funciónEjecutadaÚltimaConsulta = true;
                                     funciónEjecutada = true;
 
@@ -745,6 +854,7 @@ namespace Frugalia {
             } catch (Exception ex) {
 
                 error = ex.Message;
+                resultado = Resultado.OtroError;
                 return null;
 
             }
