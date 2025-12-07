@@ -23,6 +23,7 @@
 //
 
 using System;
+using System.Text;
 using static Frugalia.Global;
 
 
@@ -146,7 +147,7 @@ namespace Frugalia {
         internal static double ObtenerFactorDescuentoCaché(Modelo modelo) => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
 
 
-        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento, ref string información) {
+        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento, ref StringBuilder información) {
 
             if (nivelesMejoramiento == 0) return modeloOriginal;
             if (nivelesMejoramiento < 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
@@ -156,7 +157,7 @@ namespace Frugalia {
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
             var modeloMejorado = ObtenerModelo(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
             if (modeloMejorado == null && nivelesMejoramiento == 2) {
-                información += $"No se encontró un modelo dos niveles superior a {modeloOriginal}, se usó un modelo un nivel superior.{Environment.NewLine}";
+                información.AgregarLínea($"No se encontró un modelo dos niveles superior a {modeloOriginal}, se usó un modelo un nivel superior.");
                 nivelesMejoramiento = 1; // Si no hay un modelo dos niveles superior, se usa el que es un nivel superior.
                 goto reintentar;
             }

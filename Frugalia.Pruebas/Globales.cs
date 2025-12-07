@@ -36,29 +36,15 @@ public class Globales {
     public void AgregarSumando_CreaDiccionarioCuandoEsNulo() {
 
         var tókenes = CrearTókenes("gpt-5-mini", lote: false, entradaTotal: 10, salidaTotal: 5, salidaRazonamiento: 2, entradaCaché: 1);
-        var resultado = Global.AgregarSumando(null, tókenes);
+        Dictionary<string, Tókenes>? diccionarioNulo = null;
+        Global.AgregarSumandoPosibleNulo(ref diccionarioNulo, tókenes);
         var clave = ObtenerClave(tókenes);
 
-        Assert.NotNull(resultado);
-        Assert.Single(resultado);
-        Assert.Equal(tókenes, resultado[clave]);
+        Assert.NotNull(diccionarioNulo);
+        Assert.Single(diccionarioNulo);
+        Assert.Equal(tókenes, diccionarioNulo[clave]);
 
     } // AgregarSumando_CreaDiccionarioCuandoEsNulo>
-
-
-    [Fact]
-    public void AgregarSumando_AgregaNuevaClaveEnDiccionarioExistente() {
-
-        var diccionario = new Dictionary<string, Tókenes>();
-        var tókenes = CrearTókenes("gpt-5-mini", lote: false, entradaTotal: 20, salidaTotal: 10, salidaRazonamiento: 4, entradaCaché: 2, escrituraManualCaché: 1);
-        var clave = ObtenerClave(tókenes);
-        var resultado = diccionario.AgregarSumando(tókenes);
-
-        Assert.Same(diccionario, resultado);
-        Assert.Single(diccionario);
-        Assert.Equal(tókenes, resultado[clave]);
-
-    } // AgregarSumando_AgregaNuevaClaveEnDiccionarioExistente>
 
 
     [Fact]

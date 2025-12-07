@@ -50,18 +50,26 @@ namespace Frugalia {
 
         private Action<int> AcciónEscribirMáximosTókenesSalida { get; }
 
-        internal void EscribirMáximosTókenesSalida(int máximosTókenesSalida) => AcciónEscribirMáximosTókenesSalida(máximosTókenesSalida);
-
-        private Func<Razonamiento, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, string> 
+        private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder> 
             FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
 
         internal void EscribirOpcionesRazonamiento(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, ref string información) {
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, RestricciónTókenesSalida restricciónTókenesSalida,
+            RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, ref StringBuilder información) {
 
-            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamiento, restricciónRazonamientoAlto, 
+            var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo,
+                largoInstrucciónÚtil, out StringBuilder informaciónRazonamientoEfectivo);
+            if (!informaciónRazonamientoEfectivo.EsNuloOVacío()) información.AgregarLíneas(informaciónRazonamientoEfectivo);
+
+            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamientoEfectivo, restricciónRazonamientoAlto, 
                 restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
-            if (!string.IsNullOrEmpty(informaciónOpcionesRazonamiento))
-                información += $"{informaciónOpcionesRazonamiento.TrimEnd()}{Environment.NewLine}";
+            if (!informaciónOpcionesRazonamiento.EsNuloOVacío()) información.AgregarLíneas(informaciónOpcionesRazonamiento);
+
+            var máximosTókenesSalidaYRazonamiento
+                = ObtenerMáximosTókenesSalidaYRazonamiento(restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, razonamientoEfectivo);
+
+            if (máximosTókenesSalidaYRazonamiento <= 0) throw new Exception("No se permiten valores negativos o cero para máximosTókenesSalida.");
+            if (máximosTókenesSalidaYRazonamiento != SinLímiteTókenes) AcciónEscribirMáximosTókenesSalida(máximosTókenesSalidaYRazonamiento);
 
         } // EscribirOpcionesRazonamiento>
 
@@ -70,11 +78,12 @@ namespace Frugalia {
         internal string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
 
 
-        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento,
-            RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, int largoInstrucciónÚtil,
-            int máximosTókenesSalida, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref string información) {
+        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, 
+            RestricciónTókenesSalida restricciónTókenesSalida, RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, int largoInstrucciónÚtil,
+            Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
 
             Familia = familia;
+
             switch (Familia) {
             case Familia.GPT:
 
@@ -83,21 +92,19 @@ namespace Frugalia {
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
                 FunciónEscribirOpcionesRazonamientoYObtenerInformación = 
-                    (razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, largoInstrucciónÚtil2) => {
+                    (razonamientoEfectivo2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, largoInstrucciónÚtil2) => {
 
-                    var información2 = "";
-                    var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento2, rRazonamientoAlto2, rRazonamientoMedio2,
-                        modelo2, largoInstrucciónÚtil2, ref información2);
+                    var información2 = new StringBuilder(); // No se ha escrito aún, pero se deja por si es necesario llenarlo más adelante.
 
                     var nombreModeloMinúsculas = modelo2.Nombre.ToLowerInvariant();
 
-                    if (razonamientoEfectivo != Razonamiento.Alto && nombreModeloMinúsculas == "gpt-5-pro")
+                    if (razonamientoEfectivo2 != RazonamientoEfectivo.Alto && nombreModeloMinúsculas == "gpt-5-pro")
                         throw new InvalidOperationException("gpt-5-pro no permite nivel de razonamiento diferente de alto.");
 
                     var modelosSinRazonamiento = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" };
                     if (modelosSinRazonamiento.Contains(nombreModeloMinúsculas)) {
 
-                        if (razonamientoEfectivo != Razonamiento.Ninguno) // No se debe agregar ReasoningOptions incluso con none en estos modelos porque saca error. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
+                        if (razonamientoEfectivo2 != RazonamientoEfectivo.Ninguno) // No se debe agregar ReasoningOptions incluso con none en estos modelos porque saca error. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
                             throw new NotSupportedException($"El modelo {nombreModeloMinúsculas} no soporta razonamiento. Solo se puede usar con " +
                                 $"Razonamiento = Ninguno.");
 
@@ -105,21 +112,21 @@ namespace Frugalia {
 
                         var modelosConRazonamientoMinimal = new List<string> { "gpt-5-nano", "gpt-5-mini", "gpt-5" }; // Se hace la lista de los viejos porque se espera que los nuevos mantengan none.                          
                         var textoRazonamiento = "";
-                        switch (razonamientoEfectivo) {
-                        case Razonamiento.Ninguno:
+                        switch (razonamientoEfectivo2) {
+                        case RazonamientoEfectivo.Ninguno:
                             textoRazonamiento = modelosConRazonamientoMinimal.Contains(nombreModeloMinúsculas) ? "minimal" : "none";
                             break;
-                        case Razonamiento.Bajo:
+                        case RazonamientoEfectivo.Bajo:
                             textoRazonamiento = "low";
                             break;
-                        case Razonamiento.Medio:
+                        case RazonamientoEfectivo.Medio:
                             textoRazonamiento = "medium";
                             break;
-                        case Razonamiento.Alto:
+                        case RazonamientoEfectivo.Alto:
                             textoRazonamiento = "high";
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException(nameof(razonamiento2), $"Razonamiento {razonamientoEfectivo} no considerado.");
+                            throw new Exception($"Razonamiento {razonamientoEfectivo2} no considerado.");
                         }
 
                         OpcionesGPT.ReasoningOptions =
@@ -135,10 +142,9 @@ namespace Frugalia {
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil, ref información);
+                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil, 
+                    restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, ref información);
    
-                EscribirMáximosTókenesSalida(máximosTókenesSalida);
-
                 var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
                 if (modelosSinVerbosidad.Contains(modelo.Nombre.ToLowerInvariant())) {
                     if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {modelo} no soporta configuración de la verbosidad.");
@@ -203,6 +209,87 @@ namespace Frugalia {
             }
 
         } // Opciones>
+
+
+        /// <summary>
+        /// Un control interno de seguridad para que el modelo no se vaya a enloquecer y cobre decenas de miles de tókenes de salida y/o razonamiento, 
+        /// generando altos costos. Con los valores de multiplicadores: 1, 2 y 3, máximosTókenesSalidaBase: 200, 350 y 500, y 
+        /// máximosTókenesRazonamientoBase: 0, 300, 1000 y 3000, el valor máximo a pagar por consulta en un modelo medio cómo gpt-5.1 sería de 
+        /// aproximadamente 0.1 USD.
+        /// </summary>
+        /// <param name="restricciónTókenesSalida"></param>
+        /// <param name="verbosidad"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        internal static int ObtenerMáximosTókenesSalidaYRazonamiento(RestricciónTókenesSalida restricciónTókenesSalida,
+            RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, RazonamientoEfectivo razonamientoEfectivo) {
+
+            int multiplicadorMáximosTókenesSalida;
+            switch (restricciónTókenesSalida) {
+            case RestricciónTókenesSalida.Alta:
+                multiplicadorMáximosTókenesSalida = 1;
+                break;
+            case RestricciónTókenesSalida.Media:
+                multiplicadorMáximosTókenesSalida = 2;
+                break;
+            case RestricciónTókenesSalida.Baja:
+                multiplicadorMáximosTókenesSalida = 3;
+                break;
+            case RestricciónTókenesSalida.Ninguna:
+                return SinLímiteTókenes;
+            default:
+                throw new Exception($"Valor de RestricciónTókenesSalida no considerado: {restricciónTókenesSalida}");
+            }
+
+            int máximosTókenesSalida; // Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, generando altos costos.
+            if (verbosidad == Verbosidad.Baja) {
+                máximosTókenesSalida = 200 * multiplicadorMáximosTókenesSalida;
+            } else if (verbosidad == Verbosidad.Media) {
+                máximosTókenesSalida = 350 * multiplicadorMáximosTókenesSalida;
+            } else if (verbosidad == Verbosidad.Alta) {
+                máximosTókenesSalida = 500 * multiplicadorMáximosTókenesSalida;
+            } else {
+                throw new Exception($"Valor de verbosidad no considerado: {verbosidad}.");
+            }
+
+            int multiplicadorMáximosTókenesRazonamiento;
+            switch (restricciónTókenesRazonamiento) {
+            case RestricciónTókenesRazonamiento.Alta:
+                multiplicadorMáximosTókenesRazonamiento = 1;
+                break;
+            case RestricciónTókenesRazonamiento.Media:
+                multiplicadorMáximosTókenesRazonamiento = 2;
+                break;
+            case RestricciónTókenesRazonamiento.Baja:
+                multiplicadorMáximosTókenesRazonamiento = 3;
+                break;
+            case RestricciónTókenesRazonamiento.Ninguna:
+                return SinLímiteTókenes;
+            default:
+                throw new Exception($"Valor de RestricciónTókenesRazonamiento no considerado: {restricciónTókenesRazonamiento}");
+            }
+
+            int máximosTókenesRazonamiento;
+            switch (razonamientoEfectivo) {
+            case RazonamientoEfectivo.Ninguno:
+                máximosTókenesRazonamiento = 0 * multiplicadorMáximosTókenesRazonamiento;
+                break;
+            case RazonamientoEfectivo.Bajo:
+                máximosTókenesRazonamiento = 300 * multiplicadorMáximosTókenesRazonamiento;
+                break;
+            case RazonamientoEfectivo.Medio:
+                máximosTókenesRazonamiento = 1000 * multiplicadorMáximosTókenesRazonamiento;
+                break;
+            case RazonamientoEfectivo.Alto:
+                máximosTókenesRazonamiento = 3000 * multiplicadorMáximosTókenesRazonamiento;
+                break;
+            default:
+                throw new Exception("Valor de razonamiento no considerado.");
+            }
+
+            return máximosTókenesSalida + máximosTókenesRazonamiento;
+
+        } // ObtenerMáximosTókenesSalidaYRazonamiento>
 
 
     } // Opciones>

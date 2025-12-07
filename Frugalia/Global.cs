@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 
@@ -35,6 +36,10 @@ namespace Frugalia {
     public enum Razonamiento {
         Ninguno, Bajo, Medio, Alto, // Se configuran solo 4 niveles de razonamiento, en línea con GPT 5.1. El valor Ninguno se mapea al nivel más bajo disponible en otros modelos como 'minimal' en GPT 5 o su equivalentes en otras familias.
         NingunoOMayor, BajoOMayor, MedioOMayor, // Adaptables: Los modelos de OpenAI ya adaptan internamente cuántos tókenes de razonamiento usan según la dificultad de la tarea, pero aquí se añade una capa extra de control para proteger costos. Por ejemplo, con NingunoOMayor se usa Ninguno (más barato) y sólo se sube a Bajo o Medio cuando la entrada es muy larga, de modo que el modelo tenga más margen de razonamiento cuando realmente lo necesita, sin arriesgarse a gastar de más en casos simples. Esto logra que si se estima que una tarea puede funcionar con Ninguno, se puede poner en NingunoOMayor para que la mayoría de las veces se ejecute con Ninguno y no hayan tókenes de razonamiento, y que cuando excepcionalmente ser requiera procesar textos más largos, que podrían requerir más razonamiento, se adapte a uno de los niveles de razonamiento superiores.
+    }
+
+    internal enum RazonamientoEfectivo { // La enumeración que se usa efectivamente en los modelos. Se separa de la otra para facilitar la depuración y evitar errores al estar escribiendo integraciones.
+        Ninguno, Bajo, Medio, Alto
     }
 
     public enum Verbosidad { Baja, Media, Alta }
@@ -81,11 +86,18 @@ namespace Frugalia {
         OtroError
     }
 
-    public enum RestricciónMáximosTókenesSalida {
+    public enum RestricciónTókenesSalida {
         Alta,
         Media,
         Baja,
-        Ninguna
+        Ninguna // No se debería activar porque libera al modelo de gastar lo que él quiera.
+    }
+
+    public enum RestricciónTókenesRazonamiento {
+        Alta,
+        Media,
+        Baja,
+        Ninguna // No se debería activar porque libera al modelo de gastar lo que él quiera.
     }
 
     public enum TratamientoNegritas {
@@ -116,6 +128,8 @@ namespace Frugalia {
         internal const string Deshabilitado = "[deshabilitado]";
 
         internal const string Fin = ".[fin].";
+
+        internal const int SinLímiteTókenes = int.MaxValue;
 
         internal const double FactorÉxitoCaché = 0.8; // Si OpenAI funcionara bien no debería pasar que no se active la caché en el segundo mensaje de una conversación que tiene instrucciones de sistema rellenadas desde el primer mensaje, pero sí pasa. En algunos casos OpenAI simplemente ignora la caché por razones desconocidas. Se hizo un experimento inflando más las instrucciones de sistema y queda demostrado que no es cuestión del tamaño de tokenes de la función ni que se cambie ni nada, simplemente a veces no lo coje, con 1294 tókenes hay más que suficiente para garantizar que toda la instruccion sistema es superior a 1024 . 1294 - 10 (o lo que sea de la instrucción de usuario) - 73 de la función  = 1211 1: ENC = 1294 EC = 0 SNR = 103 SR = 0 2: ENC = 1402 EC = 0 SNR = 222 SR = 0 OpenAI describe el prompt caching como una optimización de “best effort”, no determinista como un contrato fuerte tipo: “si el prefijo coincide, 100 % te voy a servir desde caché”. Así que básicamente dicen, si no funciona, no me culpen. Lo mejor entonces es asumir un % de éxito que se incorporá en la fórmula para solo engordar las instrucciones de sistema que considerando ese porcentaje de éxito de uso de la caché logren ahorros. 0.8 es un valor que se tira al aire basado en un pequeño experimento limitado: se ejecutó 10 veces una conversación de 6-7 mensajes y se obtuvo una tasa de fallo de 13%, es decir un factor de éxito de 0.87, sin embargo debido a que hay incertidumbre con este número y a que hay una ligera demesmejoría en el comportamiento del agente cuando se rellenan las instrucciones del sistema, se prefiere dejar en 0.8. Se usa el mismo valor para las otras familias de modelos porque no se conoce aún su funcionamiento.
 
@@ -197,7 +211,7 @@ namespace Frugalia {
         } // Reemplazar>
 
 
-        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento, ref string información) {
+        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento, ref StringBuilder información) {
 
             if (nivelesMejoramiento <= 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
             
@@ -263,9 +277,9 @@ namespace Frugalia {
             }
 
             if (razonamiento != nuevoRazonamiento) {
-                información += $"Se cambió el razonamiento un nivel desde {razonamiento} hasta {nuevoRazonamiento}.{Environment.NewLine}";
+                información.AgregarLínea($"Se cambió el razonamiento un nivel desde {razonamiento} hasta {nuevoRazonamiento}.");
             } else {
-                información += $"No se cambió el razonamiento {razonamiento}.{Environment.NewLine}";
+                información.AgregarLínea($"No se cambió el razonamiento {razonamiento}.");
             }
 
             return nuevoRazonamiento;
@@ -273,39 +287,60 @@ namespace Frugalia {
         } // ObtenerRazonamientoMejorado>
 
 
-        public static Razonamiento ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, ref string información) {
+        internal static RazonamientoEfectivo ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, out StringBuilder información) {
 
             var largoLímite1 = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
             var largoLímite2 = 2400; // Aproximadamente 800 tokenes.
 
-            var razonamientoEfectivo = razonamiento; // Se hace esta copia porque se reescribirá en esta función.
-            if (razonamientoEfectivo == Razonamiento.NingunoOMayor) {
+            información = new StringBuilder();
+
+            RazonamientoEfectivo razonamientoEfectivo;
+
+            switch (razonamiento) { // Inicia los valores actuales por defecto. 
+            case Razonamiento.Ninguno:
+                razonamientoEfectivo = RazonamientoEfectivo.Ninguno;
+                break;
+            case Razonamiento.Bajo:
+                razonamientoEfectivo = RazonamientoEfectivo.Bajo;
+                break;
+            case Razonamiento.Medio:
+                razonamientoEfectivo = RazonamientoEfectivo.Medio;
+                break;
+            case Razonamiento.Alto:
+                razonamientoEfectivo = RazonamientoEfectivo.Alto;
+                break;
+            default:
+                razonamientoEfectivo = RazonamientoEfectivo.Ninguno; // Se establece solo para que el compilador no se queje, pero se asegura que este cambiará.
+                break;
+            }
+
+            if (razonamiento == Razonamiento.NingunoOMayor) {
 
                 if (largoInstrucciónÚtil < largoLímite1) {
-                    razonamientoEfectivo = Razonamiento.Ninguno;
+                    razonamientoEfectivo = RazonamientoEfectivo.Ninguno;
                 } else if (largoInstrucciónÚtil < largoLímite2) {
-                    razonamientoEfectivo = Razonamiento.Bajo;
+                    razonamientoEfectivo = RazonamientoEfectivo.Bajo;
                 } else {
-                    razonamientoEfectivo = Razonamiento.Medio;
+                    razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 }
 
-            } else if (razonamientoEfectivo == Razonamiento.BajoOMayor) {
+            } else if (razonamiento == Razonamiento.BajoOMayor) {
 
                 if (largoInstrucciónÚtil < largoLímite1) {
-                    razonamientoEfectivo = Razonamiento.Bajo;
+                    razonamientoEfectivo = RazonamientoEfectivo.Bajo;
                 } else if (largoInstrucciónÚtil < largoLímite2) {
-                    razonamientoEfectivo = Razonamiento.Medio;
+                    razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 } else {
-                    razonamientoEfectivo = Razonamiento.Alto;
+                    razonamientoEfectivo = RazonamientoEfectivo.Alto;
                 }
 
-            } else if (razonamientoEfectivo == Razonamiento.MedioOMayor) {
+            } else if (razonamiento == Razonamiento.MedioOMayor) {
 
                 if (largoInstrucciónÚtil < largoLímite1) {
-                    razonamientoEfectivo = Razonamiento.Medio;
+                    razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 } else {
-                    razonamientoEfectivo = Razonamiento.Alto;
+                    razonamientoEfectivo = RazonamientoEfectivo.Alto;
                 }
 
             }
@@ -313,38 +348,45 @@ namespace Frugalia {
             var tamaño = modelo.ObtenerTamaño();
             var aplicadaRestricción = false;
 
-            if (razonamientoEfectivo == Razonamiento.Alto && restricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna) {
+            if (razonamientoEfectivo == RazonamientoEfectivo.Alto && restricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna) {
 
                 if (restricciónRazonamientoAlto == RestricciónRazonamiento.ModelosPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Medio; }
+                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Medio; }
                 } else if (restricciónRazonamientoAlto == RestricciónRazonamiento.ModelosMuyPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Medio; }
+                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Medio; }
                 }
 
             }
 
-            if (razonamientoEfectivo == Razonamiento.Medio && restricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna) { // Se debe poner después de la revisión de razonamiento Alto porque es posible que tenga doble restricción, entonces el anterior código lo pasa a razonamiento medio y el siguiente verifica si se debe pasar a razonamiento bajo.
+            if (razonamientoEfectivo == RazonamientoEfectivo.Medio && restricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna) { // Se debe poner después de la revisión de razonamiento Alto porque es posible que tenga doble restricción, entonces el anterior código lo pasa a razonamiento medio y el siguiente verifica si se debe pasar a razonamiento bajo.
 
                 if (restricciónRazonamientoMedio == RestricciónRazonamiento.ModelosPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Bajo; }
+                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Bajo; }
                 } else if (restricciónRazonamientoMedio == RestricciónRazonamiento.ModelosMuyPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = Razonamiento.Bajo; }
+                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Bajo; }
                 }
 
             }
 
-            if (razonamiento != razonamientoEfectivo)
-                información += $"Razonamiento efectivo: {razonamientoEfectivo}, Razonamiento Original: {razonamiento}, " +
-                    $"Largo instrucción útil: {largoInstrucciónÚtil}{(aplicadaRestricción ? ", Aplicada restricción de razonamiento" : "")}.{Environment.NewLine}";
+            if (razonamiento.ToString() != razonamientoEfectivo.ToString())
+                información.AgregarLínea($"Razonamiento efectivo: {razonamientoEfectivo}, Razonamiento Original: {razonamiento}, " +
+                    $"Largo instrucción útil: {largoInstrucciónÚtil}{(aplicadaRestricción ? ", Aplicada restricción de razonamiento" : "")}.");
 
             return razonamientoEfectivo;
 
         } // ObtenerRazonamientoEfectivo>
 
 
-        public static Dictionary<string, Tókenes> AgregarSumando(this Dictionary<string, Tókenes> diccionario, Tókenes tókenes) {
+        /// <summary>
+        /// Agrega un objeto Tókenes al diccionario. Si ya existe una entrada con la misma clave, suma los tókenes.
+        /// Si el diccionario es nulo, lanza excepción.
+        /// </summary>
+        /// <param name="diccionario"></param>
+        /// <param name="tókenes"></param>
+        public static void AgregarSumando(this Dictionary<string, Tókenes> diccionario, Tókenes tókenes) {
 
-            if (diccionario == null) diccionario = new Dictionary<string, Tókenes>();
+            if (diccionario == null) 
+                throw new ArgumentNullException(nameof(diccionario), "El método AgregarSumando() no permite nulos. Usa AgregarSumandoPosibleNulo().");
             var clave = tókenes.Clave;
             if (diccionario.ContainsKey(clave)) {
                 diccionario[clave] += tókenes;
@@ -352,9 +394,74 @@ namespace Frugalia {
                 diccionario.Add(clave, tókenes);
             }
 
-            return diccionario;
-
         } // AgregarSumando>
+
+
+        /// <summary>
+        /// Agrega un objeto Tókenes al diccionario. Si ya existe una entrada con la misma clave, suma los tókenes. 
+        /// </summary>
+        /// <param name="diccionario"></param>
+        /// <param name="tókenes"></param>
+        public static void AgregarSumandoPosibleNulo(ref Dictionary<string, Tókenes> diccionario, Tókenes tókenes) { // Es necesaria esta función auxiliar porque C# 7.3 no permite 'ref this Dictionary<string, Tókenes> diccionario' para objetos que no son struct.
+
+            if (diccionario == null) diccionario = new Dictionary<string, Tókenes>();
+            diccionario.AgregarSumando(tókenes);
+
+        } // AgregarSumandoPosibleNulo>
+
+
+        /// <summary>
+        /// Agrega una nueva línea a un texto guardado en un StringBuilder.
+        /// Si el texto es nulo, lanza excepción.
+        /// </summary>
+        /// <param name="texto"></param>
+        /// <param name="nuevaLínea"></param>
+        public static void AgregarLínea(this StringBuilder texto, string nuevaLínea) {
+
+            if (texto == null) throw new ArgumentNullException(nameof(texto), "El método AgregarLínea() no permite nulos. Usa AgregarLíneaPosibleNulo().");
+            texto.AppendLine(nuevaLínea);            
+
+        } // AgregarLínea>
+
+
+        /// <summary>
+        /// Agrega varias nuevas líneas a un texto guardado en un StringBuilder.
+        /// </summary>
+        /// <param name="texto"></param>
+        /// <param name="nuevasLíneas"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static void AgregarLíneas(this StringBuilder texto, StringBuilder nuevasLíneas) {
+
+            if (texto == null) throw new ArgumentNullException(nameof(texto), "El método AgregarLíneas() no permite nulos. Usa primero AgregarLíneaPosibleNulo().");
+            if (nuevasLíneas != null) { // No agrega si nuevaLíneas es nulo.
+                if (texto.Length > 0) texto.AgregarLínea(""); // Si ya hay algo escrito, separa con una línea en blanco.
+                texto.Append(nuevasLíneas);
+            }
+               
+        } // AgregarLíneas>
+
+
+        /// <summary>
+        /// Indica si el StringBuilder es nulo o está vacío (Length == 0).
+        /// Equivalente a string.IsNullOrEmpty pero para StringBuilder.
+        /// </summary>
+        /// <param name="texto">Instancia a evaluar (puede ser nula).</param>
+        /// <returns>true si es nulo o está vacío; false en caso contrario.</returns>
+        public static bool EsNuloOVacío(this StringBuilder texto) => texto == null || texto.Length == 0;
+
+
+        /// <summary>
+        /// Agrega una nueva línea a un texto guardado en un StringBuilder.
+        /// </summary>
+        /// <param name="texto"></param>
+        /// <param name="nuevaLínea"></param>
+        /// <returns></returns>
+        public static void AgregarLíneaPosibleNulo(ref StringBuilder texto, string nuevaLínea) { // Es necesaria esta función auxiliar porque C# 7.3 no permite 'ref this StringBuilder texto' para objetos que no son struct.
+
+            if (texto == null) texto = new StringBuilder();
+            texto.AgregarLínea(nuevaLínea);
+
+        } // AgregarLíneaPosibleNulo>
 
 
         internal static List<(string Nombre, string Valor)> ExtraerParámetros(JsonDocument json) {

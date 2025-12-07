@@ -23,6 +23,7 @@
 //
 
 using System.Diagnostics;
+using System.Text;
 using static Frugalia.Demostración.Global;
 using static Frugalia.Global;
 namespace Frugalia.Demostración;
@@ -72,9 +73,9 @@ internal class Demostración {
             3 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
                 númeroDemostración, lote: false),
             4 => Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.NingunoOMayor, Verbosidad.Media, CalidadAdaptable.MejorarRazonamiento,
-                númeroDemostración, lote: false),
+                númeroDemostración, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media),
             5 => Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Media, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false, RestricciónMáximosTókenesSalida.Baja),
+                númeroDemostración, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media),
             6 => Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.NingunoOMayor, Verbosidad.Media, CalidadAdaptable.MejorarModeloYRazonamiento,
                 númeroDemostración, lote: false), // Se encontró nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
             7 => Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.NingunoOMayor, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
@@ -107,9 +108,10 @@ internal class Demostración {
 
 
     internal static string Consultar(Func<Servicio, Modelo, 
-        (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado resultado)> consulta, 
+        (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado resultado)> consulta, 
         string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
-        int númeroDemostración, bool lote, RestricciónMáximosTókenesSalida restricciónMáximosTókenesSalida = RestricciónMáximosTókenesSalida.Alta) {
+        int númeroDemostración, bool lote, RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, 
+        RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta) {
 
         var temporizador = new Stopwatch();
         temporizador.Start();
@@ -128,7 +130,7 @@ internal class Demostración {
         }
 
         var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, modoCalidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
-            out string errorInicio, restricciónMáximosTókenesSalida: restricciónMáximosTókenesSalida);
+            out string errorInicio, restricciónTókenesSalida: restricciónTókenesSalida, restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
 
         Escribir("");
         var parámetros = $"Iniciando {Demostraciones[númeroDemostración].ToLower()} con {servicio.Descripción}";
@@ -156,8 +158,8 @@ internal class Demostración {
                 EscribirMultilíneaVerde($"{costoTókenes}{detalleCosto}{DobleLínea}{detalleTiempo}");
                 EscribirSeparador();
 
-                if (!string.IsNullOrEmpty(información)) {
-                    EscribirMultilíneaCianOscuro(información);
+                if (!información.EsNuloOVacío()) {
+                    EscribirMultilíneaCianOscuro(información.ToString());
                     EscribirSeparador();
                 }
 
@@ -183,7 +185,7 @@ internal class Demostración {
 
 
     #pragma warning disable IDE0060 // Quitar el parámetro no utilizado
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado)
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado)
         ConsultaTexto(Servicio servicio, Modelo modelo, int dificultadInstrucción) {
     #pragma warning restore IDE0060 // Quitar el parámetro no utilizado
 
@@ -206,7 +208,7 @@ internal class Demostración {
         var consultasEnPocasHoras = 10;
 
         var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error,
-            out Dictionary<string, Tókenes> tókenes, out string información, out Resultado resultado);
+            out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: null);
         EscribirSeparador();
@@ -216,7 +218,7 @@ internal class Demostración {
     } // ConsultaTexto>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado)
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado)
         ConsultaConArchivos(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
@@ -227,7 +229,7 @@ internal class Demostración {
         var tipoArchivo = TipoArchivo.Imagen;
 
         var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, archivos, out string error,
-            out Dictionary<string, Tókenes> tókenes, tipoArchivo, out string información, out Resultado resultado);
+            out Dictionary<string, Tókenes> tókenes, tipoArchivo, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: $"{tipoArchivo}: {archivos[0]}");
         EscribirSeparador();
@@ -238,19 +240,19 @@ internal class Demostración {
 
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado) 
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado) 
         ConsultaBuscandoEnInternet(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
         var respuesta = servicio.Consulta(10, "Eres un investigador de mercado de productos de consumo diario en Colombia", ref rellenoInstrucciónSistema,
             "¿La marca Boggy existe? Sí existe, dame fuentes de su existencia", out string error, out Dictionary<string, Tókenes> tókenes,
-            out string información, out Resultado resultado, buscarEnInternet: true);
+            out StringBuilder información, out Resultado resultado, buscarEnInternet: true);
         return (respuesta, tókenes, "", error, información, resultado);
 
     } // ConsultaBuscandoEnInternet>
 
 
-    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, string Información, Resultado Resultado) 
+    internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado) 
         ConsultaUsandoFunciones(Servicio servicio, Modelo modelo, bool usarInstrucciónMuyLarga, bool usarInstrucciónSistemaMuyLarga) {
 
         var instrucción = "Hola, estoy interesado en conocer el precio de un accesorio Ala para el avión F40.";
@@ -270,7 +272,7 @@ internal class Demostración {
         var respuesta = "";
         var conversación = new Conversación(modelo.Familia);
         var tókenes = new Dictionary<string, Tókenes>();
-        var información = "";
+        var información = new StringBuilder();
         var detalleTókenes = "";
         var separadorMensajes = $"{Environment.NewLine}--------------------------------------------------------{Environment.NewLine}";
         var númeroAleatorio = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en llamadas siguientes porque se cambia la instrucción de sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
@@ -403,11 +405,11 @@ internal class Demostración {
             [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
                 [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
             out string error, out Dictionary<string, Tókenes> tókenesConsulta, instruccionesPorConversación: 6, proporciónPrimerInstrucciónVsSiguientes: 3,
-            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out string informaciónConsulta, out Resultado resultadoConsulta) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
+            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
 
         if (resultado == Resultado.Respondido && resultadoConsulta != Resultado.Respondido) resultado = resultadoConsulta; // Al primer resultado diferente de Respondido se queda con ese para reportar el resumen de este procedimiento. Si bien no es estrictamente correcto, sirve para fines de prueba poder registrar la aparición de un caso problemático en toda la conversación, así existan otros.
      
-        información += $"{informaciónConsulta}{Environment.NewLine}";
+        información.AgregarLíneas(informaciónConsulta);
 
         var contadorTókenesConsulta = 1;
         foreach (var iTókenesConsulta in tókenesConsulta.Values) {
