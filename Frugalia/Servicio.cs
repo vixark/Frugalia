@@ -552,15 +552,21 @@ namespace Frugalia {
                 } // textoRespuesta.Contains(Etiqueta)>
 
                 if (nivelesMejoramiento == 0) {
+
                     respuesta = respuestaInicial;
-                    resultado = resultadoInicial;
+                    if (resultado != Resultado.SinAutoevaluación) resultado = resultadoInicial;
+                    agregar(ref información, $"No se realizó mejoramiento por encima de {Modelo}.");
+
                 } else {
 
                     var nivelesMejoramientoModelo = ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento ? 0 : nivelesMejoramiento; // Cuando solo se está mejorando razonamiento no se incrementa el nivel del modelo.
                     var modeloMejorado = Modelo.ObtenerModeloMejorado(Modelo, nivelesMejoramientoModelo, ref información);
                     if (modeloMejorado == null) {
-                        agregar(ref información, $"No hay modelos disponibles por encima de {Modelo}.");
+
                         respuesta = respuestaInicial; // No hay modelos disponibles por encima del usado inicialmente.
+                        resultado = resultadoInicial;
+                        agregar(ref información, $"No hay modelos disponibles por encima de {Modelo}.");
+
                     } else {
 
                         agregar(ref información, $"Se repitió consulta con {modeloMejorado}.");
