@@ -175,7 +175,8 @@ namespace Frugalia {
                 }
 
             } else {
-                información.AgregarLínea($"Se mejoró el modelo de {modeloOriginal} a {nombreModeloMejorado}.");
+                información.AgregarLínea($"Se mejoró el modelo {nivelMejoramiento} nivel{(nivelMejoramiento > 1 ? "es" : "")} de " +
+                    $"{modeloOriginal} a {nombreModeloMejorado}.");
                 return modeloMejorado;
             }
 

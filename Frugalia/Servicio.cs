@@ -432,7 +432,7 @@ namespace Frugalia {
                     : $"{instruccionesOriginales}.{instrucciónAutoevaluación}";
                 opciones.EscribirInstrucciónSistema(nuevasInstruccionesSistema);
 
-                var restricciónTókenesSalida = RestricciónTókenesSalida; // Hace copia para no reemplazar la propiedad original.
+                var restricciónTókenesSalida = RestricciónTókenesSalida; // Hace copia para no reemplazar la propiedad original. Solo se reduce cuando inicia en Alta o Media.
 
                 reintentarMenosRestrictiva:
                 var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out Resultado resultadoInicial);
@@ -513,26 +513,36 @@ namespace Frugalia {
 
                 } else {
 
-                    var modeloMejorado = Modelo.ObtenerModeloMejorado(Modelo, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
-                    if (modeloMejorado == null) {
+                    var modeloMejoradoNulable = Modelo.ObtenerModeloMejorado(Modelo, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
+                    if (modeloMejoradoNulable == null) {
                         respuesta = respuestaInicial; // No hay modelos disponibles por encima del usado inicialmente.
                         resultado = resultadoInicial;
                     } else {
 
-                        información.AgregarLínea($"Se repitió consulta con {modeloMejorado}.");
-
-                        opciones.EscribirInstrucciónSistema(instruccionesOriginales); // Con el nuevo modelo usa las instrucciones originales, sin la instrucción de autoevaluacion porque solo se autoevaluará una vez.
-                        
+                        var modeloMejorado = (Modelo)modeloMejoradoNulable;
                         var razonamientoMejorado = ObtenerRazonamientoMejorado(Razonamiento, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
 
-                        opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, 
-                            (Modelo)modeloMejorado, largoInstrucciónÚtil, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
+                        if (Modelo.Nombre == modeloMejorado.Nombre && razonamientoMejorado == Razonamiento) {
+                            respuesta = respuestaInicial;
+                            resultado = resultadoInicial;
+                            información.AgregarLínea($"No se repitió la consulta mejorada sugerida por el modelo porque se retringió el mejoramiento del " +
+                                $"modelo y/o el razonamiento.");
+                        } else { 
 
-                        respuesta = ObtenerRespuesta(instrucción, conversación, opciones, (Modelo)modeloMejorado, ref tókenes, out resultado);
+                            opciones.EscribirInstrucciónSistema(instruccionesOriginales); // Con el nuevo modelo usa las instrucciones originales, sin la instrucción de autoevaluacion porque solo se autoevaluará una vez.
 
-                        if (resultado == Resultado.MáximosTókenesAlcanzados)
-                            información.AgregarLínea($"Se alcanzó la cantidad máxima de tókenes en la consulta mejorada. Se recomienda aumentar los tókenes " +
-                                $"máximos de razonamiento o la verbosidad si en tu caso de uso estás encontrando frecuentemente esta situación."); // Se prefiere no reintentar con una restricción menor en máximos tókenes de salida en estos casos porque al ser un modelo mejorado no solo es más caro si no que también puede generar más tókenes de razonamiento. Entonces repetir de manera automática la consulta con menos restricción de tókenes podría ser costoso para el usuario de la librería.
+                            opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio,
+                                modeloMejorado, largoInstrucciónÚtil, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
+
+                            respuesta = ObtenerRespuesta(instrucción, conversación, opciones, modeloMejorado, ref tókenes, out resultado);
+
+                            información.AgregarLínea($"Se repitió consulta con {modeloMejorado}.");
+
+                            if (resultado == Resultado.MáximosTókenesAlcanzados)
+                                información.AgregarLínea($"Se alcanzó la cantidad máxima de tókenes en la consulta mejorada. Se recomienda aumentar los tókenes " +
+                                    $"máximos de razonamiento o la verbosidad si en tu caso de uso estás encontrando frecuentemente esta situación."); // Se prefiere no reintentar con una restricción menor en máximos tókenes de salida en estos casos porque al ser un modelo mejorado no solo es más caro si no que también puede generar más tókenes de razonamiento. Entonces repetir de manera automática la consulta con menos restricción de tókenes podría ser costoso para el usuario de la librería.
+
+                        }
 
                     }
 

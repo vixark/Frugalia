@@ -220,7 +220,7 @@ namespace Frugalia {
         internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido, 
             ref StringBuilder información) {
 
-            var nivelMejoramiento = ObtenerNivelMejoramientoModeloEfectivo(calidadAdaptable, nivelMejoramientoSugerido);
+            var nivelMejoramiento = ObtenerNivelMejoramientoRazonamientoEfectivo(calidadAdaptable, nivelMejoramientoSugerido);
             if (nivelMejoramiento == 0) return razonamiento;
             
             Razonamiento razonamientoMejorado;
@@ -285,9 +285,10 @@ namespace Frugalia {
             }
 
             if (razonamiento != razonamientoMejorado) {
-                información.AgregarLínea($"Se cambió el razonamiento un nivel desde {razonamiento} hasta {razonamientoMejorado}.");
+                información.AgregarLínea($"Se mejoró el razonamiento {nivelMejoramiento} nivel{(nivelMejoramiento > 1 ? "es" : "")} de " +
+                    $"{razonamiento} a {razonamientoMejorado}.");
             } else {
-                información.AgregarLínea($"No se cambió el razonamiento {razonamiento}.");
+                información.AgregarLínea($"No se mejoró el razonamiento {razonamiento}.");
             }
 
             return razonamientoMejorado;
@@ -318,9 +319,13 @@ namespace Frugalia {
             case Razonamiento.Alto:
                 razonamientoEfectivo = RazonamientoEfectivo.Alto;
                 break;
-            default:
-                razonamientoEfectivo = RazonamientoEfectivo.Ninguno; // Se establece solo para que el compilador no se queje, pero se asegura que este cambiará.
+            case Razonamiento.NingunoOMayor:
+            case Razonamiento.BajoOMayor:
+            case Razonamiento.MedioOMayor:
+                razonamientoEfectivo = RazonamientoEfectivo.Ninguno; // Se establece solo para que el compilador no se queje, pero se asegura que este cambiará en el código siguiente.
                 break;
+            default:
+                throw new Exception("Valor de razonamiento no considerado.");
             }
 
             if (razonamiento == Razonamiento.NingunoOMayor) {
@@ -441,12 +446,12 @@ namespace Frugalia {
         } // ObtenerNivelMejoramientoRazonamientoMáximo>
 
 
-        public static int ObtenerNivelMejoramientoRazonamientoEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugeridoModelo) 
-            => Math.Min(calidad.ObtenerNivelMejoramientoRazonamientoMáximo(), nivelMejoramientoSugeridoModelo);
+        public static int ObtenerNivelMejoramientoRazonamientoEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugerido) 
+            => Math.Min(calidad.ObtenerNivelMejoramientoRazonamientoMáximo(), nivelMejoramientoSugerido);
 
 
-        public static int ObtenerNivelMejoramientoModeloEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugeridoModelo)
-            => Math.Min(calidad.ObtenerNivelMejoramientoModeloMáximo(), nivelMejoramientoSugeridoModelo);
+        public static int ObtenerNivelMejoramientoModeloEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugerido)
+            => Math.Min(calidad.ObtenerNivelMejoramientoModeloMáximo(), nivelMejoramientoSugerido);
 
 
         /// <summary>
