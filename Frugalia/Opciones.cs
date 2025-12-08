@@ -270,11 +270,11 @@ namespace Frugalia {
 
             int máximosTókenesSalida; // Un control interno de seguridad para que el modelo no se vaya a enloquecer en algún momento y devuelva miles de tókenes de salida, generando altos costos.
             if (verbosidad == Verbosidad.Baja) {
-                máximosTókenesSalida = 200 * multiplicadorMáximosTókenesSalida;
+                máximosTókenesSalida = MáximosTókenesSalidaBaseVerbosidadBaja * multiplicadorMáximosTókenesSalida;
             } else if (verbosidad == Verbosidad.Media) {
-                máximosTókenesSalida = 350 * multiplicadorMáximosTókenesSalida;
+                máximosTókenesSalida = MáximosTókenesSalidaBaseVerbosidadMedia * multiplicadorMáximosTókenesSalida;
             } else if (verbosidad == Verbosidad.Alta) {
-                máximosTókenesSalida = 500 * multiplicadorMáximosTókenesSalida;
+                máximosTókenesSalida = MáximosTókenesSalidaBaseVerbosidadAlta * multiplicadorMáximosTókenesSalida;
             } else {
                 throw new Exception($"Valor de verbosidad no considerado: {verbosidad}.");
             }
@@ -299,16 +299,16 @@ namespace Frugalia {
             int máximosTókenesRazonamiento;
             switch (razonamientoEfectivo) {
             case RazonamientoEfectivo.Ninguno:
-                máximosTókenesRazonamiento = 0 * multiplicadorMáximosTókenesRazonamiento;
+                máximosTókenesRazonamiento = MáximosTókenesRazonamientoBaseNinguno * multiplicadorMáximosTókenesRazonamiento;
                 break;
             case RazonamientoEfectivo.Bajo:
-                máximosTókenesRazonamiento = 300 * multiplicadorMáximosTókenesRazonamiento;
+                máximosTókenesRazonamiento = MáximosTókenesRazonamientoBaseBajo * multiplicadorMáximosTókenesRazonamiento;
                 break;
             case RazonamientoEfectivo.Medio:
-                máximosTókenesRazonamiento = 1000 * multiplicadorMáximosTókenesRazonamiento;
+                máximosTókenesRazonamiento = MáximosTókenesRazonamientoBaseMedio * multiplicadorMáximosTókenesRazonamiento;
                 break;
             case RazonamientoEfectivo.Alto:
-                máximosTókenesRazonamiento = 3000 * multiplicadorMáximosTókenesRazonamiento;
+                máximosTókenesRazonamiento = MáximosTókenesRazonamientoBaseAlto * multiplicadorMáximosTókenesRazonamiento;
                 break;
             default:
                 throw new Exception("Valor de razonamiento no considerado.");
