@@ -15,6 +15,17 @@ La idea es ayudarte a:
    
 Actualmente está implementado OpenAI con una arquitectura preparada a corto plazo para Claude y Gemini.
 
+
+## Licencia
+<a href="https://github.com/vixark/Frugalia?tab=AGPL-3.0-1-ov-file">GNU Affero General Public License v3.0</a>. Esta licencia te da permiso de modificar, distribuir o vender <b>Frugalia</b> y tus modificaciones siempre y cuando le entregues al usuario el código fuente completo de <b>Frugalia</b> y de tus modificaciones, así como del resto del programa que lo integre como parte de un todo, bajo los términos de esta misma licencia. 
+
+Si usas una versión (modificada o no) de <b>Frugalia</b> para prestar un servicio web, también deberás entregarle a las personas que reciban el programa o lo usen a través de un servicio web el código fuente completo de <b>Frugalia</b>, de tus modificaciones y del programa que use Frugalia para prestar ese servicio. Si no se lo entregas, estarás violando la licencia. 
+
+Los requerimientos de la licencia aplican si entregas un software o prestas un servicio web a otras personas o empresas que incluya código de Frugalia o la use como librería enlazada (por ejemplo, si vendes un servicio de análisis de imágenes con IA usando Frugalia internamente). En cambio, si solo quieres adaptar y usar el código de <b>Frugalia</b> dentro de tu negocio (por ejemplo, eres una empresa de selección de personal y usarás Frugalia para implementar un prefiltrado de hojas de vida con IA) y tus clientes solo ven el resultado en el mejoramiento de tu producto o servicio (siguiendo el ejemplo, un mejor candidato para su empresa), pero no acceden directamente a las funciones de Frugalia, no tienes que distribuirle el código modificado a los clientes de tu negocio.
+
+Este texto es un resumen informal; en caso de duda, tiene prioridad el texto oficial de la licencia GNU AGPL v3.0.
+
+
 ## ¿Por qué otro encapsulador/wrapper más?
 
 La mayoría de los encapsuladores de modelos de IA hacen:
