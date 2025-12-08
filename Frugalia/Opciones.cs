@@ -215,7 +215,8 @@ namespace Frugalia {
         /// Un control interno de seguridad para que el modelo no se vaya a enloquecer y cobre decenas de miles de tókenes de salida y/o razonamiento, 
         /// generando altos costos. Con los valores de multiplicadores: 1, 2 y 3, máximosTókenesSalidaBase: 200, 350 y 500, y 
         /// máximosTókenesRazonamientoBase: 0, 300, 1000 y 3000, el valor máximo a pagar por consulta en un modelo medio cómo gpt-5.1 sería de 
-        /// aproximadamente 0.1 USD.
+        /// aproximadamente 0.1 USD. Al eliminar una restricción efectivamente se liberan ambas porque los modelos solo permiten restringir la suma de las dos. Para mantener la consistencia y claridad sobre este comportamiento,
+        /// se lanza excepción si se elimina la restricción de razonamiento y no se libera la restricción de salida, y viceversa.
         /// </summary>
         /// <param name="restricciónTókenesSalida"></param>
         /// <param name="verbosidad"></param>
@@ -223,6 +224,13 @@ namespace Frugalia {
         /// <exception cref="Exception"></exception>
         internal static int ObtenerMáximosTókenesSalidaYRazonamiento(RestricciónTókenesSalida restricciónTókenesSalida,
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, RazonamientoEfectivo razonamientoEfectivo) {
+
+            if ((restricciónTókenesRazonamiento == RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida != RestricciónTókenesSalida.Ninguna) 
+                || restricciónTókenesRazonamiento != RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida == RestricciónTókenesSalida.Ninguna)
+                throw new Exception("No se permite que RestricciónTókenesRazonamiento == Ninguna y RestricciónTókenesSalida != Ninguna, o viceversa. " +
+                    "Los modelos solo permiten establecer el límite de tókenes a la suma de los dos, por lo tanto la eliminación de la restricción en " +
+                    "una debe estar acompañada por la restricción de la eliminación de la restricción en la otra para hacer explícito esta liberación de " +
+                    "costos completa en el código que usa la librería.");
 
             int multiplicadorMáximosTókenesSalida;
             switch (restricciónTókenesSalida) {
@@ -236,7 +244,7 @@ namespace Frugalia {
                 multiplicadorMáximosTókenesSalida = 3;
                 break;
             case RestricciónTókenesSalida.Ninguna:
-                return SinLímiteTókenes;
+                return SinLímiteTókenes; // Al liberar salida también se libera razonamiento porque los modelos no aceptan límites independientes.
             default:
                 throw new Exception($"Valor de RestricciónTókenesSalida no considerado: {restricciónTókenesSalida}");
             }
@@ -264,7 +272,7 @@ namespace Frugalia {
                 multiplicadorMáximosTókenesRazonamiento = 3;
                 break;
             case RestricciónTókenesRazonamiento.Ninguna:
-                return SinLímiteTókenes;
+                return SinLímiteTókenes; // Al liberar razonamiento también se libera salida porque los modelos no aceptan límites independientes.
             default:
                 throw new Exception($"Valor de RestricciónTókenesRazonamiento no considerado: {restricciónTókenesRazonamiento}");
             }
