@@ -336,6 +336,8 @@ namespace Frugalia {
             case Razonamiento.NingunoOBajo:
             case Razonamiento.BajoOMedio:
             case Razonamiento.MedioOAlto:
+            case Razonamiento.NingunoBajoOMedio:
+            case Razonamiento.BajoMedioOAlto:
                 razonamientoEfectivo = RazonamientoEfectivo.Ninguno; // Se establece solo para que el compilador no se queje, pero se asegura que este cambiará en el código siguiente.
                 break;
             default:

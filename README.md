@@ -79,7 +79,7 @@ var rutaClave = @"C:\Rutas\No\Versionadas\openai-key.txt";
 var servicio = new Servicio(
    nombreModelo: "gpt-5.1",
    lote: false,
-   razonamiento: Razonamiento.NingunoOMayor,
+   razonamiento: Razonamiento.NingunoOBajo,
    verbosidad: Verbosidad.Media,
    calidadAdaptable: CalidadAdaptable.MejorarModelo,
    restricciónRazonamientoAlto: RestricciónRazonamiento.ModelosMuyPequeños,
