@@ -35,7 +35,8 @@ namespace Frugalia {
 
     public enum Razonamiento {
         Ninguno, Bajo, Medio, Alto, // Se configuran solo 4 niveles de razonamiento, en línea con GPT 5.1. El valor Ninguno se mapea al nivel más bajo disponible en otros modelos como 'minimal' en GPT 5 o su equivalentes en otras familias.
-        NingunoOMayor, BajoOMayor, MedioOMayor, // Adaptables: Los modelos de OpenAI ya adaptan internamente cuántos tókenes de razonamiento usan según la dificultad de la tarea, pero aquí se añade una capa extra de control para proteger costos. Por ejemplo, con NingunoOMayor se usa Ninguno (más barato) y sólo se sube a Bajo o Medio cuando la entrada es muy larga, de modo que el modelo tenga más margen de razonamiento cuando realmente lo necesita, sin arriesgarse a gastar de más en casos simples. Esto logra que si se estima que una tarea puede funcionar con Ninguno, se puede poner en NingunoOMayor para que la mayoría de las veces se ejecute con Ninguno y no hayan tókenes de razonamiento, y que cuando excepcionalmente ser requiera procesar textos más largos, que podrían requerir más razonamiento, se adapte a uno de los niveles de razonamiento superiores.
+        NingunoOBajo, BajoOMedio, MedioOAlto, // Adaptables de dos opciones: Los modelos de OpenAI ya adaptan internamente cuántos tókenes de razonamiento usan según la dificultad de la tarea, pero aquí se añade una capa extra de control para proteger costos. Por ejemplo, con NingunoOBajo se usa Ninguno (más barato) y sólo se sube a Bajo cuando la entrada es muy larga, de modo que el modelo tenga más margen de razonamiento cuando realmente lo necesita, sin arriesgarse a gastar de más en casos simples. Esto logra que si se estima que una tarea puede funcionar con Ninguno, se puede poner en NingunoOBajo para que la mayoría de las veces se ejecute con Ninguno y no hayan tókenes de razonamiento, y que cuando excepcionalmente ser requiera procesar textos más largos, que podrían requerir más razonamiento, se adapte a uno de los niveles de razonamiento superiores. Se usa la segunda opción si el texto de instrucción supera CarácteresLímiteInstrucciónParaSubirRazonamiento. 
+        NingunoBajoOMedio, BajoMedioOAlto // Adaptables de tres opciones: Dan más granularidad al usuario de la librería para permitir que el modelo suba hasta dos niveles de razonamiento desde Ninguno hasta Medio o desde Bajo hasta Alto. Se usa la tercera opción si el texto de instrucción supera CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles. 
     }
 
     internal enum RazonamientoEfectivo { // La enumeración que se usa efectivamente en los modelos. Se separa de la otra para facilitar la depuración y evitar errores al estar escribiendo integraciones.
@@ -134,6 +135,10 @@ namespace Frugalia {
         internal const string Deshabilitado = "[deshabilitado]";
 
         internal const string Fin = ".[fin].";
+
+        internal const int CarácteresLímiteInstrucciónParaSubirRazonamiento = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
+
+        internal const int CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles = 2400; // Aproximadamente 800 tokenes.
 
         internal const int SinLímiteTókenes = int.MaxValue;
 
@@ -240,14 +245,20 @@ namespace Frugalia {
                 case Razonamiento.Alto:
                     razonamientoMejorado = Razonamiento.Alto;  // Permanece igual.
                     break;
-                case Razonamiento.NingunoOMayor:
-                    razonamientoMejorado = Razonamiento.BajoOMayor;
+                case Razonamiento.NingunoOBajo:
+                    razonamientoMejorado = Razonamiento.BajoOMedio;
                     break;
-                case Razonamiento.BajoOMayor:
-                    razonamientoMejorado = Razonamiento.MedioOMayor;
+                case Razonamiento.BajoOMedio:
+                    razonamientoMejorado = Razonamiento.MedioOAlto;
                     break;
-                case Razonamiento.MedioOMayor:
+                case Razonamiento.MedioOAlto:
                     razonamientoMejorado = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    break;
+                case Razonamiento.NingunoBajoOMedio:
+                    razonamientoMejorado = Razonamiento.BajoMedioOAlto;
+                    break;
+                case Razonamiento.BajoMedioOAlto:
+                    razonamientoMejorado = Razonamiento.MedioOAlto; // No hay valor de 3 opciones, entonces pasa a MedioOAlto.
                     break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
@@ -269,14 +280,20 @@ namespace Frugalia {
                 case Razonamiento.Alto:
                     razonamientoMejorado = Razonamiento.Alto; // Permanece igual.
                     break;
-                case Razonamiento.NingunoOMayor:
-                    razonamientoMejorado = Razonamiento.MedioOMayor;
+                case Razonamiento.NingunoOBajo:
+                    razonamientoMejorado = Razonamiento.MedioOAlto;
                     break;
-                case Razonamiento.BajoOMayor:
+                case Razonamiento.BajoOMedio:
                     razonamientoMejorado = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
                     break;
-                case Razonamiento.MedioOMayor:
+                case Razonamiento.MedioOAlto:
                     razonamientoMejorado = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    break;
+                case Razonamiento.NingunoBajoOMedio:
+                    razonamientoMejorado = Razonamiento.MedioOAlto; // El salto de dos niveles lo lleva a MedioOAlto porque Ninguno pasa a Medio, Bajo a Alto y Medio al mismo Alto.
+                    break;
+                case Razonamiento.BajoMedioOAlto:
+                    razonamientoMejorado = Razonamiento.Alto; // El salto de dos niveles lo lleva directamente a Alto porque Bajo pasa a Alto.
                     break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
@@ -299,9 +316,6 @@ namespace Frugalia {
         internal static RazonamientoEfectivo ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
             RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, out StringBuilder información) {
 
-            var largoLímite1 = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
-            var largoLímite2 = 2400; // Aproximadamente 800 tokenes.
-
             información = new StringBuilder();
 
             RazonamientoEfectivo razonamientoEfectivo;
@@ -319,41 +333,57 @@ namespace Frugalia {
             case Razonamiento.Alto:
                 razonamientoEfectivo = RazonamientoEfectivo.Alto;
                 break;
-            case Razonamiento.NingunoOMayor:
-            case Razonamiento.BajoOMayor:
-            case Razonamiento.MedioOMayor:
+            case Razonamiento.NingunoOBajo:
+            case Razonamiento.BajoOMedio:
+            case Razonamiento.MedioOAlto:
                 razonamientoEfectivo = RazonamientoEfectivo.Ninguno; // Se establece solo para que el compilador no se queje, pero se asegura que este cambiará en el código siguiente.
                 break;
             default:
                 throw new Exception("Valor de razonamiento no considerado.");
             }
 
-            if (razonamiento == Razonamiento.NingunoOMayor) {
+            if (razonamiento == Razonamiento.NingunoBajoOMedio) {
 
-                if (largoInstrucciónÚtil < largoLímite1) {
+                if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
                     razonamientoEfectivo = RazonamientoEfectivo.Ninguno;
-                } else if (largoInstrucciónÚtil < largoLímite2) {
+                } else if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles) {
                     razonamientoEfectivo = RazonamientoEfectivo.Bajo;
                 } else {
                     razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 }
 
-            } else if (razonamiento == Razonamiento.BajoOMayor) {
+            } else if (razonamiento == Razonamiento.BajoMedioOAlto) {
 
-                if (largoInstrucciónÚtil < largoLímite1) {
+                if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
                     razonamientoEfectivo = RazonamientoEfectivo.Bajo;
-                } else if (largoInstrucciónÚtil < largoLímite2) {
+                } else if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles) {
                     razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 } else {
                     razonamientoEfectivo = RazonamientoEfectivo.Alto;
                 }
 
-            } else if (razonamiento == Razonamiento.MedioOMayor) {
+            } else if (razonamiento == Razonamiento.MedioOAlto) {
 
-                if (largoInstrucciónÚtil < largoLímite1) {
+                if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
                     razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 } else {
                     razonamientoEfectivo = RazonamientoEfectivo.Alto;
+                }
+
+            } else if (razonamiento == Razonamiento.NingunoOBajo) { // Solo admite una mejora de razonamiento.
+
+                if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
+                    razonamientoEfectivo = RazonamientoEfectivo.Ninguno;
+                } else {
+                    razonamientoEfectivo = RazonamientoEfectivo.Bajo;
+                }
+
+            } else if (razonamiento == Razonamiento.BajoOMedio) { // Solo admite una mejora de razonamiento.
+
+                if (largoInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
+                    razonamientoEfectivo = RazonamientoEfectivo.Bajo;
+                } else {
+                    razonamientoEfectivo = RazonamientoEfectivo.Medio;
                 }
 
             }
