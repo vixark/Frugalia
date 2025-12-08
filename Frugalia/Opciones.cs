@@ -48,11 +48,15 @@ namespace Frugalia {
 
         internal void EscribirInstrucciónSistema(string instrucciónSistema) => AcciónEscribirInstrucciónSistema(instrucciónSistema);
 
+        private Func<string> FunciónObtenerInstrucciónSistema { get; }
+
+        internal string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
+
+
         private Action<int> AcciónEscribirMáximosTókenesSalida { get; }
 
         private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder> 
             FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
-
 
         /// <summary>
         /// Por facilidad y evitar introducir errores en el uso de las funciones escribir opciones y escribir máximos tókenes de salida y razonamiento,
@@ -90,11 +94,6 @@ namespace Frugalia {
             if (máximosTókenesSalidaYRazonamiento != SinLímiteTókenes) AcciónEscribirMáximosTókenesSalida(máximosTókenesSalidaYRazonamiento);
 
         } // EscribirOpcionesRazonamientoYLímitesTókenes>
-
-
-        private Func<string> FunciónObtenerInstrucciónSistema { get; }
-
-        internal string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
 
 
         internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, 
