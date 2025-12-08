@@ -109,7 +109,7 @@ internal class Demostración {
 
     internal static string Consultar(Func<Servicio, Modelo, 
         (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado resultado)> consulta, 
-        string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable,
+        string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable,
         int númeroDemostración, bool lote, RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, 
         RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta) {
 
@@ -129,7 +129,7 @@ internal class Demostración {
             return errorClaveAPI;
         }
 
-        var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, modoCalidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
+        var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
             out string errorInicio, restricciónTókenesSalida: restricciónTókenesSalida, restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
 
         Escribir("");

@@ -70,7 +70,7 @@ var servicio = new Servicio(
    lote: false,
    razonamiento: Razonamiento.NingunoOMayor,
    verbosidad: Verbosidad.Media,
-   modoCalidadAdaptable: CalidadAdaptable.MejorarModelo,
+   calidadAdaptable: CalidadAdaptable.MejorarModelo,
    restricciónRazonamientoAlto: RestricciónRazonamiento.ModelosMuyPequeños,
    tratamientoNegritas: TratamientoNegritas.Eliminar,
    rutaArchivoClaveAPI: rutaClave,

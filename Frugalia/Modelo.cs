@@ -147,30 +147,35 @@ namespace Frugalia {
         internal static double ObtenerFactorDescuentoCaché(Modelo modelo) => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
 
 
-        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, int nivelesMejoramiento, ref StringBuilder información) {
+        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido, 
+            ref StringBuilder información) {
 
-            if (nivelesMejoramiento == 0) return modeloOriginal;
-            if (nivelesMejoramiento < 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
+            var nivelMejoramiento = ObtenerNivelMejoramientoModeloEfectivo(calidadAdaptable, nivelMejoramientoSugerido);
+
+            if (nivelMejoramiento == 0) { información.AgregarLínea($"No se mejoró el modelo."); return modeloOriginal; }
+            if (nivelMejoramiento < 0 || nivelMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
  
             reintentar:
-            var nombreModeloMejorado = nivelesMejoramiento == 2 ? modeloOriginal.NombreModelo2NivelesSuperior : modeloOriginal.NombreModelo1NivelSuperior;
+            var nombreModeloMejorado = nivelMejoramiento == 2 ? modeloOriginal.NombreModelo2NivelesSuperior : modeloOriginal.NombreModelo1NivelSuperior;
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
             var modeloMejorado = ObtenerModelo(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
-            if (modeloMejorado == null && nivelesMejoramiento == 2) {
+            if (modeloMejorado == null && nivelMejoramiento == 2) {
                 información.AgregarLínea($"No se encontró un modelo dos niveles superior a {modeloOriginal}, se usó un modelo un nivel superior.");
-                nivelesMejoramiento = 1; // Si no hay un modelo dos niveles superior, se usa el que es un nivel superior.
+                nivelMejoramiento = 1; // Si no hay un modelo dos niveles superior, se usa el que es un nivel superior.
                 goto reintentar;
             }
 
             if (modeloMejorado == null) {
 
                 if (string.IsNullOrEmpty(nombreModeloMejorado)) {
+                    información.AgregarLínea($"No habían modelos superiores a {modeloOriginal}. No se pudo mejorar el modelo.");
                     return null; // Se acepta que sea vacío porque es posible que no haya modelos superiores a este.
                 } else {
                     throw new Exception("Nombre del modelo mejorado no encontrado en tabla de modelos.");
                 }
 
             } else {
+                información.AgregarLínea($"Se mejoró el modelo de {modeloOriginal} a {nombreModeloMejorado}.");
                 return modeloMejorado;
             }
 

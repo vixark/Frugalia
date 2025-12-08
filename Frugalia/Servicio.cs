@@ -54,7 +54,7 @@ namespace Frugalia {
 
         public Verbosidad Verbosidad { get; }
 
-        public CalidadAdaptable ModoCalidadAdaptable { get; }
+        public CalidadAdaptable CalidadAdaptable { get; }
 
         public TratamientoNegritas TratamientoNegritas { get; }
 
@@ -65,15 +65,15 @@ namespace Frugalia {
         private bool Iniciado { get; }
 
         public string Descripción => $"Modelo: {Modelo}. Lote: {Lote}. Razonamiento: {Razonamiento}. Verbosidad: {Verbosidad}. " +
-            $"Calidad adaptable: {ModoCalidadAdaptable}. Restricción razonamiento alto: {RestricciónRazonamientoAlto}. " +
+            $"Calidad adaptable: {CalidadAdaptable}. Restricción razonamiento alto: {RestricciónRazonamientoAlto}. " +
             $"Restricción tókenes salida: {RestricciónTókenesSalida}. Restricción tókenes razonamiento: {RestricciónTókenesRazonamiento}";
 
 
-        public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable modoCalidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
+        public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
             TratamientoNegritas tratamientoNegritas, string claveAPI, out string error,
             RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosMuyPequeños, // Se ha encontrado con GPT que los modelos muy pequeños con alto razonamiento no funcionan muy bien porque terminan gastando muchos tókenes de razonamiento para cubrir sus limitaciones, reduciendo la ventaja económica de usar este modelo muy pequeño en primer lugar.
             RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna, // No se ha realizados pruebas suficientes para sugerir un valor predeterminado para este parámetro.
-            RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta,
+            RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, // Predeterminada se establecen estas restricciones altas, el usuario de la librería podría relajarlas para evitar respuestas incompletas si en su caso de uso está sucediendo frecuentemente pero teniendo en cuenta que se incrementan los costos.
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta) {
 
             error = null;
@@ -97,7 +97,7 @@ namespace Frugalia {
             Verbosidad = verbosidad;
             RestricciónTókenesSalida = restricciónTókenesSalida;
             RestricciónTókenesRazonamiento = restricciónTókenesRazonamiento;
-            ModoCalidadAdaptable = modoCalidadAdaptable;
+            CalidadAdaptable = calidadAdaptable;
             TratamientoNegritas = tratamientoNegritas;
             Lote = lote;
             RestricciónRazonamientoAlto = restricciónRazonamientoAlto;
@@ -106,12 +106,6 @@ namespace Frugalia {
             Iniciado = true;
 
         } // ServicioIA>
-
-
-        private static string ObtenerTextoPrimeraInstrucción(Conversación conversación) => conversación?.ObtenerTextoPrimeraInstrucción() ?? "";
-
-
-        private static string ObtenerTextoÚltimaInstrucción(Conversación conversación) => conversación?.ObtenerTextoÚltimaInstrucción() ?? "";
 
 
         /// <summary>
@@ -243,7 +237,7 @@ namespace Frugalia {
                  
                 */
 
-                var m1 = ObtenerTextoPrimeraInstrucción(conversación);
+                var m1 = Conversación.ObtenerTextoPrimeraInstrucción(conversación);
                 if (!string.IsNullOrWhiteSpace(m1)) {
 
                     var largoM1 = m1.Length;
@@ -398,14 +392,13 @@ namespace Frugalia {
 
             if (tókenes == null) tókenes = new Dictionary<string, Tókenes>();
             var últimaInstruccion = instrucción;
-            if (conversación != null) últimaInstruccion = ObtenerTextoÚltimaInstrucción(conversación);
+            if (conversación != null) últimaInstruccion = Conversación.ObtenerTextoÚltimaInstrucción(conversación);
             var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema);
             Respuesta respuesta;
-            var modoCalidadAdaptable = ModoCalidadAdaptable == CalidadAdaptable.MejorarModelo 
-                || ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento || ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento;
+            var esCalidadAdaptable = CalidadAdaptable != CalidadAdaptable.No; 
 
             var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones, ref información);
-            if (modoCalidadAdaptable) {
+            if (esCalidadAdaptable) {
 
                 var instrucciónAplicable = string.IsNullOrEmpty(instrucción) ? últimaInstruccion : instrucción;
                 if (instrucciónAplicable.Contains(UsaModeloMuchoMejor) || instrucciónAplicable.Contains(UsaModeloMejor) || instrucciónAplicable.Contains(LoHiceBien))
@@ -445,16 +438,16 @@ namespace Frugalia {
                 var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out Resultado resultadoInicial);
                 var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(TratamientoNegritas);
 
-                int nivelesMejoramiento;
+                int nivelMejoramientoSugerido;
                 if (textoRespuesta.Contains(LoHiceBien)) {
                     información.AgregarLínea($"El modelo se autoevaluó con {LoHiceBien}.");
-                    nivelesMejoramiento = 0;
+                    nivelMejoramientoSugerido = 0;
                 } else if (textoRespuesta.Contains(UsaModeloMejor)) {
                     información.AgregarLínea($"El modelo sugirió {UsaModeloMejor}.");
-                    nivelesMejoramiento = 1;
+                    nivelMejoramientoSugerido = 1;
                 } else if (textoRespuesta.Contains(UsaModeloMuchoMejor)) {
                     información.AgregarLínea($"El modelo sugirió {UsaModeloMuchoMejor}.");
-                    nivelesMejoramiento = 2;
+                    nivelMejoramientoSugerido = 2;
                 } else {
 
                     if (resultadoInicial == Resultado.MáximosTókenesAlcanzados) { // Aquí puede entrar por traer el texto vacío o truncado. El vacío sucede cuando se llega al máximo de tókenes de salida solo con razonamiento y aún no había empezado a generar la respuesta de texto. Pueden suceder los dos casos de con OpenAI. Por lo tanto la etiqueta de autoevaluación puede estar truncada o no estar. El intento de solución más inmediato es reintantar la consulta con menos restricción en la cantidad de máximos tókenes de salida.
@@ -465,8 +458,7 @@ namespace Frugalia {
                         if (Modelo.ObtenerTamaño() == Tamaño.Pequeño || Modelo.ObtenerTamaño() == Tamaño.MuyPequeño) {
                                                       
                             var modificadaRestricción = false;
-
-                            switch (restricciónTókenesSalida) { // Debido a que normalmente el modoCalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
+                            switch (restricciónTókenesSalida) { // Debido a que normalmente el con el modo CalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
                             case RestricciónTókenesSalida.Alta:
                                 
                                 restricciónTókenesSalida = RestricciónTókenesSalida.Media;
@@ -489,31 +481,31 @@ namespace Frugalia {
                             if (modificadaRestricción) {
 
                                 información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Se intentó nuevamente con una restricción menor.");
-                                opciones.EscribirOpcionesRazonamiento(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, Modelo, 
-                                    largoInstrucciónÚtil, restricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);  // Por facilidad y control de errores en el uso de estas funciones que actualizan las opciones (opciones y máximos tókenes de salida y razonamiento) ambas se escriben en la misma función. Esto es necesario porque la funcíón que establece los tókenes máximos necesita el razonamiento efectivo que se calcula al escribir las opciones de consulta, por lo tanto están altamente acopladas y es mejor llamarlas siempre juntas.
+                                opciones.EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, 
+                                    Modelo, largoInstrucciónÚtil, restricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
                                 goto reintentarMenosRestrictiva;
 
                             } else {
                                 información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Cómo ya estaba muy baja la restricción, no se reintentó.");
-                                nivelesMejoramiento = 0;
+                                nivelMejoramientoSugerido = 0;
                             }
 
                         } else {
                             información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Cómo el modelo no era muy pequeño o pequeño, no se reintentó.");
-                            nivelesMejoramiento = 0; // Para modelos medios o grandes, puede no justificar el costo extra de la llamada adicionales para intentar corregir este problema usando una menor restricción de máximos tókenes de salida.
+                            nivelMejoramientoSugerido = 0; // Para modelos medios o grandes, puede no justificar el costo extra de la llamada adicionales para intentar corregir este problema usando una menor restricción de máximos tókenes de salida.
                         }
                                                
                     } else { // El modelo olvidó agregar la etiqueta de autoevaluación. No tiene problemas de máximos tókenes de salida alcanzados.
 
                         resultado = Resultado.SinAutoevaluación; // El modelo no contestó con la etiqueta correcta. No debería pasar mucho. Se devuelve el estado apropiado al usuario librería para que pueda llevar un registro de cuándo sucede esto y tomar las acciones necesarias. Al usuario del programa se le responde normalmente sin realizar ningún mejoramiento del modelo. Lo peor que puede pasa es que el usuario a veces obtenga resultados no tan buenos con un modelo más pequeño, es similar a lo que sucede cuando el modelo es ignorantemente confidente y se califica [lo-hice-bien] sin haberlo hecho bien.
-                        nivelesMejoramiento = 0;
+                        nivelMejoramientoSugerido = 0;
                         información.AgregarLínea("La respuesta del modelo no incluyó la etiqueta de autoevaluación esperada.");
 
                     }
 
                 } // textoRespuesta.Contains(Etiqueta)>
 
-                if (nivelesMejoramiento == 0) {
+                if (nivelMejoramientoSugerido == 0) {
 
                     respuesta = respuestaInicial;
                     if (resultado != Resultado.SinAutoevaluación) resultado = resultadoInicial;
@@ -521,28 +513,20 @@ namespace Frugalia {
 
                 } else {
 
-                    var nivelesMejoramientoModelo = ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento ? 0 : nivelesMejoramiento; // Cuando solo se está mejorando razonamiento no se incrementa el nivel del modelo.
-                    var modeloMejorado = Modelo.ObtenerModeloMejorado(Modelo, nivelesMejoramientoModelo, ref información);
+                    var modeloMejorado = Modelo.ObtenerModeloMejorado(Modelo, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
                     if (modeloMejorado == null) {
-
                         respuesta = respuestaInicial; // No hay modelos disponibles por encima del usado inicialmente.
                         resultado = resultadoInicial;
-                        información.AgregarLínea($"No hay modelos disponibles por encima de {Modelo}.");
-
                     } else {
 
                         información.AgregarLínea($"Se repitió consulta con {modeloMejorado}.");
 
                         opciones.EscribirInstrucciónSistema(instruccionesOriginales); // Con el nuevo modelo usa las instrucciones originales, sin la instrucción de autoevaluacion porque solo se autoevaluará una vez.
                         
-                        var razonamientoAUsar = Razonamiento;
+                        var razonamientoMejorado = ObtenerRazonamientoMejorado(Razonamiento, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
 
-                        if (ModoCalidadAdaptable == CalidadAdaptable.MejorarModeloYRazonamiento || ModoCalidadAdaptable == CalidadAdaptable.MejorarRazonamiento)
-                            razonamientoAUsar = ObtenerRazonamientoMejorado(razonamientoAUsar, nivelesMejoramiento, ref información);
-                        
-                        opciones.EscribirOpcionesRazonamiento(razonamientoAUsar, RestricciónRazonamientoAlto, 
-                            RestricciónRazonamientoMedio, (Modelo)modeloMejorado, largoInstrucciónÚtil, RestricciónTókenesSalida, RestricciónTókenesRazonamiento,
-                            Verbosidad, ref información);
+                        opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, 
+                            (Modelo)modeloMejorado, largoInstrucciónÚtil, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
 
                         respuesta = ObtenerRespuesta(instrucción, conversación, opciones, (Modelo)modeloMejorado, ref tókenes, out resultado);
 
@@ -559,7 +543,7 @@ namespace Frugalia {
             }
 
             respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
-            respuestaTextoLimpio = modoCalidadAdaptable
+            respuestaTextoLimpio = esCalidadAdaptable
                 ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(UsaModeloMejor, "").Replace(UsaModeloMuchoMejor, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
             respuestaTextoLimpio = respuestaTextoLimpio.TrimEnd();
             if (resultado == Resultado.MáximosTókenesAlcanzados) 
@@ -623,28 +607,6 @@ namespace Frugalia {
         } // Consulta>
 
 
-        private static int EstimarTókenesEntradaArchivos(List<string> rutasArchivos) {
-
-            var tókenesEstimados = 0;
-
-            if (rutasArchivos != null) {
-
-                foreach (var rutaArchivo in rutasArchivos) {
-
-                    if (string.IsNullOrWhiteSpace(rutaArchivo) || !File.Exists(rutaArchivo)) continue;
-
-                    var tamañoArchivoBytes = new FileInfo(rutaArchivo).Length;
-                    tókenesEstimados += (int)Math.Ceiling(tamañoArchivoBytes / 4.0); // Conversión aproximada de bytes a tókenes asumiendo 1 byte por carácter.
-
-                }
-
-            }
-
-            return tókenesEstimados;
-
-        } // EstimarTókenesEntradaArchivos>
-
-
         /// <summary>
         /// Con archivos.
         /// </summary>
@@ -673,7 +635,7 @@ namespace Frugalia {
             Archivador archivador = null;
             try {
 
-                var tókenesEstimadosArchivos = EstimarTókenesEntradaArchivos(rutasArchivos);
+                var tókenesEstimadosArchivos = Archivador.EstimarTókenesEntradaArchivos(rutasArchivos);
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, 
                     conversación: null, instruccionesPorConversación: 1, proporciónPrimerInstrucciónVsSiguientes: 1, proporciónRespuestasVsInstrucciones: 1, 

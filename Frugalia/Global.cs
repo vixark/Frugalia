@@ -44,11 +44,16 @@ namespace Frugalia {
 
     public enum Verbosidad { Baja, Media, Alta }
 
-    public enum CalidadAdaptable {  // Si se usa un modo de calidad adaptable, el modelo contestará con alguno de estos textos [LoHiceBien], [ModeloMedioRecomendado] o [ModeloGrandeRecomendado]. Si se tiene el modo MejorarModelo se realizará nuevamente la consulta usando un modelo inmediatamente superior al actual (si es posible). Si se tiene el modo MejorarModeloYRazonamiento se mejora tanto el modelo como el razonamiento (si es posible). Si responde  [ModeloGrandeRecomendado] se hacen dos incrementos de nivel de golpe.
-        Ninguna, 
+    public enum CalidadAdaptable {  // Si se usa un modo de calidad adaptable, el modelo contestará con alguno de estos textos LoHiceBien, UsaModeloMejor o UsaModeloMuchoMejor. Si se tiene el modo MejorarModelo se realizará nuevamente la consulta usando un modelo inmediatamente superior al actual (si es posible). Si se tiene el modo MejorarModeloYRazonamiento se mejora tanto el modelo como el razonamiento (si es posible). Si se eligen las opciones que incluyen mejoras de dos niveles, cuando el modelo responde UsaModeloMuchoMejor se realizan dos mejoras del modelo o dos mejoras al nivel de razonamiento según corresponda. Se prefiere mantener una configuración unificada porque solo se soportarán dos niveles de mejoramiento y la mayoría de los usuarios de la libreria usarían solo el salto de un nivel entonces están contenidos todos casos y los casos de más uso son simples y entendibles: Ninguna, MejorarModelo, MejorarRazonamiento y MejorarModeloYRazonamiento.
+        No, 
         MejorarModelo, 
         MejorarRazonamiento,
-        MejorarModeloYRazonamiento 
+        MejorarModeloYRazonamiento,
+        MejorarModeloDosNiveles,
+        MejorarRazonamientoDosNiveles,
+        MejorarModeloYRazonamientoDosNiveles,
+        MejorarModeloUnNivelYRazonamientoDosNiveles,
+        MejorarModeloDosNivelesYRazonamientoUnNivel
     };
 
     public enum RestricciónRazonamiento { // Al cambiar de gpt-5.1 a gpt-5-nano manteniendo Razonamiento = Alto en un experimento se disparó la cantidad de tókenes de salida, incluso con respuestas muy cortas, y la calidad fue peor. Esto pasa porque el razonamiento genera muchos pasos de pensamiento internos (tókenes ocultos pero facturados). En modelos muy pequeños como nano, el modelo necesita más pasos para llegar a la misma conclusión, gastando muchos tókenes y contrarrestando en parte el ahorro esperado por el menor precio del modelo. Por eso, para gpt-5-nano se debe considerar restringir el razonamiento alto.
@@ -111,6 +116,7 @@ namespace Frugalia {
         Usuario,
         AsistenteAI // Solo mensajes del asistente IA.
     } // TipoMensaje>
+
 
     public static class Global {
 
@@ -211,35 +217,37 @@ namespace Frugalia {
         } // Reemplazar>
 
 
-        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, int nivelesMejoramiento, ref StringBuilder información) {
+        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido, 
+            ref StringBuilder información) {
 
-            if (nivelesMejoramiento <= 0 || nivelesMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
+            var nivelMejoramiento = ObtenerNivelMejoramientoModeloEfectivo(calidadAdaptable, nivelMejoramientoSugerido);
+            if (nivelMejoramiento == 0) return razonamiento;
             
-            Razonamiento nuevoRazonamiento;
+            Razonamiento razonamientoMejorado;
 
-            if (nivelesMejoramiento == 1) {
+            if (nivelMejoramiento == 1) {
 
                 switch (razonamiento) {
                 case Razonamiento.Ninguno:
-                    nuevoRazonamiento = Razonamiento.Bajo;
+                    razonamientoMejorado = Razonamiento.Bajo;
                     break;
                 case Razonamiento.Bajo:
-                    nuevoRazonamiento = Razonamiento.Medio;
+                    razonamientoMejorado = Razonamiento.Medio;
                     break;
                 case Razonamiento.Medio:
-                    nuevoRazonamiento = Razonamiento.Alto;
+                    razonamientoMejorado = Razonamiento.Alto;
                     break;
                 case Razonamiento.Alto:
-                    nuevoRazonamiento = Razonamiento.Alto;  // Permanece igual.
+                    razonamientoMejorado = Razonamiento.Alto;  // Permanece igual.
                     break;
                 case Razonamiento.NingunoOMayor:
-                    nuevoRazonamiento = Razonamiento.BajoOMayor;
+                    razonamientoMejorado = Razonamiento.BajoOMayor;
                     break;
                 case Razonamiento.BajoOMayor:
-                    nuevoRazonamiento = Razonamiento.MedioOMayor;
+                    razonamientoMejorado = Razonamiento.MedioOMayor;
                     break;
                 case Razonamiento.MedioOMayor:
-                    nuevoRazonamiento = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    razonamientoMejorado = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
                     break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
@@ -250,25 +258,25 @@ namespace Frugalia {
 
                 switch (razonamiento) {
                 case Razonamiento.Ninguno:
-                    nuevoRazonamiento = Razonamiento.Medio;
+                    razonamientoMejorado = Razonamiento.Medio;
                     break;
                 case Razonamiento.Bajo:
-                    nuevoRazonamiento = Razonamiento.Alto;
+                    razonamientoMejorado = Razonamiento.Alto;
                     break;
                 case Razonamiento.Medio:
-                    nuevoRazonamiento = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    razonamientoMejorado = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
                     break;
                 case Razonamiento.Alto:
-                    nuevoRazonamiento = Razonamiento.Alto; // Permanece igual.
+                    razonamientoMejorado = Razonamiento.Alto; // Permanece igual.
                     break;
                 case Razonamiento.NingunoOMayor:
-                    nuevoRazonamiento = Razonamiento.MedioOMayor;
+                    razonamientoMejorado = Razonamiento.MedioOMayor;
                     break;
                 case Razonamiento.BajoOMayor:
-                    nuevoRazonamiento = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    razonamientoMejorado = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
                     break;
                 case Razonamiento.MedioOMayor:
-                    nuevoRazonamiento = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    razonamientoMejorado = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
                     break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
@@ -276,13 +284,13 @@ namespace Frugalia {
 
             }
 
-            if (razonamiento != nuevoRazonamiento) {
-                información.AgregarLínea($"Se cambió el razonamiento un nivel desde {razonamiento} hasta {nuevoRazonamiento}.");
+            if (razonamiento != razonamientoMejorado) {
+                información.AgregarLínea($"Se cambió el razonamiento un nivel desde {razonamiento} hasta {razonamientoMejorado}.");
             } else {
                 información.AgregarLínea($"No se cambió el razonamiento {razonamiento}.");
             }
 
-            return nuevoRazonamiento;
+            return razonamientoMejorado;
 
         } // ObtenerRazonamientoMejorado>
 
@@ -375,6 +383,70 @@ namespace Frugalia {
             return razonamientoEfectivo;
 
         } // ObtenerRazonamientoEfectivo>
+
+
+        public static int ObtenerNivelMejoramientoModeloMáximo(this CalidadAdaptable calidad) {
+
+            switch (calidad) {
+            case CalidadAdaptable.No:
+                return 0;
+            case CalidadAdaptable.MejorarModelo:
+                return 1;
+            case CalidadAdaptable.MejorarRazonamiento:
+                return 0;
+            case CalidadAdaptable.MejorarModeloYRazonamiento:
+                return 1;
+            case CalidadAdaptable.MejorarModeloDosNiveles:
+                return 2;
+            case CalidadAdaptable.MejorarRazonamientoDosNiveles:
+                return 0;
+            case CalidadAdaptable.MejorarModeloYRazonamientoDosNiveles:
+                return 2;
+            case CalidadAdaptable.MejorarModeloUnNivelYRazonamientoDosNiveles:
+                return 1;
+            case CalidadAdaptable.MejorarModeloDosNivelesYRazonamientoUnNivel:
+                return 2;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(calidad), calidad, null);
+            }
+
+        } // ObtenerNivelMejoramientoModeloMáximo>
+
+
+        public static int ObtenerNivelMejoramientoRazonamientoMáximo(this CalidadAdaptable calidad) {
+
+            switch (calidad) {
+            case CalidadAdaptable.No:
+                return 0;
+            case CalidadAdaptable.MejorarModelo:
+                return 0;
+            case CalidadAdaptable.MejorarRazonamiento:
+                return 1;
+            case CalidadAdaptable.MejorarModeloYRazonamiento:
+                return 1;
+            case CalidadAdaptable.MejorarModeloDosNiveles:
+                return 0;
+            case CalidadAdaptable.MejorarRazonamientoDosNiveles:
+                return 2;
+            case CalidadAdaptable.MejorarModeloYRazonamientoDosNiveles:
+                return 2;
+            case CalidadAdaptable.MejorarModeloUnNivelYRazonamientoDosNiveles:
+                return 2;
+            case CalidadAdaptable.MejorarModeloDosNivelesYRazonamientoUnNivel:
+                return 1;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(calidad), calidad, null);
+            }
+
+        } // ObtenerNivelMejoramientoRazonamientoMáximo>
+
+
+        public static int ObtenerNivelMejoramientoRazonamientoEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugeridoModelo) 
+            => Math.Min(calidad.ObtenerNivelMejoramientoRazonamientoMáximo(), nivelMejoramientoSugeridoModelo);
+
+
+        public static int ObtenerNivelMejoramientoModeloEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugeridoModelo)
+            => Math.Min(calidad.ObtenerNivelMejoramientoModeloMáximo(), nivelMejoramientoSugeridoModelo);
 
 
         /// <summary>

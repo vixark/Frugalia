@@ -178,6 +178,12 @@ namespace Frugalia {
         } // EstimarTókenesTotales>
 
 
+        internal static string ObtenerTextoPrimeraInstrucción(Conversación conversación) => conversación?.ObtenerTextoPrimeraInstrucción() ?? "";
+
+
+        internal static string ObtenerTextoÚltimaInstrucción(Conversación conversación) => conversación?.ObtenerTextoÚltimaInstrucción() ?? "";
+
+
     } // Conversación>
 
 

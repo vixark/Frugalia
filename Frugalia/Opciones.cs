@@ -53,7 +53,25 @@ namespace Frugalia {
         private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder> 
             FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
 
-        internal void EscribirOpcionesRazonamiento(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
+
+        /// <summary>
+        /// Por facilidad y evitar introducir errores en el uso de las funciones escribir opciones y escribir máximos tókenes de salida y razonamiento,
+        /// ambas se escriben en la misma función. Esto es necesario porque la funcíón que establece los tókenes máximos necesita el razonamiento efectivo 
+        /// que se calcula al escribir las opciones de consulta, por lo tanto están altamente acopladas y es mejor llamarlas siempre juntas. Si se implementara un
+        /// diseño de escritura independiente, el desarrollador de la librería tendría que recordar llamarlas una después de la otra para no introducir estados
+        /// inconsistentes.
+        /// </summary>
+        /// <param name="razonamiento"></param>
+        /// <param name="restricciónRazonamientoAlto"></param>
+        /// <param name="restricciónRazonamientoMedio"></param>
+        /// <param name="modelo"></param>
+        /// <param name="largoInstrucciónÚtil"></param>
+        /// <param name="restricciónTókenesSalida"></param>
+        /// <param name="restricciónTókenesRazonamiento"></param>
+        /// <param name="verbosidad"></param>
+        /// <param name="información"></param>
+        /// <exception cref="Exception"></exception>
+        internal void EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
             RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, RestricciónTókenesSalida restricciónTókenesSalida,
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, ref StringBuilder información) {
 
@@ -71,7 +89,8 @@ namespace Frugalia {
             if (máximosTókenesSalidaYRazonamiento <= 0) throw new Exception("No se permiten valores negativos o cero para máximosTókenesSalida.");
             if (máximosTókenesSalidaYRazonamiento != SinLímiteTókenes) AcciónEscribirMáximosTókenesSalida(máximosTókenesSalidaYRazonamiento);
 
-        } // EscribirOpcionesRazonamiento>
+        } // EscribirOpcionesRazonamientoYLímitesTókenes>
+
 
         private Func<string> FunciónObtenerInstrucciónSistema { get; }
 
@@ -142,7 +161,7 @@ namespace Frugalia {
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamiento(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil, 
+                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil, 
                     restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, ref información);
    
                 var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
