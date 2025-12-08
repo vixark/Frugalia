@@ -25,7 +25,8 @@
 using System.Diagnostics;
 using System.Text;
 using static Frugalia.Demostración.Global;
-using static Frugalia.Global;
+using static Frugalia.GlobalFrugalia;
+using static Frugalia.General;
 namespace Frugalia.Demostración;
 
 

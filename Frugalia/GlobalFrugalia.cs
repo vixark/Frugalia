@@ -24,10 +24,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using static Frugalia.General;
 
 
 namespace Frugalia {
@@ -118,13 +118,9 @@ namespace Frugalia {
         AsistenteAI // Solo mensajes del asistente IA.
     } // TipoMensaje>
 
-
-    public static class Global {
-
-
-        private static readonly Random AleatorioCompartido = new Random();
-
-        public static string DobleLínea = $"{Environment.NewLine}{Environment.NewLine}";
+   
+    public static class GlobalFrugalia { // Funciones y constantes auxiliares de lógica de negocio que solo aplican en esta librería. Se diferencia de General que contiene funciones que se podrían copiar y pegar en otros proyectos.
+  
 
         internal const string LoHiceBien = "[lo-hice-bien]";
 
@@ -193,33 +189,6 @@ namespace Frugalia {
             => (instrucción?.Length ?? 0) / CarácteresPorTokenConversaciónTípicos
                 + Math.Max((instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0) / CarácteresPorTokenInstrucciónSistemaTípicos
                 + (rellenoInstrucciónSistema?.Length ?? 0) / CarácteresPorTokenRellenoMáximos;
-
-
-        public static string Reemplazar(this string texto, string valorAnterior, string nuevoValor, StringComparison comparisonType) {
-
-            if (string.IsNullOrEmpty(texto) || string.IsNullOrEmpty(valorAnterior)) return texto;
-
-            if (comparisonType == StringComparison.Ordinal) return texto.Replace(valorAnterior, nuevoValor);
-
-            int idx = 0;
-            int largoAnterior = valorAnterior.Length;
-            var respuesta = "";
-
-            while (idx < texto.Length) {
-
-                int found = texto.IndexOf(valorAnterior, idx, comparisonType);
-                if (found < 0) {
-                    respuesta += texto.Substring(idx);
-                    break;
-                }
-                respuesta += texto.Substring(idx, found - idx) + nuevoValor;
-                idx = found + largoAnterior;
-
-            }
-
-            return respuesta;
-
-        } // Reemplazar>
 
 
         internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido, 
@@ -519,60 +488,6 @@ namespace Frugalia {
         } // AgregarSumandoPosibleNulo>
 
 
-        /// <summary>
-        /// Agrega una nueva línea a un texto guardado en un StringBuilder.
-        /// Si el texto es nulo, lanza excepción.
-        /// </summary>
-        /// <param name="texto"></param>
-        /// <param name="nuevaLínea"></param>
-        public static void AgregarLínea(this StringBuilder texto, string nuevaLínea) {
-
-            if (texto == null) throw new ArgumentNullException(nameof(texto), "El método AgregarLínea() no permite nulos. Usa AgregarLíneaPosibleNulo().");
-            texto.AppendLine(nuevaLínea);            
-
-        } // AgregarLínea>
-
-
-        /// <summary>
-        /// Agrega varias nuevas líneas a un texto guardado en un StringBuilder.
-        /// </summary>
-        /// <param name="texto"></param>
-        /// <param name="nuevasLíneas"></param>
-        /// <exception cref="ArgumentNullException"></exception>
-        public static void AgregarLíneas(this StringBuilder texto, StringBuilder nuevasLíneas) {
-
-            if (texto == null) throw new ArgumentNullException(nameof(texto), "El método AgregarLíneas() no permite nulos. Usa primero AgregarLíneaPosibleNulo().");
-            if (nuevasLíneas != null) { // No agrega si nuevaLíneas es nulo.
-                if (texto.Length > 0) texto.AgregarLínea(""); // Si ya hay algo escrito, separa con una línea en blanco.
-                texto.Append(nuevasLíneas);
-            }
-               
-        } // AgregarLíneas>
-
-
-        /// <summary>
-        /// Indica si el StringBuilder es nulo o está vacío (Length == 0).
-        /// Equivalente a string.IsNullOrEmpty pero para StringBuilder.
-        /// </summary>
-        /// <param name="texto">Instancia a evaluar (puede ser nula).</param>
-        /// <returns>true si es nulo o está vacío; false en caso contrario.</returns>
-        public static bool EsNuloOVacío(this StringBuilder texto) => texto == null || texto.Length == 0;
-
-
-        /// <summary>
-        /// Agrega una nueva línea a un texto guardado en un StringBuilder.
-        /// </summary>
-        /// <param name="texto"></param>
-        /// <param name="nuevaLínea"></param>
-        /// <returns></returns>
-        public static void AgregarLíneaPosibleNulo(ref StringBuilder texto, string nuevaLínea) { // Es necesaria esta función auxiliar porque C# 7.3 no permite 'ref this StringBuilder texto' para objetos que no son struct.
-
-            if (texto == null) texto = new StringBuilder();
-            texto.AgregarLínea(nuevaLínea);
-
-        } // AgregarLíneaPosibleNulo>
-
-
         internal static List<(string Nombre, string Valor)> ExtraerParámetros(JsonDocument json) {
 
             if (json == null) return new List<(string Nombre, string Valor)> { };
@@ -612,41 +527,7 @@ namespace Frugalia {
         } // ATexto>
 
 
-        /// <summary>
-        /// Ayudante para evitar el estado inestable en el que puede quedar el depurador después de una excepción en algunos casos.
-        /// No se recomienda usar frecuentemente. Lo recomendable es usar en la medida de lo posible las excepciones normales. 
-        /// Solo usar esta función cuando el editor esté poniendo problema.
-        /// </summary>
-        /// <param name="mensaje"></param>
-        internal static void LanzarExcepción(string mensaje) {
-
-            Suspender();
-            #if !DEBUG
-                throw new Exception(mensaje);
-            #endif
-
-        } // LanzarExcepciónYSuspender>
-
-
-        internal static void Suspender() {
-
-            #if DEBUG
-                Debugger.Break();
-            #endif
-
-        } // Suspender>
-
-
-        public static int ObtenerAleatorio(int mínimo, int máximo) {
-
-            lock (AleatorioCompartido) {
-                return AleatorioCompartido.Next(mínimo, máximo);
-            }
-
-        } // ObtenerAleatorio>
-
-
-    } // Global>
+    } // GlobalFrugalia>
 
 
 } // Frugalia>

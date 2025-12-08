@@ -24,7 +24,7 @@
 
 using System;
 using System.Text;
-using static Frugalia.Global;
+using static Frugalia.GlobalFrugalia;
 
 
 namespace Frugalia {

@@ -22,7 +22,7 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
-using static Frugalia.Global;
+using static Frugalia.GlobalFrugalia;
 
 
 namespace Frugalia {

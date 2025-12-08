@@ -37,7 +37,7 @@ public class Globales {
 
         var tókenes = CrearTókenes("gpt-5-mini", lote: false, entradaTotal: 10, salidaTotal: 5, salidaRazonamiento: 2, entradaCaché: 1);
         Dictionary<string, Tókenes>? diccionarioNulo = null;
-        Global.AgregarSumandoPosibleNulo(ref diccionarioNulo, tókenes);
+        GlobalFrugalia.AgregarSumandoPosibleNulo(ref diccionarioNulo, tókenes);
         var clave = ObtenerClave(tókenes);
 
         Assert.NotNull(diccionarioNulo);

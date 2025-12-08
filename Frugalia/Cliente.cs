@@ -25,7 +25,7 @@
 using OpenAI;
 using OpenAI.Responses;
 using System;
-using static Frugalia.Global;
+using static Frugalia.General;
 
 
 namespace Frugalia {
