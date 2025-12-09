@@ -73,8 +73,6 @@ internal static class Global {
 
     internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? instrucción, string? respuesta, string? archivo) {
 
-        Console.SetCursorPosition(0, Console.CursorTop);
-
         if (!string.IsNullOrEmpty(instrucciónSistema)) {
             EscribirSeparador();
             EscribirMultilíneaGrisOscuro($"Sistema: {instrucciónSistema}");
@@ -171,182 +169,99 @@ internal static class Global {
 
     #region Escribir en Colores
 
-    internal static void EscribirMagenta(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Magenta;
+    private static void EscribirConColor(ConsoleColor color, string mensaje, int espaciosMargen) {
+
+        Console.SetCursorPosition(0, Console.CursorTop);
+        Console.ForegroundColor = color;
         Escribir(mensaje, espaciosMargen);
-    } // EscribirMagenta>
+
+    } // EscribirConColor>
 
 
-    internal static void EscribirNegro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Black;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirNegro>
+    private static void EscribirMultilíneaConColor(ConsoleColor color, string mensaje, int espaciosMargen, bool agregarSeparador) {
 
-    internal static void EscribirAzul(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Blue;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirAzul>
-
-
-    internal static void EscribirCian(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirCian>
-
-
-    internal static void EscribirGris(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Gray;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirGris>
-
-
-    internal static void EscribirVerde(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Green;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirVerde>
-
-
-    internal static void EscribirRojo(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirRojo>
-
-
-    internal static void EscribirAmarillo(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirAmarillo>
-
-
-    internal static void EscribirBlanco(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.White;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirBlanco>
-
-
-    internal static void EscribirAzulOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkBlue;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirAzulOscuro>
-
-
-    internal static void EscribirCianOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkCyan;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirCianOscuro>
-
-
-    internal static void EscribirGrisOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirGrisOscuro>
-
-
-    internal static void EscribirVerdeOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkGreen;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirVerdeOscuro>
-
-
-    internal static void EscribirMagentaOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkMagenta;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirMagentaOscuro>
-
-
-    internal static void EscribirRojoOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        Escribir(mensaje, espaciosMargen);
-    } // EscribirRojoOscuro>
-
-
-    internal static void EscribirMultilíneaMagenta(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Magenta;
+        Console.SetCursorPosition(0, Console.CursorTop);
+        Console.ForegroundColor = color;
         EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaMagenta>
+        if (agregarSeparador) EscribirSeparador();
+
+    } // EscribirMultilíneaConColor>
 
 
-    internal static void EscribirMultilíneaNegro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Black;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaNegro>
+    internal static void EscribirMagenta(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Magenta, mensaje, espaciosMargen);
 
+    internal static void EscribirNegro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Black, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaAzul(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Blue;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaAzul>
+    internal static void EscribirAzul(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Blue, mensaje, espaciosMargen);
 
+    internal static void EscribirCian(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Cyan, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaCian(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaCian>
+    internal static void EscribirGris(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Gray, mensaje, espaciosMargen);
 
+    internal static void EscribirVerde(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Green, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaGris(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Gray;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaGris>
+    internal static void EscribirRojo(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Red, mensaje, espaciosMargen);
 
+    internal static void EscribirAmarillo(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.Yellow, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaVerde(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Green;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaVerde>
+    internal static void EscribirBlanco(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.White, mensaje, espaciosMargen);
 
+    internal static void EscribirAzulOscuro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.DarkBlue, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaRojo(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Red;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaRojo>
+    internal static void EscribirCianOscuro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.DarkCyan, mensaje, espaciosMargen);
 
+    internal static void EscribirGrisOscuro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.DarkGray, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaAmarillo(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaAmarillo>
+    internal static void EscribirVerdeOscuro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.DarkGreen, mensaje, espaciosMargen);
 
+    internal static void EscribirMagentaOscuro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.DarkMagenta, mensaje, espaciosMargen);
 
-    internal static void EscribirMultilíneaBlanco(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.White;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaBlanco>
+    internal static void EscribirRojoOscuro(string mensaje, int espaciosMargen = 3) => EscribirConColor(ConsoleColor.DarkRed, mensaje, espaciosMargen);
 
+    internal static void EscribirMultilíneaMagenta(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Magenta, mensaje, espaciosMargen, agregarSeparador);
 
-    internal static void EscribirMultilíneaAzulOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkBlue;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaAzulOscuro>
+    internal static void EscribirMultilíneaNegro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Black, mensaje, espaciosMargen, agregarSeparador);
 
-    internal static void EscribirMultilíneaCianOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkCyan;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaCianOscuro>
+    internal static void EscribirMultilíneaAzul(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Blue, mensaje, espaciosMargen, agregarSeparador);
 
+    internal static void EscribirMultilíneaCian(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Cyan, mensaje, espaciosMargen, agregarSeparador);
 
-    internal static void EscribirMultilíneaGrisOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaGrisOscuro>
+    internal static void EscribirMultilíneaGris(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Gray, mensaje, espaciosMargen, agregarSeparador);
 
+    internal static void EscribirMultilíneaVerde(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Green, mensaje, espaciosMargen, agregarSeparador);
 
-    internal static void EscribirMultilíneaVerdeOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkGreen;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaVerdeOscuro>
+    internal static void EscribirMultilíneaRojo(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.Red, mensaje, espaciosMargen, agregarSeparador);
 
+    internal static void EscribirMultilíneaAmarillo(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false)
+        => EscribirMultilíneaConColor(ConsoleColor.Yellow, mensaje, espaciosMargen, agregarSeparador);
 
-    internal static void EscribirMultilíneaMagentaOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkMagenta;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaMagentaOscuro>
+    internal static void EscribirMultilíneaBlanco(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.White, mensaje, espaciosMargen, agregarSeparador);
 
+    internal static void EscribirMultilíneaAzulOscuro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.DarkBlue, mensaje, espaciosMargen, agregarSeparador);
 
-    internal static void EscribirMultilíneaRojoOscuro(string mensaje, int espaciosMargen = 3) {
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        EscribirMultilínea(mensaje, espaciosMargen);
-    } // EscribirMultilíneaRojoOscuro>
+    internal static void EscribirMultilíneaCianOscuro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.DarkCyan, mensaje, espaciosMargen, agregarSeparador);
+
+    internal static void EscribirMultilíneaGrisOscuro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.DarkGray, mensaje, espaciosMargen, agregarSeparador);
+
+    internal static void EscribirMultilíneaVerdeOscuro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false)
+        => EscribirMultilíneaConColor(ConsoleColor.DarkGreen, mensaje, espaciosMargen, agregarSeparador);
+
+    internal static void EscribirMultilíneaMagentaOscuro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false)
+        => EscribirMultilíneaConColor(ConsoleColor.DarkMagenta, mensaje, espaciosMargen, agregarSeparador);
+
+    internal static void EscribirMultilíneaRojoOscuro(string mensaje, int espaciosMargen = 3, bool agregarSeparador = false) 
+        => EscribirMultilíneaConColor(ConsoleColor.DarkRed, mensaje, espaciosMargen, agregarSeparador);
 
     #endregion
 

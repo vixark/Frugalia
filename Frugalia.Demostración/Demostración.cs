@@ -131,10 +131,11 @@ internal class Demostración {
         }
 
         var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
-            out string errorInicio, restricciónTókenesSalida: restricciónTókenesSalida, restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
+            out string errorInicio, out string informaciónInicio, restricciónTókenesSalida: restricciónTókenesSalida, 
+            restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
 
         Escribir("");
-        var parámetros = $"Iniciando {Demostraciones[númeroDemostración].ToLower()} con {servicio.Descripción}";
+        var parámetros = $"Iniciando {Demostraciones[númeroDemostración].ToLower().TrimEnd(['.', ' '])}:{Environment.NewLine}{servicio.Descripción}";
         EscribirMultilíneaCianOscuro(parámetros);
         Console.SetCursorPosition(3, Console.CursorTop);
 
@@ -144,10 +145,9 @@ internal class Demostración {
             (respuesta, var tókenes, var detalleCosto, var error, var información, var resultado) = consulta(servicio, (Modelo)modelo);
 
             if (!string.IsNullOrEmpty(error)) {
-
-                EscribirMultilíneaRojo(error);
+                EscribirSeparador();
+                EscribirMultilíneaRojo($"Error: {error}", agregarSeparador: true);
                 respuesta = error;
-
             } else {
 
                 temporizador.Stop();
@@ -156,12 +156,11 @@ internal class Demostración {
 
                 var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
                 detalleCosto = (string.IsNullOrEmpty(detalleCosto) ? "" : DobleLínea + detalleCosto);
-                EscribirMultilíneaVerde($"{costoTókenes}{detalleCosto}{DobleLínea}{detalleTiempo}");
-                EscribirSeparador();
+                EscribirMultilíneaVerde($"{costoTókenes}{detalleCosto}{DobleLínea}{detalleTiempo}", agregarSeparador: true);                
 
                 if (!información.EsNuloOVacío()) {
-                    EscribirMultilíneaCianOscuro(información.ToString());
-                    EscribirSeparador();
+                    if (!string.IsNullOrEmpty(informaciónInicio)) EscribirMultilíneaCianOscuro(informaciónInicio);
+                    EscribirMultilíneaCianOscuro(información.ToString(), agregarSeparador: true);
                 }
 
                 respuesta = $"{parámetros}{DobleLínea}{respuesta}{DobleLínea}{costoTókenes}{detalleCosto}";
@@ -169,14 +168,14 @@ internal class Demostración {
             }
 
             if (resultado != Resultado.Respondido) {
-                EscribirMultilíneaRojo($"Resultado: {resultado}");
-                EscribirSeparador();
+                EscribirMultilíneaRojo($"Resultado: {resultado}", agregarSeparador: true);
             }
 
             Escribir("");
 
         } else {
-            EscribirMultilíneaRojo(errorInicio);
+            EscribirSeparador();
+            EscribirMultilíneaRojo($"Error de inicio: {errorInicio}", agregarSeparador: true);
             respuesta = errorInicio;
         }
 

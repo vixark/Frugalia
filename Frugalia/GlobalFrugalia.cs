@@ -132,8 +132,15 @@ namespace Frugalia {
 
         internal const string Fin = ".[fin].";
 
-        internal const int CarácteresLímiteInstrucciónParaSubirRazonamiento = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto.
+        internal readonly static string InstrucciónAutoevaluación = "\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +
+            "propia respuesta y en la última línea escribe exactamente una de estas etiquetas, sola, sin dar explicaciones de tu elección:\n\n" +
+            $"{LoHiceBien}\n{UsaModeloMejor}\n{UsaModeloMuchoMejor}\n\nUsa:\n{LoHiceBien}: Si tu respuesta fue buena, tiene " +
+            $"sentido y es completa. Entendiste bien la consulta y es relativamente sencilla.\n{UsaModeloMejor}: Si tu respuesta no fue " +
+            "buena en calidad, sentido o completitud, o si a la consulta le faltan detalles, contexto o no la entiendes bien.\n" +
+            $"{UsaModeloMuchoMejor}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados."; // Alrededor de 650 carácteres.
 
+        internal const int CarácteresLímiteInstrucciónParaSubirRazonamiento = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto. El valor de 750 es ligeramente superior al largo de InstrucciónAutoevaluación, por lo tanto al establecer CalidadAdaptable diferente de No y Razonamiento adaptable y sumarle el largo de instrucción de sistema y de usuario, casi siempre subirá de razonamiento.
+        
         internal const int CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles = 2400; // Aproximadamente 800 tokenes.
 
         internal const int MáximosTókenesSalidaBaseVerbosidadBaja = 200;
@@ -163,7 +170,7 @@ namespace Frugalia {
         internal const double FactorSeguridadTókenesEntradaMáximos = 0.9; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 90%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. 
 
 
-        internal static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>() { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
+        internal static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
             { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
             { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, 0.5m, 1, null, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
                 $"gpt-5-pro{Deshabilitado}") },
@@ -195,8 +202,10 @@ namespace Frugalia {
         } // LeerClave>
 
 
-        internal static int ObtenerLargoInstrucciónÚtil(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema)
-            => Math.Max((instrucción?.Length ?? 0) + (instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0);
+        internal static int ObtenerLargoInstrucciónÚtil(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema, 
+            bool calidadAdaptable) // Se considera el texto de la instrucción de autoevaluación como parte del largo útil.
+                => Math.Max((instrucción?.Length ?? 0) + (instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0)
+                    + (calidadAdaptable ? InstrucciónAutoevaluación.Length : 0), 0);
 
 
         internal static double EstimarTókenesEntradaInstrucciones(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema)
@@ -396,9 +405,8 @@ namespace Frugalia {
 
             }
 
-            if (razonamiento.ToString() != razonamientoEfectivo.ToString())
-                información.AgregarLínea($"Razonamiento efectivo: {razonamientoEfectivo}, Razonamiento Original: {razonamiento}, " +
-                    $"Largo instrucción útil: {largoInstrucciónÚtil}{(aplicadaRestricción ? ", Aplicada restricción de razonamiento" : "")}.");
+            información.AgregarLínea($"Razonamiento efectivo: {razonamientoEfectivo}    Original: {razonamiento}    " +
+                    $"Largo instrucción: {largoInstrucciónÚtil}{(aplicadaRestricción ? "    Aplicada restricción de razonamiento" : "")}.");
 
             return razonamientoEfectivo;
 

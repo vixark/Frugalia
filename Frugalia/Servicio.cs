@@ -64,17 +64,28 @@ namespace Frugalia {
 
         private bool Iniciado { get; }
 
-        public string Descripción => $"Modelo: {Modelo}. Lote: {Lote}. Razonamiento: {Razonamiento}. Verbosidad: {Verbosidad}. " +
-            $"Calidad adaptable: {CalidadAdaptable}. Restricción razonamiento alto: {RestricciónRazonamientoAlto}. " +
-            $"Restricción tókenes salida: {RestricciónTókenesSalida}. Restricción tókenes razonamiento: {RestricciónTókenesRazonamiento}";
+        private bool RellenarInstruccionesSistema { get; }
+
+        public string Descripción => $"Modelo: {Familia} {Modelo}{(Lote ? " Lote" : "")}{Environment.NewLine}" +
+            $"Razonamiento: {Razonamiento}" +
+            $"{(RestricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna ? $"    Restricción a alto en {RestricciónRazonamientoAlto}" : "")}" +
+            $"{(RestricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna ? $"    Restricción a medio en {RestricciónRazonamientoMedio}" : "")}" +
+            $"{Environment.NewLine}" +
+            $"Verbosidad: {Verbosidad}{Environment.NewLine}" +
+            $"Calidad adaptable: {CalidadAdaptable}{Environment.NewLine}" +
+            $"Restricción tókenes: Salida: {RestricciónTókenesSalida}    Razonamiento: {RestricciónTókenesRazonamiento}{Environment.NewLine}" +
+            $"Rellenar instrucciones de sistema: {(RellenarInstruccionesSistema ? "Sí" : "No")}{Environment.NewLine}";
 
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
-            TratamientoNegritas tratamientoNegritas, string claveAPI, out string error,
+            TratamientoNegritas tratamientoNegritas, string claveAPI, out string error, out string información, bool rellenarInstruccionesSistema = true,
             RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosMuyPequeños, // Se ha encontrado con GPT que los modelos muy pequeños con alto razonamiento no funcionan muy bien porque terminan gastando muchos tókenes de razonamiento para cubrir sus limitaciones, reduciendo la ventaja económica de usar este modelo muy pequeño en primer lugar.
             RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna, // No se ha realizados pruebas suficientes para sugerir un valor predeterminado para este parámetro.
             RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, // Predeterminada se establecen estas restricciones altas, el usuario de la librería podría relajarlas para evitar respuestas incompletas si en su caso de uso está sucediendo frecuentemente pero teniendo en cuenta que se incrementan los costos.
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta) {
+
+            información = "";
+            var textoInformación = new StringBuilder(); // Se deja para futuro uso.
 
             error = null;
             var modelo = Modelo.ObtenerModelo(nombreModelo);
@@ -104,8 +115,10 @@ namespace Frugalia {
             RestricciónRazonamientoMedio = restricciónRazonamientoMedio;
             Cliente = new Cliente(Familia, ClaveAPI);
             Iniciado = true;
-
-        } // ServicioIA>
+            RellenarInstruccionesSistema = rellenarInstruccionesSistema;
+            información = textoInformación.ToString();
+            
+        } // Servicio>
 
 
         /// <summary>
@@ -176,6 +189,7 @@ namespace Frugalia {
              
             */
 
+            if (!RellenarInstruccionesSistema) return "";
             if (instrucciónSistema == null) instrucciónSistema = "";
             if (rellenoInstrucciónSistema == null) rellenoInstrucciónSistema = "";
             if (instruccionesPorConversación <= 0)
@@ -393,9 +407,10 @@ namespace Frugalia {
             if (tókenes == null) tókenes = new Dictionary<string, Tókenes>();
             var últimaInstruccion = instrucción;
             if (conversación != null) últimaInstruccion = Conversación.ObtenerTextoÚltimaInstrucción(conversación);
-            var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema);
+            
             Respuesta respuesta;
-            var esCalidadAdaptable = CalidadAdaptable != CalidadAdaptable.No; 
+            var esCalidadAdaptable = CalidadAdaptable != CalidadAdaptable.No;
+            var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema, esCalidadAdaptable);
 
             var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones, ref información);
             if (esCalidadAdaptable) {
@@ -419,14 +434,8 @@ namespace Frugalia {
                 }
 
                 var instruccionesOriginales = opciones.ObtenerInstrucciónSistema();
-                var instrucciónAutoevaluación = "\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +
-                    "propia respuesta y en la última línea escribe exactamente una de estas etiquetas, sola, sin dar explicaciones de tu elección:\n\n" +
-                    $"{LoHiceBien}\n{UsaModeloMejor}\n{UsaModeloMuchoMejor}\n\nUsa:\n{LoHiceBien}: Si tu respuesta fue buena, tiene " +
-                    $"sentido y es completa. Entendiste bien la consulta y es relativamente sencilla.\n{UsaModeloMejor}: Si tu respuesta no fue " +
-                    "buena en calidad, sentido o completitud, o si a la consulta le faltan detalles, contexto o no la entiendes bien.\n" +
-                    $"{UsaModeloMuchoMejor}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados.";
-                var nuevasInstruccionesSistema = instruccionesOriginales.Contains(Fin) ? instruccionesOriginales.Replace(Fin, $"{instrucciónAutoevaluación}{Fin}")
-                    : $"{instruccionesOriginales}.{instrucciónAutoevaluación}";
+                var nuevasInstruccionesSistema = instruccionesOriginales.Contains(Fin) ? instruccionesOriginales.Replace(Fin, $"{InstrucciónAutoevaluación}{Fin}")
+                    : $"{instruccionesOriginales}.{InstrucciónAutoevaluación}";
                 opciones.EscribirInstrucciónSistema(nuevasInstruccionesSistema);
 
                 var restricciónTókenesSalida = RestricciónTókenesSalida; // Hace copia para no reemplazar la propiedad original. Solo se reduce cuando inicia en Alta o Media.
@@ -592,7 +601,7 @@ namespace Frugalia {
                 }
 
                 var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, Modelo,
-                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema), out _); // No se agrega a la información el resultado de esta función porque esta función se vuelve a llamar internamente en Responder().
+                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema, CalidadAdaptable != CalidadAdaptable.No), out _); // No se agrega a la información el resultado de esta función porque esta función se vuelve a llamar internamente en Responder().
                 if (buscarEnInternet && (razonamientoEfectivo == RazonamientoEfectivo.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
                     error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
                     return null;

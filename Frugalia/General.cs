@@ -40,6 +40,7 @@ namespace Frugalia {
 
         public static string Reemplazar(this string texto, string valorAnterior, string nuevoValor, StringComparison comparisonType) {
 
+            if (nuevoValor == null) nuevoValor = "";
             if (string.IsNullOrEmpty(texto) || string.IsNullOrEmpty(valorAnterior)) return texto;
 
             if (comparisonType == StringComparison.Ordinal) return texto.Replace(valorAnterior, nuevoValor);
