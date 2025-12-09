@@ -401,9 +401,6 @@ namespace Frugalia {
             if (esCalidadAdaptable) {
 
                 var instrucciónAplicable = string.IsNullOrEmpty(instrucción) ? últimaInstruccion : instrucción;
-                if (instrucciónAplicable.Contains(UsaModeloMuchoMejor) || instrucciónAplicable.Contains(UsaModeloMejor) || instrucciónAplicable.Contains(LoHiceBien))
-                    instrucciónAplicable = instrucciónAplicable.Replace(UsaModeloMuchoMejor, " ").Replace(UsaModeloMejor, " ").Replace(LoHiceBien, " ");
-
                 if (instrucciónAplicable.IndexOf(UsaModeloMuchoMejor, StringComparison.OrdinalIgnoreCase) >= 0 
                     || instrucciónAplicable.IndexOf(UsaModeloMejor, StringComparison.OrdinalIgnoreCase) >= 0
                     || instrucciónAplicable.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción de sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
@@ -414,7 +411,7 @@ namespace Frugalia {
                         .Reemplazar(UsaModeloMejor, " ", StringComparison.OrdinalIgnoreCase).Reemplazar(LoHiceBien, " ", StringComparison.OrdinalIgnoreCase);
 
                     if (conversación != null) {
-                        throw new Exception("El usuario ha escrito palabras protegidas."); // No se controla del todo este caso porque implicaría recrear el objeto Conversación o sobreescribirlo para agregar la instrucción del usuario limpia sin las palabras clave y se prefiere no agregar esa complejidad en el momento.
+                        throw new Exception("El usuario escribió palabras protegidas."); // No se controla del todo este caso porque implicaría recrear el objeto Conversación o sobreescribirlo para agregar la instrucción del usuario limpia sin las palabras clave y se prefiere no agregar esa complejidad en el momento.
                     } else {
                         instrucción = instrucciónAplicable; // En el caso que no hay conversación es más fácil hacer la limpieza de la instrucción del usuario.
                     }

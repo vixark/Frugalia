@@ -33,7 +33,7 @@ namespace Frugalia {
     public readonly struct Tókenes {
 
 
-        internal const int FactorPrecioFuturo = 1; // Factor de seguridad que incrementa los precios de los tókenes para proyecciones a futuro. En 2025 no se aplica recargo porque los modelos pequeños y medianos siguen presionados por alternativas de código abierto y subir tarifas implicaría perder usuarios. Para simplificar se usa 1 para todos; si se quisiera ser más estricto se podría usar pequeños x1-x1.5 y medianos x1.5-x2. Los modelos grandes ya se ofrecen con márgenes altos y difícilmente aumenten más sus tarifas, así que ante la incertidumbre se asume un factor 1 para todos.
+        private const int FactorPrecioFuturo = 1; // Factor de seguridad que incrementa los precios de los tókenes para proyecciones a futuro. En 2025 no se aplica recargo porque los modelos pequeños y medianos siguen presionados por alternativas de código abierto y subir tarifas implicaría perder usuarios. Para simplificar se usa 1 para todos; si se quisiera ser más estricto se podría usar pequeños x1-x1.5 y medianos x1.5-x2. Los modelos grandes ya se ofrecen con márgenes altos y difícilmente aumenten más sus tarifas, así que ante la incertidumbre se asume un factor 1 para todos.
 
         public int EntradaTotal { get; } // Se hacen públicos para que el que acceda a este objeto desde la aplicación pueda leer estos valores.
 
@@ -85,7 +85,12 @@ namespace Frugalia {
             EscrituraManualCaché = escrituraManualCaché ?? 0;
             SalidaNoRazonamiento = SalidaTotal - SalidaRazonamiento;
             EntradaNoCaché = EntradaTotal - EntradaCaché;
-            Error = null;
+            if (SalidaNoRazonamiento < 0 || EntradaNoCaché < 0) {
+                Error = "El modelo devolvió datos incoherentes de consumo de tókenes. " +
+                    "Se generarían valores negativos de salida no razonamiento o entrada no caché.";
+            } else {
+                Error = null;
+            }            
 
         } // Tókenes>
 
@@ -125,11 +130,11 @@ namespace Frugalia {
             $"SR={SalidaRazonamiento} EMC={EscrituraManualCaché} MEMC={MinutosEscrituraManualCaché}";
 
 
-        internal static decimal CalcularCostoMonedaLocalTókenes(int tókenes, decimal costoPorMillón, decimal tasaCambioUsd)
+        private static decimal CalcularCostoMonedaLocalTókenes(int tókenes, decimal costoPorMillón, decimal tasaCambioUsd)
             => tókenes * (FactorPrecioFuturo * costoPorMillón / (decimal)1E6) * tasaCambioUsd;
 
 
-        internal static string FormatearMoneda(decimal pesos) => $"{pesos:#,0.##} $";
+        private static string FormatearMoneda(decimal pesos) => $"{pesos:#,0.##} $";
 
 
         public static string ObtenerTextoCostoTókenes(Dictionary<string, Tókenes> listaTókenes, decimal tasaCambioUsd) {
@@ -154,7 +159,6 @@ namespace Frugalia {
                     * factorEntradaYSalida;
 
                 var pesosEscrituraManualCaché = 0m;
-
                 switch (modelo.Familia) {
                 case Familia.GPT:
                     break; // 0.
@@ -190,14 +194,17 @@ namespace Frugalia {
                 default:
                     throw new NotImplementedException();
                 }
-                var factorEscrituraCaché = tókenes.Lote ? (modelo.FracciónDescuentoEscrituraCachéPorLote ?? 1) : 1m; // Si es vacío no hay descuento, entonces el factor es 1.
-                pesosEscrituraManualCaché *= factorEscrituraCaché; 
 
-                var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraManualCaché;
-                totalTodos += totalPesos;
                 if (!string.IsNullOrEmpty(tókenes.Error)) {
                     texto += $"{clave}: {tókenes.Error}{Environment.NewLine}";
-                } else {      
+                } else {
+
+                    var factorEscrituraCaché = tókenes.Lote ? (modelo.FracciónDescuentoEscrituraCachéPorLote ?? 1) : 1m; // Si es vacío no hay descuento, entonces el factor es 1.
+                    pesosEscrituraManualCaché *= factorEscrituraCaché;
+
+                    var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraManualCaché;
+                    totalTodos += totalPesos;
+
                     texto += $"{clave}: {tókenes.EntradaNoCaché} tókenes de entrada no caché a {FormatearMoneda(pesosNoCaché)} " + Environment.NewLine +
                        $"{clave}: {tókenes.EntradaCaché} tókenes de entrada caché a {FormatearMoneda(pesosCaché)}" + Environment.NewLine +
                        $"{clave}: {tókenes.SalidaNoRazonamiento} tókenes de salida no razonamiento a {FormatearMoneda(pesosNoRazonamiento)}" + Environment.NewLine +
@@ -205,6 +212,7 @@ namespace Frugalia {
                        $"{clave}: {tókenes.EscrituraManualCaché} tókenes de escritura manual en caché por {tókenes.MinutosEscrituraManualCaché} minutos " +
                        $"a {FormatearMoneda(pesosEscrituraManualCaché)}" + Environment.NewLine +
                        $"{clave}: Total {FormatearMoneda(totalPesos)}" + Environment.NewLine;
+
                 }
 
             }
