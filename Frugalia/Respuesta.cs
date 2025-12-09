@@ -72,7 +72,7 @@ namespace Frugalia {
                             respuesta = respuesta.Replace("**", "");
                             break;
                         case TratamientoNegritas.ConvertirEnHtml:
-                            respuesta = Regex.Replace(respuesta, @"\*\*(.+?)\*\*", "<b>$1</b>"); // Reemplaza cualquier secuencia **texto** por <b>texto</b>.
+                            respuesta = Regex.Replace(respuesta, @"\*\*(.+?)\*\*", "<b>$1</b>", RegexOptions.Singleline); // Reemplaza cualquier secuencia **texto** por <b>texto</b>. El RegexOptions.SingleLine, permite que hayan textos en negritas en múltiples líneas y se conviertan adecuadamente a negritas en múltiples líneas. 
                             break;
                         default:
                             throw new Exception("Caso de tratamiento negritas no considerado.");
