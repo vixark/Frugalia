@@ -160,7 +160,7 @@ namespace Frugalia {
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";
             var modeloMejorado = ObtenerModelo(nombreModeloMejorado); // Aquí podría buscar con un nombre de modelo vacío y está bien porque se controla posteriormente.
             if (modeloMejorado == null && nivelMejoramiento == 2) {
-                información.AgregarLínea($"No se encontró un modelo dos niveles superior a {modeloOriginal}, se usó un modelo un nivel superior.");
+                información.AgregarLínea($"No se encontró un modelo dos niveles superior a {modeloOriginal} entonces se usó un modelo un nivel superior.");
                 nivelMejoramiento = 1; // Si no hay un modelo dos niveles superior, se usa el que es un nivel superior.
                 goto reintentar;
             }
@@ -168,14 +168,14 @@ namespace Frugalia {
             if (modeloMejorado == null) {
 
                 if (string.IsNullOrEmpty(nombreModeloMejorado)) {
-                    información.AgregarLínea($"No habían modelos superiores a {modeloOriginal}. No se pudo mejorar el modelo.");
+                    información.AgregarLínea($"No habían modelos superiores a {modeloOriginal} entonces no se pudo mejorar el modelo.");
                     return null; // Se acepta que sea vacío porque es posible que no haya modelos superiores a este.
                 } else {
                     throw new Exception("Nombre del modelo mejorado no encontrado en tabla de modelos.");
                 }
 
             } else {
-                información.AgregarLínea($"Se mejoró el modelo {nivelMejoramiento} nivel{(nivelMejoramiento > 1 ? "es" : "")} de " +
+                información.AgregarLínea($"Se mejoró el modelo {nivelMejoramiento.ALetras()} nivel{(nivelMejoramiento > 1 ? "es" : "")} de " +
                     $"{modeloOriginal} a {nombreModeloMejorado}.");
                 return modeloMejorado;
             }

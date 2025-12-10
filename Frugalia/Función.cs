@@ -122,7 +122,7 @@ namespace Frugalia {
 
         internal double EstimarTókenes() {
 
-            var totalTókenesTextos = ((Nombre?.Length ?? 0) + (Descripción?.Length ?? 0))/ (double)CarácteresPorTokenConversaciónTípicos;
+            var totalTókenesTextos = ((Nombre?.Length ?? 0) + (Descripción?.Length ?? 0))/ (double)CarácteresPorTokenTípicos;
             var totalTókenesParámetros = Parámetros.Sum(p => p.EstimarTókenes());
             return totalTókenesTextos + totalTókenesParámetros;
 

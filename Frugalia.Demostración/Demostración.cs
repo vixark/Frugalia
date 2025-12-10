@@ -33,18 +33,77 @@ namespace Frugalia.Demostración;
 internal class Demostración {
 
 
-    internal static readonly Dictionary<int, string> Demostraciones = new() {
-        { 1, "Consulta de texto media complejidad con gpt-5.1." },
-        { 2, "Consulta de texto media complejidad con gpt-5-mini." },
-        { 3, "Consulta de texto media complejidad con gpt-5-nano." },
-        { 4, "Consulta de texto alta complejidad legal con gpt-5-mini." },
-        { 5, "Consulta de texto alta complejidad legal con gpt-5-nano." },
-        { 6, "Consulta de texto alta complejidad matemática con gpt-5-nano." },
-        { 7, "Consulta de texto baja complejidad con gpt-5-mini." },
-        { 8, "Consulta de texto baja complejidad con gpt-5-nano." },
-        { 9, "Consulta con archivos." },
-        { 10, "Consulta buscando en internet con error por Razonamiento = Ninguno." },
-        { 11, "Consulta usando funciones." }
+    internal static int TasaCambioUsd = 4000; // Se usa un valor redondeado de 4000 COP$/USD en diciembre 2025.
+
+    internal static string RutaClaveAPI = @"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt";
+
+    internal static string SugerenciaNoUsarResultados = "No uses estos resultados específicos para tu caso de uso, te recomiendo que pruebes con tus propios " +
+        "datos si esta función te genera ahorros.";
+
+    internal static string ADólares(decimal pesos) => FormatearDólares(pesos, TasaCambioUsd);
+
+    internal static readonly Dictionary<int, (string Descripción, string Grupo, Func<string> Consultar)> Demostraciones = new() {
+
+        { 1, ($"Explicación de la función.", "Calidad Adaptable", () => 
+            EscribirTítuloYTexto("Calidad Adaptable", "Hace la primera consulta con un modelo pequeño (por ejemplo, GPT Mini o Nano) y le pide al modelo " +
+                "autoevaluarse en la misma respuesta. Dependiendo de la autoevaluación, decide si repite la consulta con un modelo superior (como GPT estándar) " +
+                $"y/o con mayor razonamiento.{DobleLínea}Los costos muestran que la estrategia es útil si muchas consultas son " +
+                $"de baja complejidad y unas pocas de alta complejidad.{DobleLínea}En las demostraciones número 2, 5, 8 y 11 verás el funcionamiento de GPT 5.1 " + 
+                $"sin calidad adaptable y en las demás verás el funcionamiento de GPT Mini y Nano con calidad adaptable. Los costos " +
+                $"mostrados (~0,001 USD, etc.) son el costo aproximado por ejecución de cada demostración.{DobleLínea}{SugerenciaNoUsarResultados}")) },
+
+        { 2, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable Baja Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No,
+                númeroDemostración: 2, lote: false)) }, // 5 $ en promedio.
+        { 3, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable Baja Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
+                númeroDemostración: 3, lote: false)) }, // 3,14 $ en promedio.
+        { 4, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(0.7M)}).", "Calidad Adaptable Baja Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
+                númeroDemostración: 4, lote: false)) }, // 0.67 $ en promedio.
+
+        { 5, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable Media Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No,
+                númeroDemostración: 5, lote: false)) }, // 5.22 $ promedio.
+        { 6, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(6)}).", "Calidad Adaptable Media Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
+                númeroDemostración: 6, lote: false)) }, // 6.01 $ promedio. Mini es más conciente de sus limitaciones y tiende a sugerir más frecuentemente usar un modelo mejor que nano.
+        { 7, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable Media Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
+                númeroDemostración: 7, lote: false)) }, // 3.02 $ promedio. Pocas veces sugiere mejor modelo. 
+
+        { 8, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(20)}).", "Calidad Adaptable Alta Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No,
+                númeroDemostración: 8, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 19.42 $ promedio.
+        { 9, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(7)}).", "Calidad Adaptable Alta Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
+                númeroDemostración: 9, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 6.89 $ promedio. No sugirió casi modelo mejor.
+        { 10, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(5)}).", "Calidad Adaptable Alta Complejidad", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
+                númeroDemostración: 10, lote: false, restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Media)) }, // 5.5 $ promedio. Sugirió modelo mejor (un nivel) en todos los ensayos realizados.
+
+        { 11, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(200)}).", "Calidad Adaptable Alta Complejidad Matemática", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.1", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No,
+                númeroDemostración: 11, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Baja)) }, // 190 $ promedio. Todas bien.
+        { 12, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(30)}).", "Calidad Adaptable Alta Complejidad Matemática", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-mini", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
+                númeroDemostración: 12, lote: false, restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 30 $ promedio. Todas bien y sin sugerir mejora de modelo.
+        { 13, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable Alta Complejidad Matemática", () =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
+                númeroDemostración: 13, lote: false, restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 3 $ promedio. Todas bien y sin sugerir mejora de modelo. Si se sube el nivel de complejidad matemático (por ejemplo matrices 5x5 o más) se encontró que nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
+        
+
+        { 14, ("Consulta con archivos.", "Archivos", () =>
+            Consultar(ConsultaConArchivos, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
+                númeroDemostración: 13, lote: false)) },
+        { 15,("Consulta buscando en internet con error por Razonamiento = Ninguno.", "Búsqueda en Internet", () =>
+            Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración: 15, lote: false)) },
+        { 16,("Consulta usando funciones.", "Conversación y Funciones", () =>
+            Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false),
+                "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+                númeroDemostración: 16, lote: false)) }
+
     };
 
 
@@ -54,44 +113,57 @@ internal class Demostración {
 
         EscribirVerde(""); // Rojo: errores. Magenta: mensajes del programa importantes para el funcionamiento. Verde: información de costos. Cian oscuro: información de parametros. Gris oscuro: instrucciones y respuestas del modelo.
         EscribirVerde("¡Hola soy el programa de demostración de Frugalia!");
-        EscribirVerde("");
+        Escribir("");
+        EscribirMultilíneaCianOscuro("Frugalia incorpora funciones para ahorrar en tókenes y dinero en consultas a modelos de inteligencia artificial como GPT, " +
+            "Gemini, Claude y otros. A continuación podrás ver algunas demostraciones de las funciones: calidad adaptable, relleno de instrucción de sistema, " +
+            "razonamiento adaptable, consultas por lotes, resumen de contexto (planeado) y caché de respuestas simples (planeado). Todas las funciones pueden ser " +
+            "desactivadas o activadas individualmente, permitiéndote usar solo las que generan ahorros en tu caso de uso. Para ver los costos por ejecución en " +
+            "tu moneda puedes cambiar la tasa de cambio a dólares en Demostración > TasaCambioUsd.");
+        Escribir("");
+        //EscribirMultilíneaCianOscuro("Relleno de instrucción de sistema: Realiza una optimización para que en algunos casos se agregue un texto de relleno a la " +
+        //    "instrucción de sistema para activar la caché y ahorrar dinero en tókenes de entrada en las siguientes consultas.");
+        //EscribirMultilíneaCianOscuro("Razonamiento adaptable: Según el largo de la instrucción útil (sistema + usuario + internas + funciones) elige el nivel de " +
+        //    "razonamiento a usar.");
+        //EscribirMultilíneaCianOscuro("Consultas por lotes: Realiza y hace seguimiento de consultas en modo lote que se tardan alrededor de un día en resolver, " +
+        //    "pero suelen valer la mitad.");
+        //EscribirMultilíneaCianOscuro("[planeado] Resumen de contexto: Cuando una conversación se alarga, realiza una optimización que decide sí resume los " +
+        //    "mensajes anteriores para reducir el tamaño del contexto de la conversación y los costos de tókenes de entrada en las siguientes consultas.");
+        //EscribirMultilíneaCianOscuro("[planeado] Caché de respuestas simples: Sistema para almacenar y responder a consultas simples que no requieren IA.");
+
+        EscribirMagenta("Escribe el número de la demostración que quieres ejecutar:");
 
         reiniciar:
-        for (var i = 1; i <= Demostraciones.Count; i++) {
-            EscribirMagenta($"{i}. {Demostraciones[i]}");
+
+        var demostracionesAgrupadas = Demostraciones.OrderBy(par => par.Key).GroupBy(par => par.Value.Grupo).ToList();
+        foreach (var grupo in demostracionesAgrupadas) {
+
+            Escribir("");
+            EscribirMagenta(grupo.Key);
+            foreach (var demostración in grupo) {
+                EscribirMagentaOscuro($"{demostración.Key}: {demostración.Value.Descripción}");
+            }
+
         }
-        EscribirMagenta("");
+
+        Escribir("");
+        EscribirMagenta("Ejecutar demostración número:");
+        Escribir("");
 
         var númeroDemostración = LeerNúmero();       
         if (númeroDemostración <= 0) goto reiniciar;
 
         reiniciarConNúmero:
-        _ = númeroDemostración switch { // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
-            1 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,                
-                númeroDemostración, lote: false),
-            2 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false),
-            3 => Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false),
-            4 => Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.NingunoBajoOMedio, Verbosidad.Media, CalidadAdaptable.MejorarRazonamiento,
-                númeroDemostración, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media),
-            5 => Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.NingunoBajoOMedio, Verbosidad.Media, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media),
-            6 => Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.NingunoOBajo, Verbosidad.Media, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false), // Se encontró nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
-            7 => Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false),
-            8 => Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false),
-            9 => Consultar(ConsultaConArchivos, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false),
-            10 => Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración, lote: false),
-            11 => Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false),
-                "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento, 
-                númeroDemostración, lote: false),
-            _ => $"No se ha escrito código para la demostración número {númeroDemostración}.",
-        };
+
+        if (númeroDemostración > Demostraciones.Count) { 
+            EscribirRojo($"No se ha escrito código para la demostración número {númeroDemostración}.");
+        } else {
+
+            var ensayos = 1;
+            for (int i = 0; i < ensayos; i++) {
+                _ = Demostraciones[númeroDemostración].Consultar(); // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
+            }
+
+        }
 
         EscribirMagenta("Presiona enter para volver al menú de demostraciones o el número de demostración para ejecutarla:");
         Escribir("");
@@ -120,13 +192,13 @@ internal class Demostración {
         var modelo = Modelo.ObtenerModelo(nombreModelo);
         if (modelo == null) {
             var noDisponibleModelo = $"El modelo {nombreModelo} no está disponible.";
-            EscribirMultilíneaRojo(noDisponibleModelo);
+            EscribirMultilíneaRojo(noDisponibleModelo, agregarLíneasEnBlancoAlrededor: true);
             return noDisponibleModelo;
         }
 
-        var claveAPI = LeerClave(@"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt", out string errorClaveAPI);
+        var claveAPI = LeerClave(RutaClaveAPI, out string errorClaveAPI);
         if (!string.IsNullOrEmpty(errorClaveAPI)) {
-            EscribirMultilíneaRojo(errorClaveAPI);
+            EscribirMultilíneaRojo(errorClaveAPI, agregarLíneasEnBlancoAlrededor: true);
             return errorClaveAPI;
         }
 
@@ -135,8 +207,9 @@ internal class Demostración {
             restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
 
         Escribir("");
-        var parámetros = $"Iniciando {Demostraciones[númeroDemostración].ToLower().TrimEnd(['.', ' '])}:{Environment.NewLine}{servicio.Descripción}";
-        EscribirMultilíneaCianOscuro(parámetros);
+        var demostración = Demostraciones[númeroDemostración];
+        EscribirMultilíneaCianOscuro($"{demostración.Grupo} {demostración.Descripción.TrimEnd(['.', ' '])}:");
+        EscribirMultilíneaCianOscuro(servicio.Descripción);
         Console.SetCursorPosition(3, Console.CursorTop);
 
         string respuesta;
@@ -145,37 +218,37 @@ internal class Demostración {
             (respuesta, var tókenes, var detalleCosto, var error, var información, var resultado) = consulta(servicio, (Modelo)modelo);
 
             if (!string.IsNullOrEmpty(error)) {
-                EscribirSeparador();
-                EscribirMultilíneaRojo($"Error: {error}", agregarSeparador: true);
+                EscribirMultilíneaRojo($"Error: {error}", agregarLíneasEnBlancoAlrededor: true);
                 respuesta = error;
             } else {
 
                 temporizador.Stop();
                 var tiempo = temporizador.Elapsed;
-                var detalleTiempo = $"Tiempo consulta: {tiempo.Minutes} minutos {tiempo.Seconds} segundos.";
-
-                var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: 4000);
+                var detalleTiempo = $"Duración consultas: {tiempo.Minutes} minutos {tiempo.Seconds} segundos.";
+                var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: TasaCambioUsd);
                 detalleCosto = (string.IsNullOrEmpty(detalleCosto) ? "" : DobleLínea + detalleCosto);
-                EscribirMultilíneaVerde($"{costoTókenes}{detalleCosto}{DobleLínea}{detalleTiempo}", agregarSeparador: true);                
+                Escribir("");
+
+                EscribirMultilíneaVerdeOscuro($"{costoTókenes}{detalleCosto}{DobleLínea}{detalleTiempo}");
 
                 if (!información.EsNuloOVacío()) {
+                    Escribir("");
                     if (!string.IsNullOrEmpty(informaciónInicio)) EscribirMultilíneaCianOscuro(informaciónInicio);
-                    EscribirMultilíneaCianOscuro(información.ToString(), agregarSeparador: true);
+                    EscribirMultilíneaCianOscuro(información.ToString());
                 }
 
-                respuesta = $"{parámetros}{DobleLínea}{respuesta}{DobleLínea}{costoTókenes}{detalleCosto}";
+                respuesta = $"{servicio.Descripción}{DobleLínea}{respuesta}{DobleLínea}{costoTókenes}{detalleCosto}";
 
             }
 
             if (resultado != Resultado.Respondido) {
-                EscribirMultilíneaRojo($"Resultado: {resultado}", agregarSeparador: true);
+                EscribirMultilíneaRojo($"Resultado: {resultado}", agregarLíneasEnBlancoAlrededor: true);
+            } else {
+                Escribir("");
             }
-
-            Escribir("");
-
+          
         } else {
-            EscribirSeparador();
-            EscribirMultilíneaRojo($"Error de inicio: {errorInicio}", agregarSeparador: true);
+            EscribirMultilíneaRojo($"Error de inicio: {errorInicio}", agregarLíneasEnBlancoAlrededor: true);
             respuesta = errorInicio;
         }
 
@@ -193,15 +266,14 @@ internal class Demostración {
         var instrucciónSistema = "Eres grosero y seco. Respondes displicentemente al usuario por no saber lo que preguntó.";
 
         var instrucción = dificultadInstrucción switch {
-            1 => "¿Cuánto es 1 + 1?",
+            1 => "Hola, ¿Cómo estás? ¿Me podrías decir si el sol es más grande que la luna?",
             2 => "Dime la hora en españa cuando en tagandamdapio son las 4 pm",
             3 => "Analiza y compara las implicaciones fiscales en IVA, retención en la fuente y precios de transferencia para una multinacional del sector " +
             "tecnológico que opera en Colombia, México, Brasil y España, considerando los convenios para evitar la doble imposición y las normas BEPS. " +
             "Propón una estructura óptima de facturación intercompany y repatriación de utilidades que minimice la carga fiscal sin incumplir ninguna " +
             "regulación local ni internacional. Quiero un resumen ejecutivo de un solo parrafo por el momento.",
-            4 => "Calcula el determinante exacto de la matriz 5×5 con filas: Fila 1: 2, -1, 3, 0, 4; Fila 2: -2, 5, 1, -3, 2; Fila 3: 1, 0, -4, 2, -1; " +
-            "Fila 4: 3, -2, 0, 1, 5; Fila 5: 0, 4, -1, -2, 3; responde en una sola línea dando solo el número entero resultado, y si no " +
-            "puedes estar 100% seguro responde exactamente",
+            4 => "Calcula el determinante exacto de la matriz 4x4: [[2, -1, 3, 0], [-2, 5, 1, -3], [-72, 0, -4, 2], [3, -2, 0, 1]]. " +
+            "Responde en una sola línea dando solo el número entero resultado. Responde solo si estás 100% seguro del resultado.", // Respuesta correcta -100.
             _ => throw new NotImplementedException(),
         };
 
@@ -211,7 +283,6 @@ internal class Demostración {
             out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: null);
-        EscribirSeparador();
 
         return (respuesta, tókenes, "", error, información, resultado);
 
@@ -232,7 +303,6 @@ internal class Demostración {
             out Dictionary<string, Tókenes> tókenes, tipoArchivo, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: $"{tipoArchivo}: {archivos[0]}");
-        EscribirSeparador();
 
         return (respuesta, tókenes, "", error, información, resultado);
 
@@ -270,6 +340,7 @@ internal class Demostración {
 
         var cuentaMensaje = 1;
         var respuesta = "";
+        var mensajes = new List<(TipoMensaje Tipo, string Mensaje)>();
         var conversación = new Conversación(modelo.Familia);
         var tókenes = new Dictionary<string, Tókenes>();
         var información = new StringBuilder();
@@ -400,12 +471,15 @@ internal class Demostración {
             "H62, H63, H64, H65, H66, H67, H68, H69, H70, H71, H72, H73, H74, H75, H76, H77, H78, H79, H80.";
         if (usarInstrucciónSistemaMuyLarga) instrucciónSistema = instrucciónSistemaMuyLarga; // Se fuerza que se active la caché de tókenes de entrada. Se pasa toda la 'base de datos' de productos completa para lograr una alta inteligencia contextual del modelo con respecto a los productos ofrecidos por ejemplo para que identifique cosas como -eso que me estás diciendo no es un accessorio si no un motor quieres que te cotice el motor?-. Lamentablemente esto no es escalable para bases de datos con muchos productos porque se incrementan mucho los tókenes de entrada que incluso si se leen de la caché, pueden ser considerables. Entonces ChatGPT ofreció esta alternativa: Alternativa RAG / embeddings para búsqueda "inteligente": En vez de mandar todo el catálogo en las instrucciones, se puede usar este flujo: 1. Indexar catálogo: Para cada producto guardar: referencia, descripción, familia, tags, etc. Generar un embedding (vector) de "referencia + descripción" y guardarlo en una base de datos vectorial.  2. En cada consulta del usuario: Generar embedding del texto del usuario ("accesorio para F40", "motor M444", etc.).  Buscar en la base de datos vectorial los N productos más parecidos (top-k). Solo esos productos candidatos (3–10) se envían al modelo como contexto. El modelo: Usa la información de los productos candidatos para razonar y responder. Puede detectar inconsistencias (p.ej. usuario pide accesorio pero el candidato es motor). Ventajas: No se manda todo el catálogo en cada consulta (menos tokens, menos costo). Escala a catálogos grandes. Mantiene búsqueda "inteligente" basada en similitud semántica y no solo por referencia exacta.
 
+        mensajes.Add((TipoMensaje.Usuario, instrucción));
         respuesta += "Usuario: " + Environment.NewLine + instrucción + separadorMensajes;
-        respuesta += "Agente: " + Environment.NewLine + servicio.Consulta(2, instrucciónSistema, ref rellenoInstrucciónSistema, conversación,
+        var respuestaConsulta = servicio.Consulta(2, instrucciónSistema, ref rellenoInstrucciónSistema, conversación,
             [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
                 [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
             out string error, out Dictionary<string, Tókenes> tókenesConsulta, instruccionesPorConversación: 6, proporciónPrimerInstrucciónVsSiguientes: 3,
-            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta) + separadorMensajes; // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
+            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta); // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
+        mensajes.Add((TipoMensaje.AsistenteAI, respuestaConsulta));
+        respuesta += "Agente: " + Environment.NewLine + respuestaConsulta + separadorMensajes;
 
         if (resultado == Resultado.Respondido && resultadoConsulta != Resultado.Respondido) resultado = resultadoConsulta; // Al primer resultado diferente de Respondido se queda con ese para reportar el resumen de este procedimiento. Si bien no es estrictamente correcto, sirve para fines de prueba poder registrar la aparición de un caso problemático en toda la conversación, así existan otros.
      
@@ -443,12 +517,12 @@ internal class Demostración {
 
         }
 
-        detalleTókenes = $"{detalleTókenes}{separadorMensajes}";
+        EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, mensajes);
+
+        detalleTókenes = $"{detalleTókenes}{Environment.NewLine}";
         var detalleAñadidoPrecio = rellenoInstrucciónSistema.Length == 0 ? ""
             : $"Relleno de instrucción de sistema para forzar el uso de la caché de {rellenoInstrucciónSistema.Length} carácteres.{DobleLínea}";
-        var detalleCosto = $"{detalleAñadidoPrecio}{detalleTókenes}";
-
-        return (respuesta, tókenes, detalleCosto, error, información, resultado);
+        return (respuesta, tókenes, $"{detalleAñadidoPrecio}{detalleTókenes}", error, información, resultado);
 
     } // ConsultaUsandoFunciones>
 

@@ -66,6 +66,37 @@ namespace Frugalia {
         } // Reemplazar>
 
 
+        public static string FormatearEnMonedaLocal(decimal usd, decimal tasaCambioUsd) => FormatearMoneda(usd * tasaCambioUsd);
+
+
+        public static string FormatearPesosColombianos(decimal pesos) => $"{FormatearMoneda(pesos)} COP";
+
+
+        public static string FormatearDólares(decimal pesos, decimal tasaCambioUSD) => $"{RedondearAUnaCifraSignificativa(pesos / tasaCambioUSD):0.#####} USD";
+
+
+        public static string FormatearMoneda(decimal pesos) => $"{pesos:#,0.##} $";
+
+
+        /// <summary>
+        /// Devuelve el valor con una sola cifra significativa conservando el orden de magnitud.
+        /// </summary>
+        /// <param name="valor">Valor que se desea redondear.</param>
+        /// <returns>Valor redondeado a una cifra significativa.</returns>
+        public static decimal RedondearAUnaCifraSignificativa(decimal valor) {
+
+            if (valor == 0) return 0;
+            var signo = Math.Sign(valor);
+            var absoluto = Math.Abs(valor);
+            var potencia = Math.Pow(10, Math.Floor(Math.Log10((double)absoluto)));
+            var escala = (decimal)potencia;
+            var normalizado = absoluto / escala;
+            var redondeado = Math.Round(normalizado, 0, MidpointRounding.ToEven);
+            return signo * redondeado * escala;
+
+        } // RedondearAUnaCifraSignificativa>
+
+
         /// <summary>
         /// Agrega una nueva línea a un texto guardado en un StringBuilder.
         /// Si el texto es nulo, lanza excepción.
@@ -89,10 +120,7 @@ namespace Frugalia {
         public static void AgregarLíneas(this StringBuilder texto, StringBuilder nuevasLíneas) {
 
             if (texto == null) throw new ArgumentNullException(nameof(texto), "El método AgregarLíneas() no permite nulos. Usa primero AgregarLíneaPosibleNulo().");
-            if (nuevasLíneas != null) { // No agrega si nuevaLíneas es nulo.
-                if (texto.Length > 0) texto.AgregarLínea(""); // Si ya hay algo escrito, separa con una línea en blanco.
-                texto.Append(nuevasLíneas);
-            }
+            if (nuevasLíneas != null) texto.Append(nuevasLíneas); // No agrega si nuevaLíneas es nulo.
 
         } // AgregarLíneas>
 

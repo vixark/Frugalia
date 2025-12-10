@@ -151,23 +151,23 @@ namespace Frugalia {
 
         internal const int MáximosTókenesRazonamientoBaseNinguno = 0;
 
-        internal const int MáximosTókenesRazonamientoBaseBajo = 300;
+        internal const int MáximosTókenesRazonamientoBaseBajo = 1000;
 
-        internal const int MáximosTókenesRazonamientoBaseMedio = 1000;
+        internal const int MáximosTókenesRazonamientoBaseMedio = 2500;
 
-        internal const int MáximosTókenesRazonamientoBaseAlto = 3000;
+        internal const int MáximosTókenesRazonamientoBaseAlto = 5000;
 
         internal const int SinLímiteTókenes = int.MaxValue;
 
         internal const double FactorÉxitoCaché = 0.8; // Si OpenAI funcionara bien no debería pasar que no se active la caché en el segundo mensaje de una conversación que tiene instrucciones de sistema rellenadas desde el primer mensaje, pero sí pasa. En algunos casos OpenAI simplemente ignora la caché por razones desconocidas. Se hizo un experimento inflando más las instrucciones de sistema y queda demostrado que no es cuestión del tamaño de tokenes de la función ni que se cambie ni nada, simplemente a veces no lo coje, con 1294 tókenes hay más que suficiente para garantizar que toda la instruccion sistema es superior a 1024 . 1294 - 10 (o lo que sea de la instrucción de usuario) - 73 de la función  = 1211 1: ENC = 1294 EC = 0 SNR = 103 SR = 0 2: ENC = 1402 EC = 0 SNR = 222 SR = 0 OpenAI describe el prompt caching como una optimización de “best effort”, no determinista como un contrato fuerte tipo: “si el prefijo coincide, 100 % te voy a servir desde caché”. Así que básicamente dicen, si no funciona, no me culpen. Lo mejor entonces es asumir un % de éxito que se incorporá en la fórmula para solo engordar las instrucciones de sistema que considerando ese porcentaje de éxito de uso de la caché logren ahorros. 0.8 es un valor que se tira al aire basado en un pequeño experimento limitado: se ejecutó 10 veces una conversación de 6-7 mensajes y se obtuvo una tasa de fallo de 13%, es decir un factor de éxito de 0.87, sin embargo debido a que hay incertidumbre con este número y a que hay una ligera demesmejoría en el comportamiento del agente cuando se rellenan las instrucciones del sistema, se prefiere dejar en 0.8. Se usa el mismo valor para las otras familias de modelos porque no se conoce aún su funcionamiento.
 
-        internal const int CarácteresPorTokenConversaciónTípicos = 3; // Aplica para mensajes tanto del usuario como del asistente IA.
+        internal const int CarácteresPorTokenTípicos = 3; // Aplica para mensajes del usuario, mensajes del asistente IA, archivos y funciones.
 
         internal const int CarácteresPorTokenInstrucciónSistemaTípicos = 4; // La necesidad o no de rellenar la instrucción de sistema se decide usando valor promedio de 4 carácteres por tókenes y la rellenada aw hace con un exceso de tokenes (carácteresPorTokenMáximos) para asegurar que se generen suficientes carácteres para que con seguridad supere el límite para activar la caché (tókenesObjetivo). El valor de 4 carácteres por token se obtuvo de controlar eliminando los tókenes que consumía la función, así 340 tókenes (-73 función) = 267 tókenes para 1061 carácteres = 3.97 char/tk (para el primer mensaje de mensaje de usuario + instrucción de sistema sin rellenar). Para textos más normales que no sean instrucciones de sistema (que suelen tener frases cortas densas, referencias, datos, etc) suelen ser 3 carácteres por token. Pero como aquí se está intentando ajustar es instrucciones de sistema se trabaja con 4.
 
         internal const double CarácteresPorTokenRellenoMáximos = 5.5; // Se usa 5.5 como caso límite. Se asegura agregar suficientes carácteres para que supere los tókenes requeridos. Se hizo un experimento y se encontró esto: Sin relleno 340 tk y 1061 char: 3.12 char/tk, con relleno 955 tk y 4183 char: 4.38 char/ tk, solo el relleno: 615tk y 3122 char: 5.07 char/ tk. Este mismo experimento se repitió para el caso de usar solo el texto relleno sin lorems (solo para fines de calcular su cantidad de carácteres por token) y se encontró que es 4.75 char/tk. También se hizo el experimento únicamente con lorems (sin texto introductorio) y dio otra vez 5.07 char/tk, así que esto es algo inconsistente matemáticamente porque podrían haber cosas desconocidas de cómo el modelo calcula los tókenes, entonces para pecar por seguro, se usa 5.5 carácteres por token para el texto de relleno. Esto asegura que el relleno garantiza con cierto margen de seguridad que se active la caché. Se debe poner un valor superior porque hay incertidumbre de que tal vez el modelo cambié la forma de cálculo de tókenes y de pronto llegue a ser 5.3 o 5.2, y si así fuera y se hubiera puesto un valor muy ajustado como 5.1, no se activaría la caché y se gastaría innecesariamente en tókenes inutiles no en caché.
 
-        internal const double FactorSeguridadTókenesEntradaMáximos = 0.9; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 90%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. 
+        internal const double FactorSeguridadTókenesEntradaMáximos = 0.75; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 75%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. El 75% se obtiene de 3/4 que es un rango de carácteres tókenes típico promedio a típico máximo.
 
 
         internal static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
@@ -192,7 +192,11 @@ namespace Frugalia {
         public static string LeerClave(string rutaArchivo, out string error) {
 
             error = null;
-            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) { error = "No se encontró el archivo con la clave de la API."; return null; }
+            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) { 
+                error = $"No se encontró el archivo con la clave de la API en {rutaArchivo}. Crea un archivo .txt en esa ruta conteniendo solo la clave API " +
+                    $"en la primera línea o modifica la ruta para que apunte al archivo que contiene la clave API."; 
+                return null; 
+            }
 
             var contenido = File.ReadAllText(rutaArchivo).Trim();
             if (string.IsNullOrWhiteSpace(contenido)) { error = "El archivo de la API key está vacío."; return null; }
@@ -202,14 +206,27 @@ namespace Frugalia {
         } // LeerClave>
 
 
+        /// <summary>
+        /// Obtiene el largo útil de la instrucción considerando la instrucción del usuario, la instrucción de sistema rellenada,
+        /// el relleno de la instrucción de sistema (que no cuenta para el largo útil), el largo adicional y si es una consulta de calidad adaptable.
+        /// </summary>
+        /// <param name="instrucción">Instrucción del usuario.</param>
+        /// <param name="instrucciónSistemaRellena">Instrucción de sistema rellena.</param>
+        /// <param name="rellenoInstrucciónSistema">Relleno del instruccion del sistema que no se tiene en cuenta para el largo útil.</param>
+        /// <param name="largoAdicional">Largo adicional que se le agrega al largo útil: largo de la descripción de las funciones, largo de contenido de texto en 
+        /// archivos o largo equivalente a complejidad visual de una imagen que requiera razonamiento. El caso de las imágenes sería adaptable según el tipo de 
+        /// imagen, pero por el momento no se implementa un análisis que lo calcule (por ejemplo, una imagen de un solo color plano no agrega largo equivalente 
+        /// a la instrucción útil, en cambio una imagen con una tabla de contenido nutricional si lo hace).</param>
+        /// <param name="calidadAdaptable">Sí está en modo calidad adaptable, se agrega al largo útil la instrucción de autoevaluación.</param>
+        /// <returns></returns>
         internal static int ObtenerLargoInstrucciónÚtil(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema, 
-            bool calidadAdaptable) // Se considera el texto de la instrucción de autoevaluación como parte del largo útil.
+            double largoAdicional, bool calidadAdaptable) // Se considera el texto de la instrucción de autoevaluación como parte del largo útil.
                 => Math.Max((instrucción?.Length ?? 0) + (instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0)
-                    + (calidadAdaptable ? InstrucciónAutoevaluación.Length : 0), 0);
+                    + (calidadAdaptable ? InstrucciónAutoevaluación.Length : 0) + (int)Math.Round(largoAdicional), 0);
 
 
         internal static double EstimarTókenesEntradaInstrucciones(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema)
-            => (instrucción?.Length ?? 0) / CarácteresPorTokenConversaciónTípicos
+            => (instrucción?.Length ?? 0) / CarácteresPorTokenTípicos
                 + Math.Max((instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0), 0) / CarácteresPorTokenInstrucciónSistemaTípicos
                 + (rellenoInstrucciónSistema?.Length ?? 0) / CarácteresPorTokenRellenoMáximos;
 
@@ -294,8 +311,8 @@ namespace Frugalia {
             }
 
             if (razonamiento != razonamientoMejorado) {
-                información.AgregarLínea($"Se mejoró el razonamiento {nivelMejoramiento} nivel{(nivelMejoramiento > 1 ? "es" : "")} de " +
-                    $"{razonamiento} a {razonamientoMejorado}.");
+                información.AgregarLínea($"Se mejoró el razonamiento {nivelMejoramiento.ALetras()} nivel{(nivelMejoramiento > 1 ? "es" : "")} de {razonamiento} a " +
+                    $"{razonamientoMejorado}.");
             } else {
                 información.AgregarLínea($"No se mejoró el razonamiento {razonamiento}.");
             }
@@ -303,6 +320,9 @@ namespace Frugalia {
             return razonamientoMejorado;
 
         } // ObtenerRazonamientoMejorado>
+
+
+        internal static string ALetras(this int número) => (número  == 1 ? "un" : (número == 2 ? "dos" : "?"));
 
 
         internal static RazonamientoEfectivo ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
@@ -405,8 +425,7 @@ namespace Frugalia {
 
             }
 
-            información.AgregarLínea($"Razonamiento efectivo: {razonamientoEfectivo}    Original: {razonamiento}    " +
-                    $"Largo instrucción: {largoInstrucciónÚtil}{(aplicadaRestricción ? "    Aplicada restricción de razonamiento" : "")}.");
+            información.AgregarLínea($"Razonamiento efectivo = {razonamientoEfectivo}.{(aplicadaRestricción ? " Aplicada restricción de razonamiento." : "")}");
 
             return razonamientoEfectivo;
 

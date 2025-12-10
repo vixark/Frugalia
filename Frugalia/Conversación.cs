@@ -174,7 +174,7 @@ namespace Frugalia {
                 }                    
             }
 
-            return totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos;
+            return totalCarácteres / (double)CarácteresPorTokenTípicos;
 
         } // EstimarTókenesTotales>
 

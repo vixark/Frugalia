@@ -28,6 +28,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using static Frugalia.General;
+using static Frugalia.GlobalFrugalia;
 
 
 namespace Frugalia {
@@ -132,7 +133,7 @@ namespace Frugalia {
         public Archivador(OpenAIFileClient archivadorGPT) : this(Familia.GPT) => ArchivadorGPT = archivadorGPT;
 
 
-        internal static double EstimarTókenesEntradaArchivos(List<string> rutasArchivos) {
+        internal static double EstimarTókenes(List<string> rutasArchivos) {
 
             var tókenesEstimados = 0.0;
 
@@ -143,7 +144,7 @@ namespace Frugalia {
                     if (string.IsNullOrWhiteSpace(rutaArchivo) || !File.Exists(rutaArchivo)) continue;
 
                     var tamañoArchivoBytes = new FileInfo(rutaArchivo).Length;
-                    tókenesEstimados += tamañoArchivoBytes / 4.0; // Conversión aproximada de bytes a tókenes asumiendo 1 byte por carácter.
+                    tókenesEstimados += tamañoArchivoBytes / CarácteresPorTokenTípicos; // Conversión aproximada de bytes a tókenes asumiendo 1 byte por carácter.
 
                 }
 
@@ -151,7 +152,7 @@ namespace Frugalia {
 
             return tókenesEstimados;
 
-        } // EstimarTókenesEntradaArchivos>
+        } // EstimarTókenes>
 
 
     } // Archivador>

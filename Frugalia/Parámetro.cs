@@ -52,7 +52,7 @@ namespace Frugalia {
 
         public double EstimarTókenes() {
             var totalCarácteres = (Nombre?.Length ?? 0) + (Tipo?.Length ?? 0) + (Descripción?.Length ?? 0);
-            return totalCarácteres / (double)CarácteresPorTokenConversaciónTípicos;
+            return totalCarácteres / (double)CarácteresPorTokenTípicos;
         } // EstimarTókenes>
 
 

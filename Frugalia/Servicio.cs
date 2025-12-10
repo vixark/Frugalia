@@ -66,21 +66,21 @@ namespace Frugalia {
 
         private bool RellenarInstruccionesSistema { get; }
 
-        public string Descripción => $"Modelo: {Familia} {Modelo}{(Lote ? " Lote" : "")}{Environment.NewLine}" +
-            $"Razonamiento: {Razonamiento}" +
-            $"{(RestricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna ? $"    Restricción a alto en {RestricciónRazonamientoAlto}" : "")}" +
-            $"{(RestricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna ? $"    Restricción a medio en {RestricciónRazonamientoMedio}" : "")}" +
-            $"{Environment.NewLine}" +
-            $"Verbosidad: {Verbosidad}{Environment.NewLine}" +
-            $"Calidad adaptable: {CalidadAdaptable}{Environment.NewLine}" +
-            $"Restricción tókenes: Salida: {RestricciónTókenesSalida}    Razonamiento: {RestricciónTókenesRazonamiento}{Environment.NewLine}" +
-            $"Rellenar instrucciones de sistema: {(RellenarInstruccionesSistema ? "Sí" : "No")}{Environment.NewLine}";
+        public string Descripción => $"Modelo = {Familia} {Modelo}{(Lote ? " Lote" : "")}.{Environment.NewLine}" +
+            $"Verbosidad = {Verbosidad}.{Environment.NewLine}" +
+            $"Razonamiento = {Razonamiento}.{Environment.NewLine}" +
+            $"Calidad adaptable = {CalidadAdaptable}.{Environment.NewLine}" +
+            $"Rellenar instrucciones de sistema = {(RellenarInstruccionesSistema ? "Sí" : "No")}.{Environment.NewLine}" +
+            $"Restricción tókenes de salida {RestricciónTókenesSalida} y de razonamiento {RestricciónTókenesRazonamiento}.{Environment.NewLine}" +
+            $"{(RestricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna ? $"Exclusión razonamiento alto en {RestricciónRazonamientoAlto}" : "")}" +
+            $"{(RestricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna ? $" y exclusión razonamiento medio en {RestricciónRazonamientoMedio}." : ".")}" +
+            $"{Environment.NewLine}";
 
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
             TratamientoNegritas tratamientoNegritas, string claveAPI, out string error, out string información, bool rellenarInstruccionesSistema = true,
-            RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosMuyPequeños, // Se ha encontrado con GPT que los modelos muy pequeños con alto razonamiento no funcionan muy bien porque terminan gastando muchos tókenes de razonamiento para cubrir sus limitaciones, reduciendo la ventaja económica de usar este modelo muy pequeño en primer lugar.
-            RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.Ninguna, // No se ha realizados pruebas suficientes para sugerir un valor predeterminado para este parámetro.
+            RestricciónRazonamiento restricciónRazonamientoAlto = RestricciónRazonamiento.ModelosPequeños, // Se ha encontrado con GPT que los modelos pequeños y muy pequeños con alto razonamiento no funcionan muy bien porque terminan gastando muchos tókenes de razonamiento para cubrir sus limitaciones, reduciendo la ventaja económica de usar este modelo muy pequeño en primer lugar.
+            RestricciónRazonamiento restricciónRazonamientoMedio = RestricciónRazonamiento.ModelosMuyPequeños, // No se ha realizados pruebas suficientes para sugerir un valor predeterminado para este parámetro, pero se establece este valor predeterminado para ser gradual con el anterior.
             RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, // Predeterminada se establecen estas restricciones altas, el usuario de la librería podría relajarlas para evitar respuestas incompletas si en su caso de uso está sucediendo frecuentemente pero teniendo en cuenta que se incrementan los costos.
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta) {
 
@@ -262,8 +262,8 @@ namespace Frugalia {
 
                         if (n < 1) return 0;
                         var largoSRellena = tókenesS < tókenesObjetivoSRellena ? tókenesObjetivoSRellena : tókenesS;
-                        return largoSRellena + largoM1 / (double)CarácteresPorTokenConversaciónTípicos 
-                            + (n - 1) * (largoM + largoR) / CarácteresPorTokenConversaciónTípicos;
+                        return largoSRellena + largoM1 / (double)CarácteresPorTokenTípicos 
+                            + (n - 1) * (largoM + largoR) / CarácteresPorTokenTípicos;
 
                     } // obtenerTókenes>
 
@@ -394,8 +394,8 @@ namespace Frugalia {
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         private Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
-            bool buscarEnInternet, List<Función> funciones, out string respuestaTextoLimpio, ref Dictionary<string, Tókenes> tókenes, 
-            ref StringBuilder información, out Resultado resultado) {
+            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesEntrada, out string respuestaTextoLimpio, 
+            ref Dictionary<string, Tókenes> tókenes, ref StringBuilder información, out Resultado resultado) {
 
             resultado = Resultado.Respondido;
 
@@ -410,7 +410,9 @@ namespace Frugalia {
             
             Respuesta respuesta;
             var esCalidadAdaptable = CalidadAdaptable != CalidadAdaptable.No;
-            var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema, esCalidadAdaptable);
+            var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema, 
+                tókenesAdicionalesEntrada * CarácteresPorTokenTípicos, esCalidadAdaptable);
+            información.AgregarLínea($"Largo instrucción útil = {largoInstrucciónÚtil} carácteres.");
 
             var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones, ref información);
             if (esCalidadAdaptable) {
@@ -439,6 +441,8 @@ namespace Frugalia {
                 opciones.EscribirInstrucciónSistema(nuevasInstruccionesSistema);
 
                 var restricciónTókenesSalida = RestricciónTókenesSalida; // Hace copia para no reemplazar la propiedad original. Solo se reduce cuando inicia en Alta o Media.
+                var restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento;
+                var reintentoMenosRestrictivoRealizado = false;
 
                 reintentarMenosRestrictiva:
                 var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out Resultado resultadoInicial);
@@ -458,8 +462,7 @@ namespace Frugalia {
 
                     if (resultadoInicial == Resultado.MáximosTókenesAlcanzados) { // Aquí puede entrar por traer el texto vacío o truncado. El vacío sucede cuando se llega al máximo de tókenes de salida solo con razonamiento y aún no había empezado a generar la respuesta de texto. Pueden suceder los dos casos de con OpenAI. Por lo tanto la etiqueta de autoevaluación puede estar truncada o no estar. El intento de solución más inmediato es reintantar la consulta con menos restricción en la cantidad de máximos tókenes de salida.
 
-                        var informaciónMáximosTókenesAlcanzados = $"El modelo {Modelo} no pudo terminar la respuesta en los tókenes máximos " +
-                            $"permitidos con restricción {restricciónTókenesSalida}";
+                        var informaciónMáximosTókenesAlcanzados = $"No se terminó la respuesta en los tókenes máximos";
 
                         if (Modelo.ObtenerTamaño() == Tamaño.Pequeño || Modelo.ObtenerTamaño() == Tamaño.MuyPequeño) {
                                                       
@@ -484,12 +487,40 @@ namespace Frugalia {
                                 throw new NotImplementedException();
                             }
 
+                            switch (restricciónTókenesRazonamiento) { // Debido a que normalmente el con el modo CalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
+                            case RestricciónTókenesRazonamiento.Alta:
+
+                                restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Media;
+                                modificadaRestricción = true;
+                                break;
+
+                            case RestricciónTókenesRazonamiento.Media:
+
+                                restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Baja;
+                                modificadaRestricción = true;
+                                break;
+
+                            case RestricciónTókenesRazonamiento.Baja:
+                            case RestricciónTókenesRazonamiento.Ninguna:
+                                break;
+                            default:
+                                throw new NotImplementedException();
+                            }
+
                             if (modificadaRestricción) {
 
-                                información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Se intentó nuevamente con una restricción menor.");
-                                opciones.EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, 
-                                    Modelo, largoInstrucciónÚtil, restricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
-                                goto reintentarMenosRestrictiva;
+                                if (!reintentoMenosRestrictivoRealizado) { // Se asegura que se hace solo un intento de reducción de restricción de tókenes de salida. Más de un intento, se puede tardar mucho la consulta y escalar el costo de una manera que no debería ser automática.
+                                                            
+                                    información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Se reintentó con menos restricciones.");
+                                    opciones.EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, 
+                                        Modelo, largoInstrucciónÚtil, restricciónTókenesSalida, restricciónTókenesRazonamiento, Verbosidad, ref información);
+                                    reintentoMenosRestrictivoRealizado = true;
+                                    goto reintentarMenosRestrictiva;
+
+                                } else {
+                                    información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Como solo se permite un reintento, no se reintentó.");
+                                    nivelMejoramientoSugerido = 0;
+                                }
 
                             } else {
                                 información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Cómo ya estaba muy baja la restricción, no se reintentó.");
@@ -515,7 +546,7 @@ namespace Frugalia {
 
                     respuesta = respuestaInicial;
                     if (resultado != Resultado.SinAutoevaluación) resultado = resultadoInicial;
-                    información.AgregarLínea($"No se realizó mejoramiento por encima de {Modelo}.");
+                    información.AgregarLínea($"No se realizó mejoramiento por encima del modelo {Modelo} y de razonamiento {Razonamiento}.");
 
                 } else {
 
@@ -531,19 +562,18 @@ namespace Frugalia {
                         if (Modelo.Nombre == modeloMejorado.Nombre && razonamientoMejorado == Razonamiento) {
                             respuesta = respuestaInicial;
                             resultado = resultadoInicial;
-                            información.AgregarLínea($"No se repitió la consulta mejorada sugerida por el modelo porque se retringió el mejoramiento del " +
-                                $"modelo y/o el razonamiento.");
-                        } else { 
+                            información.AgregarLínea($"No se repitió la consulta mejorada porque se retringió el mejoramiento.");
+                        } else {
+
+                            información.AgregarLínea($"Se repitió consulta con {modeloMejorado} y razonamiento {razonamientoMejorado}.");
 
                             opciones.EscribirInstrucciónSistema(instruccionesOriginales); // Con el nuevo modelo usa las instrucciones originales, sin la instrucción de autoevaluacion porque solo se autoevaluará una vez.
 
                             opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio,
                                 modeloMejorado, largoInstrucciónÚtil, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
-
+                           
                             respuesta = ObtenerRespuesta(instrucción, conversación, opciones, modeloMejorado, ref tókenes, out resultado);
-
-                            información.AgregarLínea($"Se repitió consulta con {modeloMejorado}.");
-
+                            
                             if (resultado == Resultado.MáximosTókenesAlcanzados)
                                 información.AgregarLínea($"Se alcanzó la cantidad máxima de tókenes en la consulta mejorada. Se recomienda aumentar los tókenes " +
                                     $"máximos de razonamiento o la verbosidad si en tu caso de uso estás encontrando frecuentemente esta situación."); // Se prefiere no reintentar con una restricción menor en máximos tókenes de salida en estos casos porque al ser un modelo mejorado no solo es más caro si no que también puede generar más tókenes de razonamiento. Entonces repetir de manera automática la consulta con menos restricción de tókenes podría ser costoso para el usuario de la librería.
@@ -563,7 +593,7 @@ namespace Frugalia {
                 ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(UsaModeloMejor, "").Replace(UsaModeloMuchoMejor, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
             respuestaTextoLimpio = respuestaTextoLimpio.TrimEnd();
             if (resultado == Resultado.MáximosTókenesAlcanzados) 
-                respuestaTextoLimpio = "No pude completar la respuesta porque se alcanzó el límite de texto. " +
+                respuestaTextoLimpio = "No pude completar la respuesta porque se alcanzó el límite de texto o de capacidad de razonamiento. " +
                     "Intenta hacer una consulta más sencilla, concreta o separarla en varias preguntas."; // Este mensaje no sigue el tono especificado por el usuario de la libreria en instrucciones sistema, pero se acepta por ser algo que no debería suceder mucho. Se prefiere responder al usuario del programa con un tono diferente esperado que no responderle nada.
             return respuesta;
 
@@ -601,14 +631,15 @@ namespace Frugalia {
                 }
 
                 var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, Modelo,
-                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema, CalidadAdaptable != CalidadAdaptable.No), out _); // No se agrega a la información el resultado de esta función porque esta función se vuelve a llamar internamente en Responder().
+                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema, largoAdicional: 0, 
+                    CalidadAdaptable != CalidadAdaptable.No), out _); // No se agrega a la información el resultado de esta función porque esta función se vuelve a llamar internamente en Responder().
                 if (buscarEnInternet && (razonamientoEfectivo == RazonamientoEfectivo.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
                     error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
                     return null;
                 }
 
-                Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
-                    out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null, 
+                    tókenesAdicionalesEntrada: 0, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
@@ -651,15 +682,15 @@ namespace Frugalia {
             Archivador archivador = null;
             try {
 
-                var tókenesEstimadosArchivos = Archivador.EstimarTókenesEntradaArchivos(rutasArchivos);
+                var tókenesArchivos = Archivador.EstimarTókenes(rutasArchivos);
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, 
                     conversación: null, instruccionesPorConversación: 1, proporciónPrimerInstrucciónVsSiguientes: 1, proporciónRespuestasVsInstrucciones: 1, 
-                    tókenesAdicionales: tókenesEstimadosArchivos);
+                    tókenesAdicionales: tókenesArchivos);
 
                 if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
 
-                if (tókenesEstimadosArchivos 
+                if (tókenesArchivos 
                     + EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
                     error = $"Se supera el límite de tókenes de entrada permitidos ({Modelo.TókenesEntradaLímiteSeguro}) para el modelo {Modelo}. " +
                         "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o los archivos adjuntos, o usa un modelo con un límite mayor.";
@@ -671,7 +702,8 @@ namespace Frugalia {
                 if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) { error = conversaciónConArchivosYError.Error; return null; }
 
                 var respuesta = Responder(instrucción: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
-                    buscarEnInternet: false, funciones: null, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                    buscarEnInternet: false, funciones: null, tipoArchivo != TipoArchivo.Imagen ? tókenesArchivos : 0, // Si los archivos son imágenes, por el momento no se suman los tókenes del archivo a los tókenes de entrada adicionales porque el caso de imágenes muy simples (por ejemplo, un imagen de un solo color) no implicarían una alta carga de razonamiento adicional requerido, en cambio imágenes más complejas como fotos de tablas nutricionales sí implicarían una alta carga de razonamiento adicional. Por lo tanto, derivar los tókenes adicionales de entrada de los tókenes del tamaño del archivo de la imagen no sería muy apropiado. Si se quisiera ser más estricto, se debería preanalizar la imagen para determinar que tanta carga de razonamiento extra puede requerir.
+                    out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
@@ -723,12 +755,12 @@ namespace Frugalia {
 
             try {
 
-                var tókenesEstimadosFunciones = Función.EstimarTókenes(funciones);
+                var tókenesFunciones = Función.EstimarTókenes(funciones);
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
                     conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones, 
-                    tókenesAdicionales: tókenesEstimadosFunciones);
+                    tókenesAdicionales: tókenesFunciones);
 
-                if (conversación.EstimarTókenesTotales() + tókenesEstimadosFunciones // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
+                if (conversación.EstimarTókenesTotales() + tókenesFunciones // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
                     + EstimarTókenesEntradaInstrucciones("", instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
                     error = $"Se supera el límite de tókenes de entrada permitidos ({Modelo.TókenesEntradaLímiteSeguro}) para el modelo {Modelo}. " +
                         "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o las funciones, o usa un modelo con un límite mayor.";
@@ -748,7 +780,7 @@ namespace Frugalia {
                         return null;
                     }
                     respuesta = Responder(instrucción: null, conversación, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet: false,
-                        funciones, out respuestaTextoLimpio, ref tókenes, ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
+                        funciones, tókenesFunciones, out respuestaTextoLimpio, ref tókenes, ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
                     funciónEjecutadaÚltimaConsulta = false;
 
                     foreach (var ítemRespuesta in respuesta.ObtenerÍtemsRespuesta()) {

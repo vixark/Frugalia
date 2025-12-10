@@ -134,9 +134,6 @@ namespace Frugalia {
             => tókenes * (FactorPrecioFuturo * costoPorMillón / (decimal)1E6) * tasaCambioUsd;
 
 
-        private static string FormatearMoneda(decimal pesos) => $"{pesos:#,0.##} $";
-
-
         public static string ObtenerTextoCostoTókenes(Dictionary<string, Tókenes> listaTókenes, decimal tasaCambioUsd) {
 
             if (listaTókenes == null || listaTókenes.Count == 0) return "No hay tókenes para calcular costos.";
@@ -211,13 +208,13 @@ namespace Frugalia {
                        $"{clave}: {tókenes.SalidaRazonamiento} tókenes de salida razonamiento a {FormatearMoneda(pesosRazonamiento)}" + Environment.NewLine +
                        $"{clave}: {tókenes.EscrituraManualCaché} tókenes de escritura manual en caché por {tókenes.MinutosEscrituraManualCaché} minutos " +
                        $"a {FormatearMoneda(pesosEscrituraManualCaché)}" + Environment.NewLine +
-                       $"{clave}: Total {FormatearMoneda(totalPesos)}" + Environment.NewLine;
+                       $"Total {clave}: {FormatearMoneda(totalPesos)}" + DobleLínea;
 
                 }
 
             }
 
-            return $"Costo:{Environment.NewLine}{texto}{Environment.NewLine}Total Todos: {FormatearMoneda(totalTodos)}";
+            return $"{texto}Total Todos: {FormatearMoneda(totalTodos)}";
 
         } // ObtenerTextoCostoTókenes>
 
