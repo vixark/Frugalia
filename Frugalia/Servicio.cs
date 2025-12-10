@@ -394,7 +394,7 @@ namespace Frugalia {
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         private Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
-            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesEntrada, out string respuestaTextoLimpio, 
+            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesInstrucciónÚtil, out string respuestaTextoLimpio, 
             ref Dictionary<string, Tókenes> tókenes, ref StringBuilder información, out Resultado resultado) {
 
             resultado = Resultado.Respondido;
@@ -411,7 +411,7 @@ namespace Frugalia {
             Respuesta respuesta;
             var esCalidadAdaptable = CalidadAdaptable != CalidadAdaptable.No;
             var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema, 
-                tókenesAdicionalesEntrada * CarácteresPorTokenTípicos, esCalidadAdaptable);
+                tókenesAdicionalesInstrucciónÚtil * CarácteresPorTokenTípicos, esCalidadAdaptable);
             información.AgregarLínea($"Largo instrucción útil = {largoInstrucciónÚtil} carácteres.");
 
             var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones, ref información);
@@ -639,7 +639,7 @@ namespace Frugalia {
                 }
 
                 Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null, 
-                    tókenesAdicionalesEntrada: 0, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                    tókenesAdicionalesInstrucciónÚtil: 0, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
