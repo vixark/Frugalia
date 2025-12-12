@@ -176,33 +176,34 @@ namespace Frugalia {
         internal const double FactorSeguridadTókenesEntradaMáximos = 0.75; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 75%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. El 75% se obtiene de 3/4 que es un rango de carácteres tókenes típico promedio a típico máximo.
 
         public static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
-            { "gpt-5.2-pro", new Modelo("gpt-5.2-pro", Familia.GPT, 21, 21, 168, 168, null, null, null, null, 400000, 0.5m, 1, null,
+            { "gpt-5.2-pro", new Modelo("gpt-5.2-pro", Familia.GPT, 21, 21, 168, 168, null, null, null, null, 400000, 0.5m, 1, null, false,
                 razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Medio, RazonamientoEfectivo.Alto,
                     RazonamientoEfectivo.MuyAlto }) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
-            { "gpt-5.2", new Modelo("gpt-5.2", Familia.GPT, 1.75m, 0.175m, 14, 14, null, null, null, 1024, 400000, 0.5m, 1, null,
-                $"gpt-5.2-pro{Deshabilitado}", usaCachéExtendida: true) },
-            { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null,
+            { "gpt-5.2", new Modelo("gpt-5.2", Familia.GPT, 1.75m, 0.175m, 14, 14, null, null, null, 1024, 400000, 0.5m, 1, null, true,
+                $"gpt-5.2-pro{Deshabilitado}") },
+            { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null, false,
                 razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo>() { RazonamientoEfectivo.Alto }) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
-            { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, 0.5m, 1, null, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
-                $"gpt-5-pro{Deshabilitado}", usaCachéExtendida: true,
+            { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, 0.5m, 1, null, true, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
+                $"gpt-5.2-pro{Deshabilitado}",
                 razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
-            { "gpt-5-mini", new Modelo("gpt-5-mini", Familia.GPT, 0.25m, 0.025m, 2, 2, null, null, null, 1024, 400000, 0.5m, 1, null,
-                "gpt-5.1", $"gpt-5-pro{Deshabilitado}",
+            { "gpt-5-mini", new Modelo("gpt-5-mini", Familia.GPT, 0.25m, 0.025m, 2, 2, null, null, null, 1024, 400000, 0.5m, 1, null, false,
+                "gpt-5.2", $"gpt-5.2-pro{Deshabilitado}",
                 razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
-            { "gpt-5-nano", new Modelo("gpt-5-nano", Familia.GPT, 0.05m, 0.005m, 0.4m, 0.4m, null, null, null, 1024, 400000, 0.5m, 1, null,
-                "gpt-5-mini", "gpt-5.1", $"gpt-5-pro{Deshabilitado}",
+            { "gpt-5-nano", new Modelo("gpt-5-nano", Familia.GPT, 0.05m, 0.005m, 0.4m, 0.4m, null, null, null, 1024, 400000, 0.5m, 1, null, false,
+                "gpt-5-mini", "gpt-5.2", $"gpt-5.2-pro{Deshabilitado}",
                 razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
-            { "gpt-4.1", new Modelo("gpt-4.1", Familia.GPT, 2, 0.5m, 8, 8, null, null, null, 1024, 1047576, 0.5m, 1, null,
-                "gpt-5", usaCachéExtendida: true, razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Ninguno },
+            { "gpt-4.1", new Modelo("gpt-4.1", Familia.GPT, 2, 0.5m, 8, 8, null, null, null, 1024, 1047576, 0.5m, 1, null, true,
+                "gpt-5.2", "gpt-5.2-pro", razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Ninguno },
                 verbosidadesPermitidas: new List<Verbosidad>()) }, // Modelo sin razonamiento y sin verbosidad. Se pasa la lista de las verbosidades permitidas vacía y la de los razonamientos efectivos solo con el elemento Ninguno.
-            { "claude-opus-4-5", new Modelo("claude-opus-4-5", Familia.Claude, 5, 0.5m, 25, 25, 6.25m, 10, null, null, 200000, 0.5m, 0.5m, 0.5m) }, // https://claude.com/pricing#api.
-            { "claude-sonnet-4-5", new Modelo("claude-sonnet-4-5", Familia.Claude, 3, 0.3m, 15, 15, 3.75m, 6, null, null, 200000, 0.5m, 0.5m, 0.5m,
+            { "claude-opus-4-5", new Modelo("claude-opus-4-5", Familia.Claude, 5, 0.5m, 25, 25, 6.25m, 10, null, null, 200000, 0.5m, 0.5m, 0.5m, false) }, // https://claude.com/pricing#api.
+            { "claude-sonnet-4-5", new Modelo("claude-sonnet-4-5", Familia.Claude, 3, 0.3m, 15, 15, 3.75m, 6, null, null, 200000, 0.5m, 0.5m, 0.5m, false,
                 "claude-opus-4-5") },
-            { "claude-sonnet+-4-5" , new Modelo("claude-sonnet+-4-5", Familia.Claude, 6, 0.6m, 22.5m, 22.5m, 7.5m, 12, null, null, 1000000, 0.5m, 0.5m, 0.5m) }, // Modelo de contexto muy grande, útil para el procesamiento de textos muy grandes. 
-            { "claude-haiku-4-5", new Modelo("claude-haiku-4-5", Familia.Claude, 1, 0.1m, 5, 5, 1.25m, 2, null, null, 200000, 0.5m, 0.5m, 0.5m,
+            { "claude-sonnet+-4-5" , new Modelo("claude-sonnet+-4-5", Familia.Claude, 6, 0.6m, 22.5m, 22.5m, 7.5m, 12, null, null, 1000000, 0.5m, 0.5m, 0.5m, 
+                false) }, // Modelo de contexto muy grande, útil para el procesamiento de textos muy grandes. 
+            { "claude-haiku-4-5", new Modelo("claude-haiku-4-5", Familia.Claude, 1, 0.1m, 5, 5, 1.25m, 2, null, null, 200000, 0.5m, 0.5m, 0.5m, false,
                 "claude-sonnet-4-5", "claude-opus-4-5") },
-            { "gemini-3-pro-preview", new Modelo("gemini-3-pro-preview", Familia.Gemini, 2, 0.2m, 12, 12, null, null, 4.5m, null, 200000, 0.5m, 1, null) }, // https://ai.google.dev/gemini-api/docs/pricing.
-            { "gemini-3-pro+-preview", new Modelo("gemini-3-pro+-preview", Familia.Gemini, 4, 0.4m, 18, 18, null, null, 4.5m, null, 1048576, 0.5m, 1, null) },
+            { "gemini-3-pro-preview", new Modelo("gemini-3-pro-preview", Familia.Gemini, 2, 0.2m, 12, 12, null, null, 4.5m, null, 200000, 0.5m, 1, null, false) }, // https://ai.google.dev/gemini-api/docs/pricing.
+            { "gemini-3-pro+-preview", new Modelo("gemini-3-pro+-preview", Familia.Gemini, 4, 0.4m, 18, 18, null, null, 4.5m, null, 1048576, 0.5m, 1, null, false) },
         };
 
 
@@ -534,6 +535,9 @@ namespace Frugalia {
             }
 
             if (EsRazonamientoAdaptable(razonamiento)) información.AgregarLínea($"Razonamiento efectivo = {razonamientoEfectivo}.{(aplicadaRestricción ? " Aplicada restricción de razonamiento." : "")}");
+
+            if (!modelo.RazonamientosEfectivosPermitidos.Contains(razonamientoEfectivo)) 
+                throw new Exception($"El modelo {modelo} no permite razonamiento {razonamientoEfectivo}.");
 
             return razonamientoEfectivo;
 

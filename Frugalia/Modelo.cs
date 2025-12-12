@@ -115,8 +115,8 @@ namespace Frugalia {
             decimal precioSalidaRazonamiento, decimal? precioEscrituraManualCachéRefrescablePor5Minutos, decimal? precioEscrituraManualCachéRefrescablePor60Minutos,
             decimal? precioAlmacenamientoCachéPorHora, int? límiteTókenesActivaciónCachéAutomática, int tókenesEntradaMáximos,
             decimal fracciónDescuentoEntradaYSalidaPorLote, decimal fracciónDescuentoLecturaCachePorLote, decimal? fracciónDescuentoEscrituraCachéPorLote,
-            string nombreModelo1NivelSuperior = "", string nombreModelo2NivelesSuperior = "", string nombreModelo3NivelesSuperior = "",
-            bool usaCachéExtendida = false, List<RazonamientoEfectivo> razonamientosEfectivosPermitidos = null, 
+            bool usaCachéExtendida, string nombreModelo1NivelSuperior = "", string nombreModelo2NivelesSuperior = "", 
+            string nombreModelo3NivelesSuperior = "", List<RazonamientoEfectivo> razonamientosEfectivosPermitidos = null, 
             List<RazonamientoEfectivo> razonamientosEfectivosNoPermitidos = null, List<Verbosidad> verbosidadesPermitidas = null, 
             List<Verbosidad> verbosidadesNoPermitidas = null) {
 

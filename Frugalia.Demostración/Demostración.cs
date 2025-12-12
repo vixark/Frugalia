@@ -48,41 +48,41 @@ internal class Demostración {
             EscribirTítuloYTexto("Calidad Adaptable", "Hace la primera consulta con un modelo pequeño (por ejemplo, GPT Mini o Nano) y le pide al modelo " +
                 "autoevaluarse en la misma respuesta. Dependiendo de la autoevaluación, decide si repite la consulta con un modelo superior (como GPT estándar) " +
                 $"y/o con mayor razonamiento.{DobleLínea}Los costos muestran que la estrategia es útil si muchas consultas son " +
-                $"de baja complejidad y unas pocas de alta complejidad.{DobleLínea}En las demostraciones número 2, 5, 8 y 11 verás el funcionamiento de GPT 5.1 " +
+                $"de baja complejidad y unas pocas de alta complejidad.{DobleLínea}En las demostraciones número 2, 5, 8 y 11 verás el funcionamiento de GPT 5.2 " +
                 $"sin calidad adaptable y en las demás verás el funcionamiento de GPT Mini y Nano con calidad adaptable. Los costos " +
                 $"mostrados (~0,001 USD, etc.) son el costo aproximado por ejecución de cada demostración.{DobleLínea}{SugerenciaNoUsarResultados}")) },
 
-        { 2, ($"Baja complejidad con GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // 5 $ en promedio.
-        { 3, ($"Baja complejidad con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) }, // 3,14 $ en promedio.
-        { 4, ($"Baja complejidad con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(0.7M)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) }, // 0.67 $ en promedio.
+        { 2, ($"Baja complejidad con GPT 5.2 sin calidad adaptable (≈{ADólares(6.7M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+        { 3, ($"Baja complejidad con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(3.2M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) },
+        { 4, ($"Baja complejidad con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(0.7M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) },
 
-        { 5, ($"Media complejidad con GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // 5.22 $ promedio.
-        { 6, ($"Media complejidad con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(6)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) }, // 6.01 $ promedio. Mini es más conciente de sus limitaciones y tiende a sugerir más frecuentemente usar un modelo mejor que nano.
-        { 7, ($"Media complejidad con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) }, // 3.02 $ promedio. Pocas veces sugiere mejor modelo. 
+        { 5, ($"Media complejidad con GPT 5.2 sin calidad adaptable (≈{ADólares(15.4M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+        { 6, ($"Media complejidad con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(13.6M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) }, 
+        { 7, ($"Media complejidad con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) }, 
 
-        { 8, ($"Alta complejidad con GPT 5.1 sin calidad adaptable (≈{ADólares(20)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
-                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 19.42 $ promedio.
-        { 9, ($"Alta complejidad con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(7)}).", "Calidad Adaptable", (d) =>
+        { 8, ($"Alta complejidad con GPT 5.2 sin calidad adaptable (≈{ADólares(39.8M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
+                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) },
+        { 9, ($"Alta complejidad con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(6.2M)}).", "Calidad Adaptable", (d) =>
             Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false,
-                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 6.89 $ promedio. No sugirió casi modelo mejor.
-        { 10, ($"Alta complejidad con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(5)}).", "Calidad Adaptable", (d) =>
+                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // No sugirió casi modelo mejor.
+        { 10, ($"Alta complejidad con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(13.3M)}).", "Calidad Adaptable", (d) =>
             Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false,
-                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Media)) }, // 5.5 $ promedio. Sugirió modelo mejor (un nivel) en todos los ensayos realizados.
+                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Media)) }, //  Sugirió modelo mucho mejor (dos niveles) en un ensayo, en otro dijo que lo hizo bien y en los otros tres sugirió un modelo mejor.
 
-        { 11, ($"Cálculo matemático con GPT 5.1 sin calidad adaptable (≈{ADólares(200)}).", "Calidad Adaptable", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.1", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
-                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Baja)) }, // 190 $ promedio. Todas bien.
-        { 12, ($"Cálculo matemático con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(30)}).", "Calidad Adaptable", (d) =>
+        { 11, ($"Cálculo matemático con GPT 5.2 sin calidad adaptable (≈{ADólares(100.7M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.2", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
+                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Baja)) }, // Todas bien.
+        { 12, ($"Cálculo matemático con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(24.7M)}).", "Calidad Adaptable", (d) =>
             Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-mini", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false,
-                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 30 $ promedio. Todas bien y sin sugerir mejora de modelo.
-        { 13, ($"Cálculo matemático con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
+                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // Todas bien y sin sugerir mejora de modelo.
+        { 13, ($"Cálculo matemático con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
             Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false,
                 restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 3 $ promedio. Todas bien y sin sugerir mejora de modelo. Si se sube el nivel de complejidad matemático (por ejemplo matrices 5x5 o más) se encontró que nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
         
@@ -122,15 +122,15 @@ internal class Demostración {
 
         //{ 18, ($"Conversación con funciones considerando 10 conversaciones por día (≈{ADólares(1000000)}).", "Relleno de Instrucción del Sistema", (d) =>
         //    Consultar((servicio, modelo) => ConversaciónConFunciones(servicio, modelo, usarInstrucciónMuyLarga: false, usarInstrucciónSistemaMuyLarga: false, 
-      //0), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // Sin rellenos pero con más conversaciones previstas.
+      //0), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // Sin rellenos pero con más conversaciones previstas.
 
 
 
         //{ 14, ("Consulta con archivos.", "Archivos", () =>
-        //    Consultar(ConsultaConArchivos, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
+        //    Consultar(ConsultaConArchivos, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
         //        13, lote: false)) },
         //{ 15,("Consulta buscando en internet con error por Razonamiento = Ninguno.", "Búsqueda en Internet", () =>
-        //    Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+        //    Consultar(ConsultaBuscandoEnInternet, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
         //        15, lote: false)) },
 
     };
@@ -178,7 +178,7 @@ internal class Demostración {
             EscribirRojo($"No se ha escrito código para la demostración número {númeroDemostración}.");
         } else {
 
-            var ensayos = 1;
+            var ensayos = 5;
             for (int i = 0; i < ensayos; i++) {
                 _ = Demostraciones[númeroDemostración].Consultar(númeroDemostración); // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
             }

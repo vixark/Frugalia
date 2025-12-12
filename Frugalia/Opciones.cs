@@ -144,7 +144,7 @@ namespace Frugalia {
 
                         if (modelo2.RazonamientosEfectivosPermitidos.Count == 1 && modelo2.RazonamientosEfectivosPermitidos[0] == RazonamientoEfectivo.Ninguno) {
                             if (razonamientoE2 != RazonamientoEfectivo.Ninguno) // No se debe agregar ReasoningOptions none porque saca error en modelos que no soportan razonamiento. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
-                                throw new Exception("No se esperaba intentar escribir ReasoningOptions con RazonamientoEfectivo = Ninguno.");
+                                throw new Exception("No se esperaba intentar escribir ReasoningOptions con RazonamientoEfectivo != Ninguno.");
                         } else {
                             OpcionesGPT.ReasoningOptions = new ResponseReasoningOptions { ReasoningEffortLevel = new ResponseReasoningEffortLevel(textoRazonamiento) };
                         }
