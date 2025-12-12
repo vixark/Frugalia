@@ -27,8 +27,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using static Frugalia.GlobalFrugalia;
 using static Frugalia.General;
+using static Frugalia.GlobalFrugalia;
 
 
 namespace Frugalia {
@@ -55,7 +55,7 @@ namespace Frugalia {
 
         private Action<int> AcciónEscribirMáximosTókenesSalida { get; }
 
-        private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder> 
+        private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder>
             FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
 
 
@@ -84,7 +84,7 @@ namespace Frugalia {
                 longitudInstrucciónÚtil, out StringBuilder informaciónRazonamientoEfectivo);
             if (!informaciónRazonamientoEfectivo.EsNuloOVacío()) información.AgregarLíneas(informaciónRazonamientoEfectivo);
 
-            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamientoEfectivo, restricciónRazonamientoAlto, 
+            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamientoEfectivo, restricciónRazonamientoAlto,
                 restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil);
             if (!informaciónOpcionesRazonamiento.EsNuloOVacío()) información.AgregarLíneas(informaciónOpcionesRazonamiento);
 
@@ -97,7 +97,7 @@ namespace Frugalia {
         } // EscribirOpcionesRazonamientoYLímitesTókenes>
 
 
-        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, 
+        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio,
             RestricciónTókenesSalida restricciónTókenesSalida, RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, int longitudInstrucciónÚtil,
             Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
 
@@ -110,28 +110,19 @@ namespace Frugalia {
 
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
-                FunciónEscribirOpcionesRazonamientoYObtenerInformación = 
-                    (razonamientoEfectivo2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, longitudInstrucciónÚtil2) => {
+                FunciónEscribirOpcionesRazonamientoYObtenerInformación = (razonamientoE2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, longitudIU2) => {
 
                     var información2 = new StringBuilder(); // No se ha escrito aún, pero se deja por si es necesario llenarlo más adelante.
 
                     var nombreModeloMinúsculas = modelo2.Nombre.ToLowerInvariant();
 
-                    if (razonamientoEfectivo2 != RazonamientoEfectivo.Alto && nombreModeloMinúsculas == "gpt-5-pro")
-                        throw new InvalidOperationException("gpt-5-pro no permite nivel de razonamiento diferente de alto.");
-
-                    var modelosSinRazonamiento = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" };
-                    if (modelosSinRazonamiento.Contains(nombreModeloMinúsculas)) {
-
-                        if (razonamientoEfectivo2 != RazonamientoEfectivo.Ninguno) // No se debe agregar ReasoningOptions incluso con none en estos modelos porque saca error. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
-                            throw new NotSupportedException($"El modelo {nombreModeloMinúsculas} no soporta razonamiento. Solo se puede usar con " +
-                                $"Razonamiento = Ninguno.");
-
+                    if (!modelo2.RazonamientosEfectivosPermitidos.Contains(razonamientoE2)) {
+                        throw new NotSupportedException($"El modelo {nombreModeloMinúsculas} no soporta razonamiento {razonamientoE2}.");
                     } else {
 
-                        var modelosConRazonamientoMinimal = new List<string> { "gpt-5-nano", "gpt-5-mini", "gpt-5" }; // Se hace la lista de los viejos porque se espera que los nuevos mantengan none.                          
+                        var modelosConRazonamientoMinimal = new List<string> { "gpt-5-nano", "gpt-5-mini", "gpt-5" };// Se hace la lista de los viejos porque se espera que los nuevos mantengan none. Se mantiene la lista solo para modelos de la familia GPT porque es una particularidad de estos en los que se mapea Razonamiento = Ninguno a 'minimal' en los modelos de esta lista y a none en el resto.
                         var textoRazonamiento = "";
-                        switch (razonamientoEfectivo2) {
+                        switch (razonamientoE2) {
                         case RazonamientoEfectivo.Ninguno:
                             textoRazonamiento = modelosConRazonamientoMinimal.Contains(nombreModeloMinúsculas) ? "minimal" : "none";
                             break;
@@ -144,29 +135,35 @@ namespace Frugalia {
                         case RazonamientoEfectivo.Alto:
                             textoRazonamiento = "high";
                             break;
+                        case RazonamientoEfectivo.MuyAlto:
+                            textoRazonamiento = "xhigh";
+                            break;
                         default:
-                            throw new Exception($"Razonamiento {razonamientoEfectivo2} no considerado.");
+                            throw new Exception($"Razonamiento {razonamientoE2} no considerado.");
                         }
 
-                        OpcionesGPT.ReasoningOptions =
-                            new ResponseReasoningOptions { ReasoningEffortLevel = new ResponseReasoningEffortLevel(textoRazonamiento) };
+                        if (modelo2.RazonamientosEfectivosPermitidos.Count == 1 && modelo2.RazonamientosEfectivosPermitidos[0] == RazonamientoEfectivo.Ninguno) {
+                            if (razonamientoE2 != RazonamientoEfectivo.Ninguno) // No se debe agregar ReasoningOptions none porque saca error en modelos que no soportan razonamiento. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
+                                throw new Exception("No se esperaba intentar escribir ReasoningOptions con RazonamientoEfectivo = Ninguno.");
+                        } else {
+                            OpcionesGPT.ReasoningOptions = new ResponseReasoningOptions { ReasoningEffortLevel = new ResponseReasoningEffortLevel(textoRazonamiento) };
+                        }
 
                     }
 
                     return información2;
 
                 };
-    
+
                 AcciónEscribirMáximosTókenesSalida = máximos => OpcionesGPT.MaxOutputTokenCount = máximos;
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil, 
+                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil,
                     restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, ref información);
-   
-                var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
-                if (modelosSinVerbosidad.Contains(modelo.Nombre.ToLowerInvariant())) {
-                    if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {modelo} no soporta configuración de la verbosidad.");
+
+                if (!modelo.VerbosidadesPermitidas.Contains(verbosidad)) {
+                    if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {modelo} no soporta configuración de la verbosidad diferente de Media."); // Se considera que la verbosidad Media es la que tienen los modelos que no permiten especificar la verbosidad y por lo tanto se les pasó vacía la lista de verbosidades permitidas al crear el Modelo.
                 } else {
 
                     var textoVerbosidad = ""; // https://platform.openai.com/docs/guides/latest-model#verbosity.
@@ -183,11 +180,11 @@ namespace Frugalia {
                     default:
                         throw new Exception($"Verbosidad {verbosidad} no considerada.");
                     }
-                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // Sí funciona. En unas pruebas se obtuvieron en promedio 393 caracteres; 249 con verbosidad baja y 657 con verbosidad alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET incluye esta opción de forma estructurada.
+                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // En unas pruebas se obtuvieron en promedio 393 caracteres; 249 con verbosidad baja y 657 con verbosidad alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET incluye esta opción de forma estructurada.
 
                 }
-                
-                if (modelo.TieneCachéExtendidaGratuita()) OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
+
+                if (modelo.UsaCachéExtendida) OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
 
                 if (buscarEnInternet) OpcionesGPT.Tools.Add(ResponseTool.CreateWebSearchTool());
 
@@ -241,7 +238,7 @@ namespace Frugalia {
         internal static int ObtenerMáximosTókenesSalidaYRazonamiento(RestricciónTókenesSalida restricciónTókenesSalida,
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, RazonamientoEfectivo razonamientoEfectivo) {
 
-            if ((restricciónTókenesRazonamiento == RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida != RestricciónTókenesSalida.Ninguna) 
+            if ((restricciónTókenesRazonamiento == RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida != RestricciónTókenesSalida.Ninguna)
                 || restricciónTókenesRazonamiento != RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida == RestricciónTókenesSalida.Ninguna)
                 throw new Exception("No se permite que RestricciónTókenesRazonamiento == Ninguna y RestricciónTókenesSalida != Ninguna, o viceversa. " +
                     "Los modelos solo permiten establecer el límite de tókenes a la suma de los dos, por lo tanto la eliminación de la restricción en " +

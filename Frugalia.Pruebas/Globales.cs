@@ -24,6 +24,7 @@
 
 using System.Reflection;
 namespace Frugalia.Pruebas;
+using static Frugalia.GlobalFrugalia;
 
 
 public class Globales {
@@ -31,13 +32,12 @@ public class Globales {
 
     #region AgregarSumando()
 
-
     [Fact]
     public void AgregarSumando_CreaDiccionarioCuandoEsNulo() {
 
-        var tókenes = CrearTókenes("gpt-5-mini", lote: false, entradaTotal: 10, salidaTotal: 5, salidaRazonamiento: 2, entradaCaché: 1);
+        var tókenes = new Tókenes(Modelos["gpt-5-mini"], lote: false, 10, 5, 2, 1, 0, 0);
         Dictionary<string, Tókenes>? diccionarioNulo = null;
-        GlobalFrugalia.AgregarSumandoPosibleNulo(ref diccionarioNulo, tókenes);
+        AgregarSumandoPosibleNulo(ref diccionarioNulo, tókenes);
         var clave = ObtenerClave(tókenes);
 
         Assert.NotNull(diccionarioNulo);
@@ -51,8 +51,8 @@ public class Globales {
     public void AgregarSumando_SumaTokensCuandoExisteLaClave() {
 
         var diccionario = new Dictionary<string, Tókenes>();
-        var inicial = CrearTókenes("gpt-5-mini", lote: true, entradaTotal: 100, salidaTotal: 50, salidaRazonamiento: 10, entradaCaché: 20, escrituraManualCaché: 5);
-        var adicional = CrearTókenes("gpt-5-mini", lote: true, entradaTotal: 50, salidaTotal: 20, salidaRazonamiento: 5, entradaCaché: 5, escrituraManualCaché: 3);
+        var inicial = new Tókenes(Modelos["gpt-5-mini"], lote: true, 100, 50, 10, 20, 5, 0);
+        var adicional = new Tókenes(Modelos["gpt-5-mini"], lote: true, 50, 20, 5, 5, 3, 0);
 
         diccionario.AgregarSumando(inicial);
         diccionario.AgregarSumando(adicional);
@@ -66,18 +66,6 @@ public class Globales {
         Assert.Equal(8, ObtenerPropiedadEntera(combinado, "EscrituraManualCaché"));
 
     } // AgregarSumando_SumaTokensCuandoExisteLaClave>
-
-
-    private static Tókenes CrearTókenes(string modelo, bool lote, int entradaTotal, int salidaTotal, int salidaRazonamiento, int entradaCaché, 
-        int escrituraManualCaché = 0, int minutosEscrituraManualCaché = 0) {
-
-        var constructor = typeof(Tókenes).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, binder: null, [typeof(string), typeof(bool), typeof(int?), 
-            typeof(int?), typeof(int?), typeof(int?), typeof(int?), typeof(int?)], modifiers: null);
-        return constructor == null ? throw new InvalidOperationException("No se encontró el constructor esperado de Tókenes.")
-            : (Tókenes)constructor.Invoke([modelo, lote, entradaTotal, salidaTotal, salidaRazonamiento, entradaCaché, escrituraManualCaché, 
-                minutosEscrituraManualCaché ]);
-
-    } // CrearTókenes>
 
 
     private static int ObtenerPropiedadEntera(Tókenes tókenes, string nombrePropiedad) {
@@ -101,7 +89,6 @@ public class Globales {
 
 
     #region Reemplazar()
-
 
     [Fact]
     public void Reemplazar_Ordinal_ReemplazaTodasLasCoincidencias() {
@@ -192,6 +179,136 @@ public class Globales {
 
     } // Reemplazar_CoincidenciasSeparadas_PreservaRestoDelTexto>
 
+    #endregion
+
+
+    #region CompilarElementosPermitidos()
+
+    private enum EstadoPrueba {
+        Ninguno = 0,
+        Uno = 1,
+        Dos = 2,
+        Tres = 3
+    }
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_AmbasListasNulas_DevuelveTodosLosValoresDelEnum() {
+
+        List<EstadoPrueba>? permitidos = null;
+        List<EstadoPrueba>? noPermitidos = null;
+
+        var resultado = General.CompilarElementosPermitidos(permitidos, noPermitidos);
+
+        var todos = Enum.GetValues<EstadoPrueba>();
+        Assert.Equal(todos.Length, resultado.Count);
+        foreach (var valor in todos) {
+            Assert.Contains(valor, resultado);
+        }
+
+    } // CompilarElementosPermitidos_AmbasListasNulas_DevuelveTodosLosValoresDelEnum>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_SoloPermitidos_DevuelveListaSinCambios() {
+
+        var permitidos = new List<EstadoPrueba> { EstadoPrueba.Uno, EstadoPrueba.Tres };
+        List<EstadoPrueba>? noPermitidos = null;
+
+        var resultado = General.CompilarElementosPermitidos(permitidos, noPermitidos);
+
+        Assert.Equal(2, resultado.Count);
+        Assert.Contains(EstadoPrueba.Uno, resultado);
+        Assert.Contains(EstadoPrueba.Tres, resultado);
+        Assert.DoesNotContain(EstadoPrueba.Dos, resultado);
+
+    } // CompilarElementosPermitidos_SoloPermitidos_DevuelveListaSinCambios>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_SoloNoPermitidos_ExcluyeNoPermitidosDelEnum() {
+
+        List<EstadoPrueba>? permitidos = null;
+        var noPermitidos = new List<EstadoPrueba> { EstadoPrueba.Dos, EstadoPrueba.Tres };
+
+        var resultado = General.CompilarElementosPermitidos(permitidos, noPermitidos);
+
+        Assert.DoesNotContain(EstadoPrueba.Dos, resultado);
+        Assert.DoesNotContain(EstadoPrueba.Tres, resultado);
+        Assert.Contains(EstadoPrueba.Ninguno, resultado);
+        Assert.Contains(EstadoPrueba.Uno, resultado);
+
+        var todos = Enum.GetValues<EstadoPrueba>();
+        Assert.Equal(todos.Length - noPermitidos.Count, resultado.Count);
+
+    } // CompilarElementosPermitidos_SoloNoPermitidos_ExcluyeNoPermitidosDelEnum>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_PermitidosYNoPermitidosSinInterseccion_DevuelveSoloPermitidos() {
+
+        var permitidos = new List<EstadoPrueba> { EstadoPrueba.Uno, EstadoPrueba.Dos };
+        var noPermitidos = new List<EstadoPrueba> { EstadoPrueba.Tres };
+
+        var resultado = General.CompilarElementosPermitidos(permitidos, noPermitidos);
+
+        Assert.Equal(2, resultado.Count);
+        Assert.Contains(EstadoPrueba.Uno, resultado);
+        Assert.Contains(EstadoPrueba.Dos, resultado);
+        Assert.DoesNotContain(EstadoPrueba.Tres, resultado);
+
+    } // CompilarElementosPermitidos_PermitidosYNoPermitidosSinInterseccion_DevuelveSoloPermitidos>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_ValorDuplicadoEnPermitidos_LanzaExcepcion() {
+
+        var permitidos = new List<EstadoPrueba> { EstadoPrueba.Uno, EstadoPrueba.Uno };
+        List<EstadoPrueba>? noPermitidos = null;
+
+        var excepción = Assert.Throws<Exception>(() => General.CompilarElementosPermitidos(permitidos, noPermitidos));
+        Assert.Contains("Valor duplicado", excepción.Message, StringComparison.OrdinalIgnoreCase);
+
+    } // CompilarElementosPermitidos_ValorDuplicadoEnPermitidos_LanzaExcepcion>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_ValorDuplicadoEnNoPermitidos_LanzaExcepcion() {
+
+        List<EstadoPrueba>? permitidos = null;
+        var noPermitidos = new List<EstadoPrueba> { EstadoPrueba.Dos, EstadoPrueba.Dos };
+
+        var excepción = Assert.Throws<Exception>(() => General.CompilarElementosPermitidos(permitidos, noPermitidos));
+        Assert.Contains("Valor duplicado", excepción.Message, StringComparison.OrdinalIgnoreCase);
+
+    } // CompilarElementosPermitidos_ValorDuplicadoEnNoPermitidos_LanzaExcepcion>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_ValorEnPermitidosYNoPermitidos_LanzaExcepcion() {
+
+        var permitidos = new List<EstadoPrueba> { EstadoPrueba.Uno, EstadoPrueba.Dos };
+        var noPermitidos = new List<EstadoPrueba> { EstadoPrueba.Dos, EstadoPrueba.Tres };
+
+        var excepción = Assert.Throws<Exception>(() => General.CompilarElementosPermitidos(permitidos, noPermitidos));
+        Assert.Contains("Incoherencia en configuración", excepción.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(EstadoPrueba.Dos), excepción.Message, StringComparison.OrdinalIgnoreCase);
+
+    } // CompilarElementosPermitidos_ValorEnPermitidosYNoPermitidos_LanzaExcepcion>
+
+
+    [Fact]
+    public void CompilarElementosPermitidos_PermitidosVaciosYNoPermitidosNulos_DevuelveListaVacia() {
+
+        var permitidos = new List<EstadoPrueba>();
+        List<EstadoPrueba>? noPermitidos = null;
+
+        var resultado = General.CompilarElementosPermitidos(permitidos, noPermitidos);
+
+        Assert.NotNull(resultado);
+        Assert.Empty(resultado);
+
+    } // CompilarElementosPermitidos_PermitidosVaciosYNoPermitidosNulos_DevuelveListaVacia>
 
     #endregion
 

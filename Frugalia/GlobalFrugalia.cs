@@ -34,20 +34,20 @@ namespace Frugalia {
 
 
     public enum Razonamiento {
-        Ninguno, Bajo, Medio, Alto, // Se configuran solo 4 niveles de razonamiento, en línea con GPT 5.1. El valor Ninguno se mapea al nivel más bajo disponible en otros modelos como 'minimal' en GPT 5 o su equivalentes en otras familias.
-        NingunoOBajo, BajoOMedio, MedioOAlto, // Adaptables de dos opciones: Los modelos de OpenAI ya adaptan internamente cuántos tókenes de razonamiento usan según la dificultad de la tarea, pero aquí se añade una capa extra de control para proteger costos. Por ejemplo, con NingunoOBajo se usa Ninguno (más barato) y sólo se sube a Bajo cuando la entrada es muy larga, de modo que el modelo tenga más margen de razonamiento cuando realmente lo necesita, sin arriesgarse a gastar de más en casos simples. Esto logra que si se estima que una tarea puede funcionar con Ninguno, se puede poner en NingunoOBajo para que la mayoría de las veces se ejecute con Ninguno y no hayan tókenes de razonamiento, y que cuando excepcionalmente ser requiera procesar textos más largos, que podrían requerir más razonamiento, se adapte a uno de los niveles de razonamiento superiores. Se usa la segunda opción si el texto de instrucción supera CarácteresLímiteInstrucciónParaSubirRazonamiento. 
-        NingunoBajoOMedio, BajoMedioOAlto // Adaptables de tres opciones: Dan más granularidad al usuario de la librería para permitir que el modelo suba hasta dos niveles de razonamiento desde Ninguno hasta Medio o desde Bajo hasta Alto. Se usa la tercera opción si el texto de instrucción supera CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles. 
+        Ninguno, Bajo, Medio, Alto, MuyAlto, // Se configuran solo 5 niveles de razonamiento, en línea con GPT 5.2. El valor Ninguno se mapea al nivel más bajo disponible en otros modelos como 'minimal' en GPT 5 o su equivalentes en otras familias.
+        NingunoOBajo, BajoOMedio, MedioOAlto, AltoOMuyAlto, // Adaptables de dos opciones: Los modelos de OpenAI ya adaptan internamente cuántos tókenes de razonamiento usan según la dificultad de la tarea, pero aquí se añade una capa extra de control para proteger costos. Por ejemplo, con NingunoOBajo se usa Ninguno (más barato) y sólo se sube a Bajo cuando la entrada es muy larga, de modo que el modelo tenga más margen de razonamiento cuando realmente lo necesita, sin arriesgarse a gastar de más en casos simples. Esto logra que si se estima que una tarea puede funcionar con Ninguno, se puede poner en NingunoOBajo para que la mayoría de las veces se ejecute con Ninguno y no hayan tókenes de razonamiento, y que cuando excepcionalmente ser requiera procesar textos más largos, que podrían requerir más razonamiento, se adapte a uno de los niveles de razonamiento superiores. Se usa la segunda opción si el texto de instrucción supera CarácteresLímiteInstrucciónParaSubirRazonamiento. 
+        NingunoBajoOMedio, BajoMedioOAlto, MedioAltoOMuyAlto // Adaptables de tres opciones: Dan más granularidad al usuario de la librería para permitir que el modelo suba hasta dos niveles de razonamiento desde Ninguno hasta Medio o desde Bajo hasta Alto. Se usa la tercera opción si el texto de instrucción supera CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles. 
     }
 
     internal enum RazonamientoEfectivo { // La enumeración que se usa efectivamente en los modelos. Se separa de la otra para facilitar la depuración y evitar errores al estar escribiendo integraciones.
-        Ninguno, Bajo, Medio, Alto
+        Ninguno, Bajo, Medio, Alto, MuyAlto
     }
 
     public enum Verbosidad { Baja, Media, Alta }
 
     public enum CalidadAdaptable {  // Si se usa un modo de calidad adaptable, el modelo contestará con alguno de estos textos LoHiceBien, UsaModeloMejor o UsaModeloMuchoMejor. Si se tiene el modo MejorarModelo se realizará nuevamente la consulta usando un modelo inmediatamente superior al actual (si es posible). Si se tiene el modo MejorarModeloYRazonamiento se mejora tanto el modelo como el razonamiento (si es posible). Si se eligen las opciones que incluyen mejoras de dos niveles, cuando el modelo responde UsaModeloMuchoMejor se realizan dos mejoras del modelo o dos mejoras al nivel de razonamiento según corresponda. Se prefiere mantener una configuración unificada porque solo se soportarán dos niveles de mejoramiento y la mayoría de los usuarios de la libreria usarían solo el salto de un nivel entonces están contenidos todos casos y los casos de más uso son simples y entendibles: Ninguna, MejorarModelo, MejorarRazonamiento y MejorarModeloYRazonamiento.
-        No, 
-        MejorarModelo, 
+        No,
+        MejorarModelo,
         MejorarRazonamiento,
         MejorarModeloYRazonamiento,
         MejorarModeloDosNiveles,
@@ -91,7 +91,7 @@ namespace Frugalia {
 
     public enum Resultado {
         Respondido,
-        Abortado,        
+        Abortado,
         MáximosTókenesAlcanzados,
         MáximasIteracionesConFunción,
         SinAutoevaluación,
@@ -124,9 +124,9 @@ namespace Frugalia {
         AsistenteIA // Solo mensajes del asistente IA.
     } // TipoMensaje>
 
-   
+
     public static class GlobalFrugalia { // Funciones y constantes auxiliares de lógica de negocio que solo aplican en esta librería. Se diferencia de General que contiene funciones que se podrían copiar y pegar en otros proyectos.
-  
+
 
         internal const string LoHiceBien = "[lo-hice-bien]";
 
@@ -146,7 +146,7 @@ namespace Frugalia {
             $"{UsaModeloMuchoMejor}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados."; // Alrededor de 650 carácteres.
 
         internal const int CarácteresLímiteInstrucciónParaSubirRazonamiento = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto. El valor de 750 es ligeramente superior a la longitud de InstrucciónAutoevaluación, por lo tanto al establecer CalidadAdaptable diferente de No y Razonamiento adaptable y sumarle la longitud de instrucción del sistema y de usuario, casi siempre subirá de razonamiento.
-        
+
         internal const int CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles = 2400; // Aproximadamente 800 tokenes.
 
         internal const int MáximosTókenesSalidaBaseVerbosidadBaja = 200;
@@ -175,15 +175,26 @@ namespace Frugalia {
 
         internal const double FactorSeguridadTókenesEntradaMáximos = 0.75; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 75%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. El 75% se obtiene de 3/4 que es un rango de carácteres tókenes típico promedio a típico máximo.
 
-
-        internal static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
-            { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
+        public static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
+            { "gpt-5.2-pro", new Modelo("gpt-5.2-pro", Familia.GPT, 21, 21, 168, 168, null, null, null, null, 400000, 0.5m, 1, null,
+                razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Medio, RazonamientoEfectivo.Alto,
+                    RazonamientoEfectivo.MuyAlto }) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
+            { "gpt-5.2", new Modelo("gpt-5.2", Familia.GPT, 1.75m, 0.175m, 14, 14, null, null, null, 1024, 400000, 0.5m, 1, null,
+                $"gpt-5.2-pro{Deshabilitado}", usaCachéExtendida: true) },
+            { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null,
+                razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo>() { RazonamientoEfectivo.Alto }) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
             { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, 0.5m, 1, null, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
-                $"gpt-5-pro{Deshabilitado}") },
+                $"gpt-5-pro{Deshabilitado}", usaCachéExtendida: true,
+                razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
             { "gpt-5-mini", new Modelo("gpt-5-mini", Familia.GPT, 0.25m, 0.025m, 2, 2, null, null, null, 1024, 400000, 0.5m, 1, null,
-                "gpt-5.1", $"gpt-5-pro{Deshabilitado}") },
+                "gpt-5.1", $"gpt-5-pro{Deshabilitado}",
+                razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
             { "gpt-5-nano", new Modelo("gpt-5-nano", Familia.GPT, 0.05m, 0.005m, 0.4m, 0.4m, null, null, null, 1024, 400000, 0.5m, 1, null,
-                "gpt-5-mini", "gpt-5.1", $"gpt-5-pro{Deshabilitado}") },
+                "gpt-5-mini", "gpt-5.1", $"gpt-5-pro{Deshabilitado}",
+                razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
+            { "gpt-4.1", new Modelo("gpt-4.1", Familia.GPT, 2, 0.5m, 8, 8, null, null, null, 1024, 1047576, 0.5m, 1, null,
+                "gpt-5", usaCachéExtendida: true, razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Ninguno },
+                verbosidadesPermitidas: new List<Verbosidad>()) }, // Modelo sin razonamiento y sin verbosidad. Se pasa la lista de las verbosidades permitidas vacía y la de los razonamientos efectivos solo con el elemento Ninguno.
             { "claude-opus-4-5", new Modelo("claude-opus-4-5", Familia.Claude, 5, 0.5m, 25, 25, 6.25m, 10, null, null, 200000, 0.5m, 0.5m, 0.5m) }, // https://claude.com/pricing#api.
             { "claude-sonnet-4-5", new Modelo("claude-sonnet-4-5", Familia.Claude, 3, 0.3m, 15, 15, 3.75m, 6, null, null, 200000, 0.5m, 0.5m, 0.5m,
                 "claude-opus-4-5") },
@@ -198,10 +209,10 @@ namespace Frugalia {
         public static string LeerClave(string rutaArchivo, out string error) {
 
             error = null;
-            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) { 
+            if (string.IsNullOrEmpty(rutaArchivo) || !File.Exists(rutaArchivo)) {
                 error = $"No se encontró el archivo con la clave de la API en {rutaArchivo}. Crea un archivo .txt en esa ruta conteniendo solo la clave API " +
-                    $"en la primera línea o modifica la ruta para que apunte al archivo que contiene la clave API."; 
-                return null; 
+                    $"en la primera línea o modifica la ruta para que apunte al archivo que contiene la clave API.";
+                return null;
             }
 
             var contenido = File.ReadAllText(rutaArchivo).Trim();
@@ -226,7 +237,7 @@ namespace Frugalia {
         /// contenido nutricional si lo hace).</param>
         /// <param name="calidadAdaptable">Sí está en modo calidad adaptable, se agrega a la longitud útil la instrucción de autoevaluación.</param>
         /// <returns></returns>
-        internal static int ObtenerLongitudInstrucciónÚtil(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema, 
+        internal static int ObtenerLongitudInstrucciónÚtil(string instrucción, string instrucciónSistemaRellena, string rellenoInstrucciónSistema,
             double longitudAdicional, bool calidadAdaptable) // Se considera el texto de la instrucción de autoevaluación como parte de la longitud útil.
                 => Math.Max((instrucción?.Length ?? 0) + (instrucciónSistemaRellena?.Length ?? 0) - (rellenoInstrucciónSistema?.Length ?? 0)
                     + (calidadAdaptable ? InstrucciónAutoevaluación.Length : 0) + (int)Math.Round(longitudAdicional), 0);
@@ -238,12 +249,13 @@ namespace Frugalia {
                 + (rellenoInstrucciónSistema?.Length ?? 0) / CarácteresPorTokenRellenoMáximos;
 
 
-        internal static Razonamiento ObtenerRazonamientoMejorado(Razonamiento razonamiento, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido, 
-            ref StringBuilder información) {
+        internal static Razonamiento ObtenerRazonamientoMejorado(Modelo modelo, Razonamiento razonamiento, CalidadAdaptable calidadAdaptable,
+            int nivelMejoramientoSugerido, ref StringBuilder información) {
 
             var nivelMejoramiento = ObtenerNivelMejoramientoRazonamientoEfectivo(calidadAdaptable, nivelMejoramientoSugerido);
             if (nivelMejoramiento == 0) return razonamiento;
-            
+
+            var tieneMuyAlto = modelo.RazonamientosEfectivosPermitidos.Contains(RazonamientoEfectivo.MuyAlto);
             Razonamiento razonamientoMejorado;
 
             if (nivelMejoramiento == 1) {
@@ -259,7 +271,7 @@ namespace Frugalia {
                     razonamientoMejorado = Razonamiento.Alto;
                     break;
                 case Razonamiento.Alto:
-                    razonamientoMejorado = Razonamiento.Alto;  // Permanece igual.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.MuyAlto : Razonamiento.Alto;
                     break;
                 case Razonamiento.NingunoOBajo:
                     razonamientoMejorado = Razonamiento.BajoOMedio;
@@ -268,18 +280,26 @@ namespace Frugalia {
                     razonamientoMejorado = Razonamiento.MedioOAlto;
                     break;
                 case Razonamiento.MedioOAlto:
-                    razonamientoMejorado = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.AltoOMuyAlto : Razonamiento.Alto;
                     break;
                 case Razonamiento.NingunoBajoOMedio:
                     razonamientoMejorado = Razonamiento.BajoMedioOAlto;
                     break;
                 case Razonamiento.BajoMedioOAlto:
-                    razonamientoMejorado = Razonamiento.MedioOAlto; // No hay valor de 3 opciones, entonces pasa a MedioOAlto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.MedioAltoOMuyAlto : Razonamiento.MedioOAlto;
+                    break;
+                case Razonamiento.MuyAlto:
+                    razonamientoMejorado = Razonamiento.MuyAlto; // No se puede subir más de MuyAlto.
+                    break;
+                case Razonamiento.AltoOMuyAlto:
+                    razonamientoMejorado = Razonamiento.MuyAlto; // No hay valores con dos razonamientos mayores a AltoOMuyAlto.
+                    break;
+                case Razonamiento.MedioAltoOMuyAlto:
+                    razonamientoMejorado = Razonamiento.AltoOMuyAlto; // No hay valores con tres razonamientos mayores a MedioAltoOMuyAlto, entonces se usa el de dos valores .
                     break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
                 }
-
 
             } else { // nivelesMejoramiento == 2.
 
@@ -291,25 +311,34 @@ namespace Frugalia {
                     razonamientoMejorado = Razonamiento.Alto;
                     break;
                 case Razonamiento.Medio:
-                    razonamientoMejorado = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.MuyAlto : Razonamiento.Alto;
                     break;
                 case Razonamiento.Alto:
-                    razonamientoMejorado = Razonamiento.Alto; // Permanece igual.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.MuyAlto : Razonamiento.Alto;
                     break;
                 case Razonamiento.NingunoOBajo:
                     razonamientoMejorado = Razonamiento.MedioOAlto;
                     break;
                 case Razonamiento.BajoOMedio:
-                    razonamientoMejorado = Razonamiento.Alto; // No se puede subir dos niveles entonces se queda en Alto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.AltoOMuyAlto : Razonamiento.Alto;
                     break;
                 case Razonamiento.MedioOAlto:
-                    razonamientoMejorado = Razonamiento.Alto; // No hay adaptable con Alto. Va directo a Alto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.MuyAlto : Razonamiento.Alto; // No hay valores con dos razonamientos dos niveles arriba de MedioOAlto, entonces solo se devuelve o MuyAlto o Alto si el modelo no soporta MuyAlto.
                     break;
                 case Razonamiento.NingunoBajoOMedio:
-                    razonamientoMejorado = Razonamiento.MedioOAlto; // El salto de dos niveles lo lleva a MedioOAlto porque Ninguno pasa a Medio, Bajo a Alto y Medio al mismo Alto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.MedioAltoOMuyAlto : Razonamiento.MedioOAlto; // En el caso tieneMuyAlto = falso el salto de dos niveles lo lleva a MedioOAlto porque Ninguno pasa a Medio, Bajo a Alto y Medio al mismo Alto.
                     break;
                 case Razonamiento.BajoMedioOAlto:
-                    razonamientoMejorado = Razonamiento.Alto; // El salto de dos niveles lo lleva directamente a Alto porque Bajo pasa a Alto.
+                    razonamientoMejorado = tieneMuyAlto ? Razonamiento.AltoOMuyAlto : Razonamiento.Alto; // En el caso tieneMuyAlto = falso el salto de dos niveles lo lleva directamente a Alto porque Bajo pasa a Alto.
+                    break;
+                case Razonamiento.MuyAlto:
+                    razonamientoMejorado = Razonamiento.MuyAlto;
+                    break;
+                case Razonamiento.AltoOMuyAlto:
+                    razonamientoMejorado = Razonamiento.MuyAlto;
+                    break;
+                case Razonamiento.MedioAltoOMuyAlto:
+                    razonamientoMejorado = Razonamiento.MuyAlto;
                     break;
                 default:
                     throw new Exception("Valor de razonamiento incorrecto.");
@@ -348,7 +377,7 @@ namespace Frugalia {
                 if (modelo.Familia != familia) continue;
 
                 var tamaño = modelo.ObtenerTamaño();
-                
+
                 var esTamañoMásPequeño = // Orden de preferencia de tamaños: MuyPequeño < Pequeño < Medio < Grande.
                     (tamaño == Tamaño.MuyPequeño && (másPequeño == null || tamañoMásPequeño != Tamaño.MuyPequeño)) ||
                     (tamaño == Tamaño.Pequeño && (másPequeño == null || (tamañoMásPequeño != Tamaño.MuyPequeño && tamañoMásPequeño != Tamaño.Pequeño))) ||
@@ -359,7 +388,7 @@ namespace Frugalia {
                     másPequeño = modelo;
                     tamañoMásPequeño = tamaño;
                 } else if (másPequeño != null && tamaño == tamañoMásPequeño) { // Ya existe un tamaño mejor que tiene el mismo tamaño que el recién encontrado.
-                   
+
                     if (modelo.PrecioSalidaNoRazonamiento < másPequeño.Value.PrecioSalidaNoRazonamiento) { // Desempate por precio de salida no razonamiento. Se elije el de más barato precio salida no razonamiento como el candidato a ser menos potente.
                         másPequeño = modelo;
                         tamañoMásPequeño = tamaño;
@@ -373,12 +402,12 @@ namespace Frugalia {
                 throw new Exception($"No se esperaba no encontrar el modelo más pequeño de la familia {familia}."); // Si no se encuentra es un problema de la construcción del diccionario Modelos. 
             } else {
                 return (Modelo)másPequeño;
-            }                
+            }
 
         } // ObtenerModeloMásPequeño>
 
 
-        internal static string ALetras(this int número) => (número  == 1 ? "un" : (número == 2 ? "dos" : "?"));
+        internal static string ALetras(this int número) => (número == 1 ? "un" : (número == 2 ? "dos" : "?"));
 
 
         internal static RazonamientoEfectivo ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
@@ -401,11 +430,16 @@ namespace Frugalia {
             case Razonamiento.Alto:
                 razonamientoEfectivo = RazonamientoEfectivo.Alto;
                 break;
+            case Razonamiento.MuyAlto:
+                razonamientoEfectivo = RazonamientoEfectivo.MuyAlto;
+                break;
             case Razonamiento.NingunoOBajo:
             case Razonamiento.BajoOMedio:
             case Razonamiento.MedioOAlto:
             case Razonamiento.NingunoBajoOMedio:
             case Razonamiento.BajoMedioOAlto:
+            case Razonamiento.AltoOMuyAlto:
+            case Razonamiento.MedioAltoOMuyAlto:
                 razonamientoEfectivo = RazonamientoEfectivo.Ninguno; // Se establece solo para que el compilador no se queje, pero se asegura que este cambiará en el código siguiente.
                 break;
             default:
@@ -454,6 +488,24 @@ namespace Frugalia {
                     razonamientoEfectivo = RazonamientoEfectivo.Bajo;
                 } else {
                     razonamientoEfectivo = RazonamientoEfectivo.Medio;
+                }
+
+            } else if (razonamiento == Razonamiento.AltoOMuyAlto) {
+
+                if (longitudInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
+                    razonamientoEfectivo = RazonamientoEfectivo.Alto;
+                } else {
+                    razonamientoEfectivo = RazonamientoEfectivo.MuyAlto;
+                }
+
+            } else if (razonamiento == Razonamiento.MedioAltoOMuyAlto) {
+
+                if (longitudInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamiento) {
+                    razonamientoEfectivo = RazonamientoEfectivo.Medio;
+                } else if (longitudInstrucciónÚtil < CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles) {
+                    razonamientoEfectivo = RazonamientoEfectivo.Alto;
+                } else {
+                    razonamientoEfectivo = RazonamientoEfectivo.MuyAlto;
                 }
 
             }
@@ -548,7 +600,7 @@ namespace Frugalia {
         } // ObtenerNivelMejoramientoRazonamientoMáximo>
 
 
-        public static int ObtenerNivelMejoramientoRazonamientoEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugerido) 
+        public static int ObtenerNivelMejoramientoRazonamientoEfectivo(CalidadAdaptable calidad, int nivelMejoramientoSugerido)
             => Math.Min(calidad.ObtenerNivelMejoramientoRazonamientoMáximo(), nivelMejoramientoSugerido);
 
 
@@ -564,7 +616,7 @@ namespace Frugalia {
         /// <param name="tókenes"></param>
         public static void AgregarSumando(this Dictionary<string, Tókenes> diccionario, Tókenes tókenes) {
 
-            if (diccionario == null) 
+            if (diccionario == null)
                 throw new ArgumentNullException(nameof(diccionario), "El método AgregarSumando() no permite nulos. Usa AgregarSumandoPosibleNulo().");
             var clave = tókenes.Clave;
             if (diccionario.ContainsKey(clave)) {

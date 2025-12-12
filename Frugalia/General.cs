@@ -23,6 +23,7 @@
 //
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
@@ -64,6 +65,49 @@ namespace Frugalia {
             return respuesta;
 
         } // Reemplazar>
+
+
+        public static List<T> CompilarElementosPermitidos<T>(List<T> permitidos, List<T> noPermitidos) where T : struct {
+
+            var permitidosNulos = permitidos == null;
+            var noPermitidosNulos = noPermitidos == null;
+            var nombre = typeof(T).Name;
+            var todos = (T[])Enum.GetValues(typeof(T));
+
+            if (permitidosNulos && noPermitidosNulos) return new List<T>(todos); // Si ambas listas son nulas, se permiten todos los valores.
+
+            var permitidosRespuesta = new HashSet<T>();
+            var noPermitidosRespuesta = new HashSet<T>();
+
+            void Agregar<T2>(List<T2> origen, HashSet<T2> destino) where T2 : struct {
+                foreach (var valor in origen) {
+                    if (!destino.Add(valor)) throw new Exception($"Valor duplicado en la lista de permitidos o no permitidos de {nombre}: {valor}.");
+                }
+            }
+
+            if (!permitidosNulos) Agregar(permitidos, permitidosRespuesta);
+            if (!noPermitidosNulos) Agregar(noPermitidos, noPermitidosRespuesta);
+
+            foreach (var valor in permitidosRespuesta) {
+                if (noPermitidosRespuesta.Contains(valor)) 
+                    throw new Exception($"Incoherencia en configuración de {nombre}: el valor {valor} está tanto en permitidos como en no permitidos.");
+            }
+
+            if (!permitidosNulos && noPermitidosNulos) return new List<T>(permitidosRespuesta); // Solo se definieron permitidos.
+
+            if (permitidosNulos && !noPermitidosNulos) {
+
+                var respuesta = new List<T>();
+                foreach (var valor in todos) {
+                    if (!noPermitidosRespuesta.Contains(valor)) respuesta.Add(valor); // Se permiten todos excepto los no permitidos.
+                }
+                return respuesta;
+
+            }
+
+            return new List<T>(permitidosRespuesta); // Si ambas listas tienen datos, ya validamos que no haya intersección.
+
+        } // CompilarElementosPermitidos>
 
 
         public static string FormatearEnMonedaLocal(decimal usd, decimal tasaCambioUsd) => FormatearMoneda(usd * tasaCambioUsd);
@@ -152,7 +196,7 @@ namespace Frugalia {
             texto.AgregarLínea(nuevaLínea);
 
         } // AgregarLíneaPosibleNulo>
-        
+
 
         /// <summary>
         /// Ayudante para evitar el estado inestable en el que puede quedar el depurador después de una excepción en algunos casos.
@@ -163,18 +207,18 @@ namespace Frugalia {
         internal static void LanzarExcepción(string mensaje) {
 
             Suspender();
-            #if !DEBUG
+#if !DEBUG
                 throw new Exception(mensaje);
-            #endif
+#endif
 
         } // LanzarExcepciónYSuspender>
 
 
         internal static void Suspender() {
 
-            #if DEBUG
-                Debugger.Break();
-            #endif
+#if DEBUG
+            Debugger.Break();
+#endif
 
         } // Suspender>
 
@@ -205,15 +249,15 @@ namespace Frugalia {
             int len = texto.Length;
             int objetivoLen = línea.Length;
             if (objetivoLen == 0) {
-               
+
                 int i = 0; // Considera que una línea vacía existe si hay dos saltos consecutivos o una línea final vacía
                 while (i <= len) {
-                    
+
                     int inicio = i; // Encuentra fin de línea
                     int fin = inicio;
                     while (fin < len && texto[fin] != '\r' && texto[fin] != '\n') fin++;
                     if (fin == inicio) return true; // línea vacía
-                    
+
                     if (fin < len) { // Avanza sobre separador de línea
                         if (texto[fin] == '\r' && fin + 1 < len && texto[fin + 1] == '\n') i = fin + 2;
                         else i = fin + 1;
@@ -241,7 +285,7 @@ namespace Frugalia {
                 if (longitudLíneaActual == objetivoLen) {
 
                     if (usarOptimizado) {
-                        
+
                         bool iguales = true; // Comparación carácter por carácter
                         for (int k = 0; k < objetivoLen; k++) {
 
@@ -257,12 +301,12 @@ namespace Frugalia {
                         if (iguales) return true;
 
                     } else {
-                       var tramo = texto.ToString(inicio, longitudLíneaActual); // Fallback: convierte solo el tramo a string y compara con reglas culturales
+                        var tramo = texto.ToString(inicio, longitudLíneaActual); // Fallback: convierte solo el tramo a string y compara con reglas culturales
                         if (string.Equals(tramo, línea, comparison)) return true;
                     }
 
                 }
-               
+
                 if (fin < len) { // Avanza sobre separador de línea
                     if (texto[fin] == '\r' && fin + 1 < len && texto[fin + 1] == '\n') pos = fin + 2; // CRLF
                     else pos = fin + 1; // LF o CR

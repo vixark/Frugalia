@@ -68,7 +68,7 @@ namespace Frugalia {
         public string Clave => $"{NombreModelo}{(Lote ? "-lote" : "")}{(MinutosEscrituraManualCaché == 0 ? "" : $"-{MinutosEscrituraManualCaché}mincaché")}";
 
 
-        internal Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché, int? escrituraManualCaché, 
+        public Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché, int? escrituraManualCaché, 
             int? minutosEscrituraManualCaché) {
 
             MinutosEscrituraManualCaché = minutosEscrituraManualCaché ?? 0;

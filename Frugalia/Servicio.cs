@@ -194,7 +194,7 @@ namespace Frugalia {
             if (!rellenarInstruccionesSistema) return "";
             if (instrucciónSistema == null) instrucciónSistema = "";
             if (rellenoInstrucciónSistema == null) rellenoInstrucciónSistema = "";
-            if (!modelo.TieneCachéExtendidaGratuita() && conversacionesDuranteCachéExtendida > 1) {
+            if (!modelo.UsaCachéExtendida && conversacionesDuranteCachéExtendida > 1) {
                 conversacionesDuranteCachéExtendida = 1; // En el caso de modelos que solo guarden la caché por unos cuantos minutos (que se espera que sean los razonables para esperar otra respuesta del usuario en un contexto de una conversación) no se puede realizar ninguna optimización considerando múltiples conversaciones que se puedan dar en el transcurso del día y que reusen las instrucciones del sistema. Entonces solo se considera la optimización que tiene en cuenta la cantidad de mensajes en una conversación (consultasPorConversación) porque se espera que estos si puedan reusar la caché.
                 información.AgregarLíneaSiNoEstá($"Se forzó conversacionesDuranteCachéExtendida a 1 porque {modelo} no soporta caché extendida.");
             }
@@ -578,7 +578,7 @@ namespace Frugalia {
                     } else {
 
                         var modeloMejorado = (Modelo)modeloMejoradoNulable;
-                        var razonamientoMejorado = ObtenerRazonamientoMejorado(razonamiento, calidadAdaptable, nivelMejoramientoSugerido, ref información);
+                        var razonamientoMejorado = ObtenerRazonamientoMejorado(modeloMejorado, razonamiento, calidadAdaptable, nivelMejoramientoSugerido, ref información);
 
                         if (modelo.Nombre == modeloMejorado.Nombre && razonamientoMejorado == razonamiento) {
                             respuesta = respuestaInicial;
