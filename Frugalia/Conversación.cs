@@ -116,7 +116,7 @@ namespace Frugalia {
                     case TipoMensaje.Usuario:
                         filtrados = mensajes.Where(m => m.Role == MessageRole.User);
                         break;
-                    case TipoMensaje.AsistenteAI:
+                    case TipoMensaje.AsistenteIA:
                         filtrados = mensajes.Where(m => m.Role == MessageRole.Assistant);
                         break;
                     case TipoMensaje.Todos:

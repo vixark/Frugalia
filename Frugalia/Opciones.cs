@@ -53,11 +53,11 @@ namespace Frugalia {
 
         internal string ObtenerInstrucciónSistema() => FunciónObtenerInstrucciónSistema();
 
-
         private Action<int> AcciónEscribirMáximosTókenesSalida { get; }
 
         private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder> 
             FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
+
 
         /// <summary>
         /// Por facilidad y evitar introducir errores en el uso de las funciones escribir opciones y escribir máximos tókenes de salida y razonamiento,
@@ -70,22 +70,22 @@ namespace Frugalia {
         /// <param name="restricciónRazonamientoAlto"></param>
         /// <param name="restricciónRazonamientoMedio"></param>
         /// <param name="modelo"></param>
-        /// <param name="largoInstrucciónÚtil"></param>
+        /// <param name="longitudInstrucciónÚtil"></param>
         /// <param name="restricciónTókenesSalida"></param>
         /// <param name="restricciónTókenesRazonamiento"></param>
         /// <param name="verbosidad"></param>
         /// <param name="información"></param>
         /// <exception cref="Exception"></exception>
         internal void EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int largoInstrucciónÚtil, RestricciónTókenesSalida restricciónTókenesSalida,
+            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int longitudInstrucciónÚtil, RestricciónTókenesSalida restricciónTókenesSalida,
             RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, ref StringBuilder información) {
 
             var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo,
-                largoInstrucciónÚtil, out StringBuilder informaciónRazonamientoEfectivo);
+                longitudInstrucciónÚtil, out StringBuilder informaciónRazonamientoEfectivo);
             if (!informaciónRazonamientoEfectivo.EsNuloOVacío()) información.AgregarLíneas(informaciónRazonamientoEfectivo);
 
             var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamientoEfectivo, restricciónRazonamientoAlto, 
-                restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil);
+                restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil);
             if (!informaciónOpcionesRazonamiento.EsNuloOVacío()) información.AgregarLíneas(informaciónOpcionesRazonamiento);
 
             var máximosTókenesSalidaYRazonamiento
@@ -98,7 +98,7 @@ namespace Frugalia {
 
 
         internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio, 
-            RestricciónTókenesSalida restricciónTókenesSalida, RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, int largoInstrucciónÚtil,
+            RestricciónTókenesSalida restricciónTókenesSalida, RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, int longitudInstrucciónÚtil,
             Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
 
             Familia = familia;
@@ -111,7 +111,7 @@ namespace Frugalia {
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
                 FunciónEscribirOpcionesRazonamientoYObtenerInformación = 
-                    (razonamientoEfectivo2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, largoInstrucciónÚtil2) => {
+                    (razonamientoEfectivo2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, longitudInstrucciónÚtil2) => {
 
                     var información2 = new StringBuilder(); // No se ha escrito aún, pero se deja por si es necesario llenarlo más adelante.
 
@@ -161,7 +161,7 @@ namespace Frugalia {
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, largoInstrucciónÚtil, 
+                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil, 
                     restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, ref información);
    
                 var modelosSinVerbosidad = new List<string> { "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" }; // Se enumeran los modelos antiguos porque se espera que los nuevos mantengan la verbosidad configurable.
@@ -186,11 +186,8 @@ namespace Frugalia {
                     OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // Sí funciona. En unas pruebas se obtuvieron en promedio 393 caracteres; 249 con verbosidad baja y 657 con verbosidad alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET incluye esta opción de forma estructurada.
 
                 }
-
-                var modelosSinCachéConfigurableA24Horas = new List<string> {
-                    "gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini" };
-                if (!modelosSinCachéConfigurableA24Horas.Contains(modelo.Nombre.ToLowerInvariant()))
-                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No he comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
+                
+                if (modelo.TieneCachéExtendidaGratuita()) OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
 
                 if (buscarEnInternet) OpcionesGPT.Tools.Add(ResponseTool.CreateWebSearchTool());
 

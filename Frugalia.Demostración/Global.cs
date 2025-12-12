@@ -66,8 +66,9 @@ internal static class Global {
         if (topDeseado < 0) topDeseado = 0;
         var topMáximo = Console.BufferHeight - Console.WindowHeight;
         if (topDeseado > topMáximo) topDeseado = topMáximo;
-        Console.SetWindowPosition(0, topDeseado);
-
+        try { Console.SetWindowPosition(0, topDeseado);
+        } catch (Exception) { } // En algunos casos con ciertas posiciones de la ventana, saca excepción. No pasa nada si no se puede desplazar el contenido.
+        
     } // DesplazarContenidoHaciaArriba>
 
 
@@ -83,16 +84,20 @@ internal static class Global {
             EscribirMultilíneaGris($"Relleno Sistema: {rellenoInstrucciónSistema}");
         }
 
-        EscribirSeparador();
-        EscribirMultilíneaGris($"Usuario: {instrucción}");
+        if (!string.IsNullOrEmpty(instrucción)) {
+            EscribirSeparador();
+            EscribirMultilíneaGris($"Usuario: {instrucción}");
+        }
 
         if (!string.IsNullOrEmpty(archivo)) {
             EscribirSeparador();
             EscribirMultilíneaGris($"Archivo Usuario: {archivo}");
         }
 
-        EscribirSeparador();
-        EscribirMultilíneaGris($"AI: {respuesta}");
+        if (!string.IsNullOrEmpty(respuesta)) {
+            EscribirSeparador();
+            EscribirMultilíneaGris($"Asistente IA: {respuesta}");
+        }
 
     } // EscribirMensajes>
 
@@ -118,7 +123,7 @@ internal static class Global {
             case TipoMensaje.Usuario:
                 EscribirMultilíneaGrisOscuro($"Usuario: {Mensaje}");
                 break;
-            case TipoMensaje.AsistenteAI:
+            case TipoMensaje.AsistenteIA:
                 EscribirMultilíneaGrisOscuro($"AI: {Mensaje}");
                 break;
             default:

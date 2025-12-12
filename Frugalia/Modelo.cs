@@ -23,8 +23,10 @@
 //
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using static Frugalia.GlobalFrugalia;
+using static Frugalia.General;
 
 
 namespace Frugalia {
@@ -62,7 +64,7 @@ namespace Frugalia {
 
         /// <summary>
         /// Aplicable para modelos como GPT que tienen un límite a partir del cual activan la caché automática. Estos modelos no cobran el 
-        /// costo de escritura de caché entonces se prestan para el truco del relleno de la instrucción de sistema para lograr ahorros. 
+        /// costo de escritura de caché entonces se prestan para el truco del relleno de la instrucción del sistema para lograr ahorros. 
         /// </summary>
         internal int? LímiteTókenesActivaciónCachéAutomática { get; }
 
@@ -102,6 +104,10 @@ namespace Frugalia {
 
         public string Descripción => $"{Familia} {Nombre}";
 
+        private Func<string, bool> FunciónTieneCachéExtendidaGratuita { get; }
+
+        internal bool TieneCachéExtendidaGratuita() => FunciónTieneCachéExtendidaGratuita(Nombre); // Funcionalidad de modelos que activan la caché automáticamente (Por ejemplo, GPT) que permiten establecer la duración de la caché por varias horas sin costo adicional. En el caso de GPT por 24 horas.
+
 
         internal Modelo(string nombre, Familia familia, decimal precioEntradaNoCaché, decimal precioEntradaCaché, decimal precioSalidaNoRazonamiento,
             decimal precioSalidaRazonamiento, decimal? precioEscrituraManualCachéRefrescablePor5Minutos, decimal? precioEscrituraManualCachéRefrescablePor60Minutos,
@@ -127,7 +133,27 @@ namespace Frugalia {
             FracciónDescuentoEscrituraCachéPorLote = fracciónDescuentoEscrituraCachéPorLote;
             FracciónDescuentoLecturaCachePorLote = fracciónDescuentoLecturaCachePorLote;
 
-        } // ModeloIA>
+            switch (familia) {
+            case Familia.GPT:
+
+                FunciónTieneCachéExtendidaGratuita = (nombreModelo2) => {
+                    var modelosConCachéExtendida = new List<string> { "gpt-5.1", "gpt-5.1-codex", "gpt-5.1-codex-mini", "gpt-5", "gpt-5-codex", "gpt-4.1" }; // Debido a que se encontró que no habilitan la caché extendida para modelos nuevos como gpt-5-mini y si para viejos como gpt-4.1, se prefiere hacer la lista de los que incluyen caché extendida porque es posible que en futuros modelos como gpt-5.1-mini se vuelvan a hacer excepciones. Ver https://platform.openai.com/docs/guides/prompt-caching.
+                    return modelosConCachéExtendida.Contains(nombreModelo2.ToLowerInvariant());
+                };
+                break;
+
+            case Familia.Claude:
+            case Familia.Mistral:
+            case Familia.Llama:
+            case Familia.DeepSeek:
+            case Familia.Qwen:
+            case Familia.GLM:
+            default:
+                FunciónTieneCachéExtendidaGratuita = null; // No se puede poner Suspender() porque se accede a estos valores en TryGetValue().
+                break;
+            };
+
+        } // Modelo>
 
 
         public override string ToString() => Nombre;

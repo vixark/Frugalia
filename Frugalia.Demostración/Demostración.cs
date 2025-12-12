@@ -37,72 +37,101 @@ internal class Demostración {
 
     internal static string RutaClaveAPI = @"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt";
 
-    internal static string SugerenciaNoUsarResultados = "No uses estos resultados específicos para tu caso de uso, te recomiendo que pruebes con tus propios " +
+    internal static string SugerenciaNoUsarResultados = $"No uses estos resultados específicos para tu caso de uso, te recomiendo que pruebes con tus propios " +
         "datos si esta función te genera ahorros.";
 
     internal static string ADólares(decimal pesos) => FormatearDólares(pesos, TasaCambioUsd);
 
-    internal static readonly Dictionary<int, (string Descripción, string Grupo, Func<string> Consultar)> Demostraciones = new() {
+    internal static readonly Dictionary<int, (string Descripción, string Grupo, Func<int, string> Consultar)> Demostraciones = new() {
 
-        { 1, ($"Explicación de la función.", "Calidad Adaptable", () => 
+        { 1, ($"Explicación de la función.", "Calidad Adaptable", (d) =>
             EscribirTítuloYTexto("Calidad Adaptable", "Hace la primera consulta con un modelo pequeño (por ejemplo, GPT Mini o Nano) y le pide al modelo " +
                 "autoevaluarse en la misma respuesta. Dependiendo de la autoevaluación, decide si repite la consulta con un modelo superior (como GPT estándar) " +
                 $"y/o con mayor razonamiento.{DobleLínea}Los costos muestran que la estrategia es útil si muchas consultas son " +
-                $"de baja complejidad y unas pocas de alta complejidad.{DobleLínea}En las demostraciones número 2, 5, 8 y 11 verás el funcionamiento de GPT 5.1 " + 
+                $"de baja complejidad y unas pocas de alta complejidad.{DobleLínea}En las demostraciones número 2, 5, 8 y 11 verás el funcionamiento de GPT 5.1 " +
                 $"sin calidad adaptable y en las demás verás el funcionamiento de GPT Mini y Nano con calidad adaptable. Los costos " +
                 $"mostrados (~0,001 USD, etc.) son el costo aproximado por ejecución de cada demostración.{DobleLínea}{SugerenciaNoUsarResultados}")) },
 
-        { 2, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable Baja Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No,
-                númeroDemostración: 2, lote: false)) }, // 5 $ en promedio.
-        { 3, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable Baja Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
-                númeroDemostración: 3, lote: false)) }, // 3,14 $ en promedio.
-        { 4, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(0.7M)}).", "Calidad Adaptable Baja Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
-                númeroDemostración: 4, lote: false)) }, // 0.67 $ en promedio.
+        { 2, ($"Baja complejidad con GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // 5 $ en promedio.
+        { 3, ($"Baja complejidad con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) }, // 3,14 $ en promedio.
+        { 4, ($"Baja complejidad con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(0.7M)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) }, // 0.67 $ en promedio.
 
-        { 5, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable Media Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No,
-                númeroDemostración: 5, lote: false)) }, // 5.22 $ promedio.
-        { 6, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(6)}).", "Calidad Adaptable Media Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
-                númeroDemostración: 6, lote: false)) }, // 6.01 $ promedio. Mini es más conciente de sus limitaciones y tiende a sugerir más frecuentemente usar un modelo mejor que nano.
-        { 7, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable Media Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
-                númeroDemostración: 7, lote: false)) }, // 3.02 $ promedio. Pocas veces sugiere mejor modelo. 
+        { 5, ($"Media complejidad con GPT 5.1 sin calidad adaptable (≈{ADólares(5)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // 5.22 $ promedio.
+        { 6, ($"Media complejidad con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(6)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) }, // 6.01 $ promedio. Mini es más conciente de sus limitaciones y tiende a sugerir más frecuentemente usar un modelo mejor que nano.
+        { 7, ($"Media complejidad con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) }, // 3.02 $ promedio. Pocas veces sugiere mejor modelo. 
 
-        { 8, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(20)}).", "Calidad Adaptable Alta Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No,
-                númeroDemostración: 8, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 19.42 $ promedio.
-        { 9, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(7)}).", "Calidad Adaptable Alta Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
-                númeroDemostración: 9, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 6.89 $ promedio. No sugirió casi modelo mejor.
-        { 10, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(5)}).", "Calidad Adaptable Alta Complejidad", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
-                númeroDemostración: 10, lote: false, restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Media)) }, // 5.5 $ promedio. Sugirió modelo mejor (un nivel) en todos los ensayos realizados.
+        { 8, ($"Alta complejidad con GPT 5.1 sin calidad adaptable (≈{ADólares(20)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
+                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 19.42 $ promedio.
+        { 9, ($"Alta complejidad con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(7)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false,
+                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // 6.89 $ promedio. No sugirió casi modelo mejor.
+        { 10, ($"Alta complejidad con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(5)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false,
+                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Media)) }, // 5.5 $ promedio. Sugirió modelo mejor (un nivel) en todos los ensayos realizados.
 
-        { 11, ($"GPT 5.1 sin calidad adaptable (≈{ADólares(200)}).", "Calidad Adaptable Alta Complejidad Matemática", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.1", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No,
-                númeroDemostración: 11, lote: false, restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Baja)) }, // 190 $ promedio. Todas bien.
-        { 12, ($"GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(30)}).", "Calidad Adaptable Alta Complejidad Matemática", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-mini", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModelo,
-                númeroDemostración: 12, lote: false, restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 30 $ promedio. Todas bien y sin sugerir mejora de modelo.
-        { 13, ($"GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable Alta Complejidad Matemática", () =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles,
-                númeroDemostración: 13, lote: false, restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 3 $ promedio. Todas bien y sin sugerir mejora de modelo. Si se sube el nivel de complejidad matemático (por ejemplo matrices 5x5 o más) se encontró que nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
+        { 11, ($"Cálculo matemático con GPT 5.1 sin calidad adaptable (≈{ADólares(200)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.1", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
+                restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Baja)) }, // 190 $ promedio. Todas bien.
+        { 12, ($"Cálculo matemático con GPT 5 Mini mejorable hasta GPT 5.1 (≈{ADólares(30)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-mini", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false,
+                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 30 $ promedio. Todas bien y sin sugerir mejora de modelo.
+        { 13, ($"Cálculo matemático con GPT 5 Nano mejorable hasta GPT 5.1 (≈{ADólares(3)}).", "Calidad Adaptable", (d) =>
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false,
+                restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // 3 $ promedio. Todas bien y sin sugerir mejora de modelo. Si se sube el nivel de complejidad matemático (por ejemplo matrices 5x5 o más) se encontró que nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
         
+        { 14, ($"Explicación de la función.", "Relleno de Instrucción del Sistema", (d) =>
+            EscribirTítuloYTexto("Relleno de Instrucción del Sistema", "La instrucción del sistema es un texto que permite configurar el tono, rol y demás " +
+                "características del asistente de IA. Cuando se tiene una conversación de varios mensajes con el modelo, la instrucción del sistema se envía con " +
+                "los mensajes anteriores como contexto. Al ser un texto estable en todas las consultas de la conversación, es posible incrementar su longitud " +
+                $"para que el modelo detecte un bloque de texto grande y constante al inicio de cada consulta y active la caché.{DobleLínea}" +
+                $"La caché permite que en las próximas consultas el costo de los tókenes de entrada se reduzca hasta el 10% de su valor original. Pero al " +
+                "aumentar la longitud de la instrucción del sistema, también aumentan los tókenes de entrada. Por eso se hace una optimización matemática " +
+                "usando datos como la cantidad de conversaciones durante la caché extendida, la cantidad de mensajes por conversación, la longitud de la " +
+                "instrucción del sistema y la longitud promedio de las instrucciones del usuario, para decidir en qué casos es viable rellenar la instrucción " +
+                $"del sistema para conseguir ahorros.{DobleLínea}El funcionamiento de la caché en los modelos es incierto, por lo tanto se considera que la caché " +
+                $"se activará en el {FactorÉxitoCaché:P0} de las veces que se llega al límite requerido. No todos los modelos tienen activación automática gratuita " +
+                "de la caché, entonces no se darían ahorros al rellenar la instrucción del sistema, estos casos se manejan transparentemente para el usuario de " +
+                $"la librería. El valor del parámetro 'conversaciones durante la caché extendida' depende del modelo, en el caso de la familia de modelos GPT, " +
+                $"es la cantidad de conversaciones que usen la misma instrucción del sistema en 24 horas.{DobleLínea}La efectividad de esta función depende de " +
+                $"los valores de los parámetros que le pases, así que asegúrate de que los datos sí sean representativos de tu caso de uso.")) },
 
-        { 14, ("Consulta con archivos.", "Archivos", () =>
-            Consultar(ConsultaConArchivos, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
-                númeroDemostración: 13, lote: false)) },
-        { 15,("Consulta buscando en internet con error por Razonamiento = Ninguno.", "Búsqueda en Internet", () =>
-            Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración: 15, lote: false)) },
-        { 16,("Consulta usando funciones.", "Conversación y Funciones", () =>
-            Consultar((servicio, modelo) => ConsultaUsandoFunciones(servicio, modelo, usarInstrucciónMuyLarga: true, usarInstrucciónSistemaMuyLarga: false),
-                "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-                númeroDemostración: 16, lote: false)) }
+        { 15, ($"Conversación y funciones con instrucción del sistema corta (sin caché y relleno no daría ahorro) (≈{ADólares(10)}).", "Relleno de Instrucción del Sistema",
+            (d) => Consultar((servicio, modelo) =>
+            ConversaciónConFunciones(servicio, modelo, Longitud.Corta), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+
+        { 16, ($"Conversación y funciones con instrucción del sistema larga (caché sin necesidad de relleno) (≈{ADólares(15)}).",
+            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
+            ConversaciónConFunciones(servicio, modelo, Longitud.Larga), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+
+        { 17, ($"Conversación y funciones con instrucción del sistema media (caché con relleno) (≈{ADólares(700000000)}).",
+            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
+            ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+
+        { 18, ($"Conversación y funciones con instrucción del sistema media (sin caché por relleno desactivado) (≈{ADólares(700000000)}).",
+            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
+            ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja,
+                CalidadAdaptable.No, d, lote: false, rellenarInstruccionesSistema: false)) },
+
+
+        //{ 18, ($"Conversación con funciones considerando 10 conversaciones por día (≈{ADólares(1000000)}).", "Relleno de Instrucción del Sistema", (d) =>
+        //    Consultar((servicio, modelo) => ConversaciónConFunciones(servicio, modelo, usarInstrucciónMuyLarga: false, usarInstrucciónSistemaMuyLarga: false, 
+      //0), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // Sin rellenos pero con más conversaciones previstas.
+
+
+
+        //{ 14, ("Consulta con archivos.", "Archivos", () =>
+        //    Consultar(ConsultaConArchivos, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
+        //        13, lote: false)) },
+        //{ 15,("Consulta buscando en internet con error por Razonamiento = Ninguno.", "Búsqueda en Internet", () =>
+        //    Consultar(ConsultaBuscandoEnInternet, "gpt-5.1", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
+        //        15, lote: false)) },
 
     };
 
@@ -115,20 +144,11 @@ internal class Demostración {
         EscribirVerde("¡Hola soy el programa de demostración de Frugalia!");
         Escribir("");
         EscribirMultilíneaCianOscuro("Frugalia incorpora funciones para ahorrar en tókenes y dinero en consultas a modelos de inteligencia artificial como GPT, " +
-            "Gemini, Claude y otros. A continuación podrás ver algunas demostraciones de las funciones: calidad adaptable, relleno de instrucción de sistema, " +
+            "Gemini, Claude y otros. A continuación podrás ver algunas demostraciones de las funciones: calidad adaptable, relleno de instrucción del sistema, " +
             "razonamiento adaptable, consultas por lotes, resumen de contexto (planeado) y caché de respuestas simples (planeado). Todas las funciones pueden ser " +
             "desactivadas o activadas individualmente, permitiéndote usar solo las que generan ahorros en tu caso de uso. Para ver los costos por ejecución en " +
             "tu moneda puedes cambiar la tasa de cambio a dólares en Demostración > TasaCambioUsd.");
         Escribir("");
-        //EscribirMultilíneaCianOscuro("Relleno de instrucción de sistema: Realiza una optimización para que en algunos casos se agregue un texto de relleno a la " +
-        //    "instrucción de sistema para activar la caché y ahorrar dinero en tókenes de entrada en las siguientes consultas.");
-        //EscribirMultilíneaCianOscuro("Razonamiento adaptable: Según el largo de la instrucción útil (sistema + usuario + internas + funciones) elige el nivel de " +
-        //    "razonamiento a usar.");
-        //EscribirMultilíneaCianOscuro("Consultas por lotes: Realiza y hace seguimiento de consultas en modo lote que se tardan alrededor de un día en resolver, " +
-        //    "pero suelen valer la mitad.");
-        //EscribirMultilíneaCianOscuro("[planeado] Resumen de contexto: Cuando una conversación se alarga, realiza una optimización que decide sí resume los " +
-        //    "mensajes anteriores para reducir el tamaño del contexto de la conversación y los costos de tókenes de entrada en las siguientes consultas.");
-        //EscribirMultilíneaCianOscuro("[planeado] Caché de respuestas simples: Sistema para almacenar y responder a consultas simples que no requieren IA.");
 
         EscribirMagenta("Escribe el número de la demostración que quieres ejecutar:");
 
@@ -160,7 +180,7 @@ internal class Demostración {
 
             var ensayos = 1;
             for (int i = 0; i < ensayos; i++) {
-                _ = Demostraciones[númeroDemostración].Consultar(); // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
+                _ = Demostraciones[númeroDemostración].Consultar(númeroDemostración); // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
             }
 
         }
@@ -184,7 +204,7 @@ internal class Demostración {
         (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado resultado)> consulta, 
         string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable,
         int númeroDemostración, bool lote, RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, 
-        RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta) {
+        RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta, bool rellenarInstruccionesSistema = true) {
 
         var temporizador = new Stopwatch();
         temporizador.Start();
@@ -203,7 +223,7 @@ internal class Demostración {
         }
 
         var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
-            out string errorInicio, out string informaciónInicio, restricciónTókenesSalida: restricciónTókenesSalida, 
+            out string errorInicio, out string informaciónInicio, rellenarInstruccionesSistema, restricciónTókenesSalida: restricciónTókenesSalida, 
             restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
 
         Escribir("");
@@ -225,7 +245,7 @@ internal class Demostración {
                 temporizador.Stop();
                 var tiempo = temporizador.Elapsed;
                 var detalleTiempo = $"Duración consultas: {tiempo.Minutes} minutos {tiempo.Seconds} segundos.";
-                var costoTókenes = Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: TasaCambioUsd);
+                var costoTókenes = $"Costo tókenes:{Environment.NewLine}{Tókenes.ObtenerTextoCostoTókenes(tókenes, tasaCambioUsd: TasaCambioUsd)}";
                 detalleCosto = (string.IsNullOrEmpty(detalleCosto) ? "" : DobleLínea + detalleCosto);
                 Escribir("");
 
@@ -257,10 +277,9 @@ internal class Demostración {
     } // Consultar>
 
 
-    #pragma warning disable IDE0060 // Quitar el parámetro no utilizado
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Quitar el parámetro no utilizado", Justification = "")]
     internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado)
         ConsultaTexto(Servicio servicio, Modelo modelo, int dificultadInstrucción) {
-    #pragma warning restore IDE0060 // Quitar el parámetro no utilizado
 
         var rellenoInstrucciónSistema = "";
         var instrucciónSistema = "Eres grosero y seco. Respondes displicentemente al usuario por no saber lo que preguntó.";
@@ -277,9 +296,9 @@ internal class Demostración {
             _ => throw new NotImplementedException(),
         };
 
-        var consultasEnPocasHoras = 10;
+        var consultasDuranteCachéExtendida = 10;
 
-        var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error,
+        var respuesta = servicio.Consulta(consultasDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, out string error,
             out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: null);
@@ -289,17 +308,18 @@ internal class Demostración {
     } // ConsultaTexto>
 
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Quitar el parámetro no utilizado", Justification = "")]
     internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado)
         ConsultaConArchivos(Servicio servicio, Modelo modelo) {
 
         var rellenoInstrucciónSistema = "";
         var instrucciónSistema = "Eres cuidadoso y detectas adecuadamente si hay varios elementos en una foto y obtienes el tamaño/cantidad total del producto considerando esto que observas.";
         var instrucción = "Dime el tamaño algodón en discos familia";
-        var consultasEnPocasHoras = 10;
+        var consultasDuranteCachéExtendida = 10;
         var archivos = new List<string> { @"D:\Proyectos\Frugalia\Archivos Pruebas\algodón-en-discos-familia-120unidad.jpg" };
         var tipoArchivo = TipoArchivo.Imagen;
 
-        var respuesta = servicio.Consulta(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, archivos, out string error,
+        var respuesta = servicio.Consulta(consultasDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, instrucción, archivos, out string error,
             out Dictionary<string, Tókenes> tókenes, tipoArchivo, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, instrucción, respuesta, archivo: $"{tipoArchivo}: {archivos[0]}");
@@ -309,7 +329,7 @@ internal class Demostración {
     } // ConsultaConArchivos>
 
 
-
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Quitar el parámetro no utilizado", Justification = "")]
     internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado) 
         ConsultaBuscandoEnInternet(Servicio servicio, Modelo modelo) {
 
@@ -323,7 +343,8 @@ internal class Demostración {
 
 
     internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado) 
-        ConsultaUsandoFunciones(Servicio servicio, Modelo modelo, bool usarInstrucciónMuyLarga, bool usarInstrucciónSistemaMuyLarga) {
+        ConversaciónConFunciones(Servicio servicio, Modelo modelo, Longitud longitudInstrucciónSistema, int conversacionesDuranteCachéExtendida = 1, 
+        bool usarInstrucciónMuyLarga = false) {
 
         var instrucción = "Hola, estoy interesado en conocer el precio de un accesorio Ala para el avión F40.";
         var instrucciónMuyLarga = @"Hola, mira, me levanté algo apestado de la gripa, con la nariz toda tapada, la garganta raspada y esa sensación de que uno durmió pero no descansó, el tinto se me quemó porque me quedé mirando el celular como un zombi mientras la cafetera sonaba y yo ni caso, y en medio de todo ese desorden mental me puse a pensar que la vida a veces se siente como un avión que despega con turbulencia, medio desbalanceado, pero igual tiene que seguir su ruta, y entonces me acordé de que anoche estuve viendo videos de aviones, documentales raros de gente que restaura avionetas viejas y las deja como nuevas, y eso me dejó con la idea dando vueltas en la cabeza de que tal vez lo que necesito para salir de esta racha es hacer algo grande, algo que me saque de la rutina, algo completamente absurdo como, no sé, comprar un avión.
@@ -336,37 +357,24 @@ internal class Demostración {
                 Mi mamá volvió a mandar mensajes por chat preguntando si ya me había tomado la pastilla para la gripa, y mientras le respondía que sí, aunque honestamente todavía no lo hacía, seguía navegando entre páginas, catálogos, descripciones técnicas, cosas que quizás no entiendo del todo pero que me hacen sentir que estoy avanzando un poquitico en ese sueño medio loco. Empecé a pensar que, si no organizo bien mis ideas, esto se va a quedar solo en una fantasía de martes por la mañana con gripa, café y divagaciones. Pero si empiezo por algo tan simple como preguntar por el precio de un accesorio específico, quizás pueda ir aterrizando el sueño en números, en decisiones, en pasos concretos.
                 Así que, después de todo este rodeo mental, después de levantarme apestado de la gripa, de quemar el tinto, de escuchar a mi mamá diciéndome que tome algo caliente y que me cuide, de pensar mil veces en si estoy tomando buenas decisiones en la vida o si solo estoy dejando que los días pasen, llegué a esta conclusión: tal vez el primer paso es simplemente pedir información clara sobre algo muy específico relacionado con ese posible avión. Nada de compromisos todavía, nada de decisiones enormes, solo un dato concreto que me ayude a dimensionar mejor el sueño. Y ese dato, en este momento, es el precio de un accesorio que me interesa especialmente porque afecta directamente el comportamiento del avión.
                 Por todo lo anterior, y dejando a un lado todo el rollo existencial, te resumo lo que realmente necesito: finalmente estoy interesado en conocer el precio de un accesorio de ala para el avión F40. Me gustaría saber cuánto cuesta ese accesorio de ala para el F40, de forma clara y directa, para poder seguir pensando si este sueño de comprar un avión tiene algún sentido realista o si se queda solo como una historia rara de una mañana con gripa, café quemado y muchas ideas dando vueltas en la cabeza.";
-        if (usarInstrucciónMuyLarga) instrucción = instrucciónMuyLarga; // Se usa para probar el uso de la caché desde el segundo mensaje, incluso en casos en los que no se está rellenando la instrucción de sistema, es decir cuando el parámetro conversacionesEnPocasHoras es 1 que evita que se rellene instrucciones de sistema.
+        if (usarInstrucciónMuyLarga) instrucción = instrucciónMuyLarga; // Se usa para probar el uso de la caché desde el segundo mensaje, incluso en casos en los que no se está rellenando la instrucción del sistema, es decir cuando el parámetro conversacionesDuranteCachéExtendida es 1 que evita que se rellene instrucciones del sistema.
 
         var cuentaMensaje = 1;
+        var totalMensajes = 6;
         var respuesta = "";
-        var mensajes = new List<(TipoMensaje Tipo, string Mensaje)>();
         var conversación = new Conversación(modelo.Familia);
         var tókenes = new Dictionary<string, Tókenes>();
         var información = new StringBuilder();
-        var detalleTókenes = "";
+        var detalleTókenesPorConsulta = "";
         var separadorMensajes = $"{Environment.NewLine}--------------------------------------------------------{Environment.NewLine}";
-        var númeroAleatorio = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en llamadas siguientes porque se cambia la instrucción de sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
+        var númeroAleatorio = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en demostraciones siguientes porque se cambia la instrucción del sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
         var rellenoInstrucciónSistema = "";
-        var resultado = Resultado.Respondido;
-
-        continuarConversación:
-
-        conversación.AgregarInstrucción(instrucción);
-        var instrucciónSistema = "Eres una representante comercial amable que se expresa con pocas palabras. Te refieres a los " +
-            "clientes con usted, no usas tú ni vos. No inventes datos para las funciones si el usuario no te los ha dado. Cuando una función devuelve un " +
-            "JSON con error, interpreta el error, explica brevemente el problema al usuario y pide los datos faltantes. No inventes valores ni vuelvas a " +
-            "llamar la función si el usuario no te ha dado la información correcta. No sugieras continuar la conversación después de dar la respuesta " +
-            "final con el resultado de una función. Esta es la base de datos de productos que tienes a tu dispocición con este formato " +
-            $"Referencia-Descripción: F40-Avion F40, F45-Avion F45, F50-Avión F50, M445-Motor M445, M{númeroAleatorio}-Motor M{númeroAleatorio}, " +
-            $"H50-Accesorio Ala H50, H51-Accesorio Ala H51. Usa la descripción del producto cuando hables con el usuario y la referencia úsala siempre " +
-            $"para pasarla a todas las funciones internas. Referencias de productos: F40, F45, F50, M445, M{númeroAleatorio}, H50, H51";
-
-        var instrucciónSistemaMuyLarga = "Eres una representante comercial amable que se expresa con pocas palabras. Te refieres a los " +
-            "clientes con usted, no usas tú ni vos. No sugieras continuar la conversación después de dar la respuesta final con el resultado de una " +
-            "función. Esta es la base de datos de productos que tienes a tu disposición con el formato Referencia-Descripción. " +
+        var resultado = Resultado.Respondido;  
+        
+        var instrucciónSistemaCorta = $"Eres una representante comercial amable que se expresa con pocas palabras. Usa el símbolo $ para indicar cantidades monetarias sin especificar nada sobre la moneda. Dirigete a los clientes con usted, no con tú ni vos. No inventes datos para las funciones si el usuario no te los ha dado. Cuando una función devuelve un JSON con error, interpreta el error, explica brevemente el problema al usuario y pide los datos faltantes. No inventes valores ni vuelvas a llamar la función si el usuario no te ha dado la información correcta. No sugieras continuar la conversación después de dar la respuesta final con el resultado de una función. Esta es la base de datos de productos que tienes a tu dispocición con este formato Referencia-Descripción: F40-Avion F40, F45-Avion F45, F50-Avión F50, M445-Motor M445, M{númeroAleatorio}-Motor M{númeroAleatorio}, H50-Accesorio Ala H50, H51-Accesorio Ala H51. Usa la descripción del producto cuando hables con el usuario y la referencia úsala siempre para pasarla a todas las funciones internas. Referencias de productos: F40, F45, F50, M445, M{númeroAleatorio}, H50, H51.";
+        var instrucciónSistemaLarga = "Eres una representante comercial amable que se expresa con pocas palabras. Usa el símbolo $ para indicar cantidades monetarias sin especificar nada sobre la moneda. Te refieres a los clientes con usted, no usas tú ni vos. No sugieras continuar la conversación después de dar la respuesta final con el resultado de una función. Esta es la base de datos de productos que tienes a tu disposición con el formato Referencia-Descripción. " +
             "F40-Avión F40, avión ligero de entrenamiento básico de un solo motor, pensado para escuelas de vuelo pequeñas. " +
-            "F41-Avión F41, variante del F40 con tanque de combustible ampliado para mayor autonomía en rutas regionales. " +
+            $"F{númeroAleatorio}-Avión F{númeroAleatorio}, variante del F40 con tanque de combustible ampliado para mayor autonomía en rutas regionales. " +
             "F42-Avión F42, versión con cabina reforzada y aviónica digital básica para entrenamiento instrumental. " +
             "F43-Avión F43, modelo ligero con configuración de cuatro plazas para uso mixto corporativo y personal. " +
             "F44-Avión F44, versión con alas reforzadas para pistas cortas y operación en aeródromos no pavimentados. " +
@@ -462,25 +470,47 @@ internal class Demostración {
             "H78-Accesorio Ala H78, accesorio destinado a equilibrar pequeños desbalances laterales de la aeronave. " +
             "H79-Accesorio Ala H79, paquete de modificación de borde de salida para mejorar control en aproximación. " +
             "H80-Accesorio Ala H80, kit integral de mejora aerodinámica para flotas antiguas con necesidad de modernización. " +
-            "Usa siempre la descripción del producto cuando hables con el usuario y la referencia úsala siempre para pasarla a todas las funciones " +
-            "internas. Nunca inventes referencias nuevas que no estén en esta base de datos. Cuando el usuario pida un producto, identifica la referencia " +
-            "más adecuada de esta lista y trabaja con ella. Referencias de productos disponibles: " +
+            "Usa siempre la descripción del producto cuando hables con el usuario y la referencia úsala siempre para pasarla a todas las funciones internas. Nunca inventes referencias nuevas que no estén en esta base de datos. Cuando el usuario pida un producto, identifica la referencia más adecuada de esta lista y trabaja con ella. Referencias de productos disponibles: " +
             "F40, F41, F42, F43, F44, F45, F46, F47, F48, F49, F50, F51, F52, F53, F54, F55, F56, F57, F58, F59, F60, F61, F62, F63, F64, F65, F66, F67, " +
             "F68, F69, F70, F71, F72, F73, F74, F75, F76, F77, F78, F79, M400, M401, M402, M403, M404, M405, M406, M407, M408, M409, M410, M411, M412, " +
             "M413, M414, M415, M416, M417, M418, M419, M420, M421, M422, M423, M424, M425, H50, H51, H52, H53, H54, H55, H56, H57, H58, H59, H60, H61, " +
             "H62, H63, H64, H65, H66, H67, H68, H69, H70, H71, H72, H73, H74, H75, H76, H77, H78, H79, H80.";
-        if (usarInstrucciónSistemaMuyLarga) instrucciónSistema = instrucciónSistemaMuyLarga; // Se fuerza que se active la caché de tókenes de entrada. Se pasa toda la 'base de datos' de productos completa para lograr una alta inteligencia contextual del modelo con respecto a los productos ofrecidos por ejemplo para que identifique cosas como -eso que me estás diciendo no es un accessorio si no un motor quieres que te cotice el motor?-. Lamentablemente esto no es escalable para bases de datos con muchos productos porque se incrementan mucho los tókenes de entrada que incluso si se leen de la caché, pueden ser considerables. Entonces ChatGPT ofreció esta alternativa: Alternativa RAG / embeddings para búsqueda "inteligente": En vez de mandar todo el catálogo en las instrucciones, se puede usar este flujo: 1. Indexar catálogo: Para cada producto guardar: referencia, descripción, familia, tags, etc. Generar un embedding (vector) de "referencia + descripción" y guardarlo en una base de datos vectorial.  2. En cada consulta del usuario: Generar embedding del texto del usuario ("accesorio para F40", "motor M444", etc.).  Buscar en la base de datos vectorial los N productos más parecidos (top-k). Solo esos productos candidatos (3–10) se envían al modelo como contexto. El modelo: Usa la información de los productos candidatos para razonar y responder. Puede detectar inconsistencias (p.ej. usuario pide accesorio pero el candidato es motor). Ventajas: No se manda todo el catálogo en cada consulta (menos tokens, menos costo). Escala a catálogos grandes. Mantiene búsqueda "inteligente" basada en similitud semántica y no solo por referencia exacta.
+        var instrucciónSistemaMedia = "Eres una representante comercial amable que se expresa con pocas palabras. Usa el símbolo $ para indicar cantidades monetarias sin especificar nada sobre la moneda. Te refieres a los clientes con usted, no usas tú ni vos. No sugieras continuar la conversación después de dar la respuesta final con el resultado de una función. Esta es la base de datos de productos que tienes a tu disposición con el formato Referencia-Descripción. " +
+            $"H{númeroAleatorio}-Accesorio Ala H{númeroAleatorio}, accesorio de borde de ataque que mejora la sustentación a baja velocidad. " +
+            "H51-Accesorio Ala H51, accesorio especializado para incrementar estabilidad en aproximaciones pronunciadas. " +
+            "H52-Accesorio Ala H52, kit de winglets para reducir consumo de combustible en crucero. " +
+            "H53-Accesorio Ala H53, conjunto de carenados aerodinámicos para disminuir resistencia parasita. " +
+            "H54-Accesorio Ala H54, refuerzo estructural del ala para operación en pistas no preparadas. " +
+            "H55-Accesorio Ala H55, kit de iluminación de punta de ala para mejorar visibilidad nocturna. " +
+            "H56-Accesorio Ala H56, sistema de calefacción de borde de ataque para operación en ambientes fríos. " +
+            "H57-Accesorio Ala H57, kit de sensores de ángulo de ataque para entrenamiento avanzado. " +
+            "H58-Accesorio Ala H58, conjunto de flaps mejorados para despegues y aterrizajes más cortos. " +
+            "H59-Accesorio Ala H59, paquete aerodinámico para reducción de ruido generado por turbulencias. " +
+            "Usa siempre la descripción del producto cuando hables con el usuario y la referencia úsala siempre para pasarla a todas las funciones internas. Nunca inventes referencias nuevas que no estén en esta base de datos. Cuando el usuario pida un producto, identifica la referencia más adecuada de esta lista y trabaja con ella. Referencias de productos disponibles: " +
+            "H50, H51, H52, H53, H54, H55, H56, H57, H58, H59";
 
-        mensajes.Add((TipoMensaje.Usuario, instrucción));
+        var instrucciónSistema = longitudInstrucciónSistema switch {
+            Longitud.Corta => instrucciónSistemaCorta,
+            Longitud.Media => instrucciónSistemaMedia,
+            Longitud.Larga => instrucciónSistemaLarga, // Se fuerza que se active la caché de tókenes de entrada. Se pasa toda la 'base de datos' de productos completa para lograr una alta inteligencia contextual del modelo con respecto a los productos ofrecidos por ejemplo para que identifique cosas como -eso que me estás diciendo no es un accessorio si no un motor quieres que te cotice el motor?-. Lamentablemente esto no es escalable para bases de datos con muchos productos porque se incrementan mucho los tókenes de entrada que incluso si se leen de la caché, pueden ser considerables. Entonces ChatGPT ofreció esta alternativa: Alternativa RAG / embeddings para búsqueda "inteligente": En vez de mandar todo el catálogo en las instrucciones, se puede usar este flujo: 1. Indexar catálogo: Para cada producto guardar: referencia, descripción, familia, tags, etc. Generar un embedding (vector) de "referencia + descripción" y guardarlo en una base de datos vectorial.  2. En cada consulta del usuario: Generar embedding del texto del usuario ("accesorio para F40", "motor M444", etc.).  Buscar en la base de datos vectorial los N productos más parecidos (top-k). Solo esos productos candidatos (3–10) se envían al modelo como contexto. El modelo: Usa la información de los productos candidatos para razonar y responder. Puede detectar inconsistencias (p.ej. usuario pide accesorio pero el candidato es motor). Ventajas: No se manda todo el catálogo en cada consulta (menos tokens, menos costo). Escala a catálogos grandes. Mantiene búsqueda "inteligente" basada en similitud semántica y no solo por referencia exacta.
+            _ => throw new NotImplementedException()
+        };
+
+        EscribirMensajes(instrucciónSistema, null, null, null, null);
+
+        continuarConversación:
+
+        conversación.AgregarInstrucción(instrucción);
+        EscribirMensajes(null, null, instrucción, null, null);
         respuesta += "Usuario: " + Environment.NewLine + instrucción + separadorMensajes;
-        var respuestaConsulta = servicio.Consulta(2, instrucciónSistema, ref rellenoInstrucciónSistema, conversación,
+
+        var respuestaConsulta = servicio.Consulta(conversacionesDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, conversación,
             [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
                 [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
-            out string error, out Dictionary<string, Tókenes> tókenesConsulta, instruccionesPorConversación: 6, proporciónPrimerInstrucciónVsSiguientes: 3,
-            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta); // Se asume que el primer mensaje es 3 veces más largo que los siguientes. Esto es un número sacado del sombrero. Idealmente debería ser un número que sea aproximado al caso de uso real. Igualmente se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, entonces esto también es un parámetro ajustable según el caso de uso.
-        mensajes.Add((TipoMensaje.AsistenteAI, respuestaConsulta));
-        respuesta += "Agente: " + Environment.NewLine + respuestaConsulta + separadorMensajes;
-
+            out string error, out Dictionary<string, Tókenes> tókenesConsulta, consultasPorConversación: totalMensajes, proporciónPrimerInstrucciónVsSiguientes: 1,
+            proporciónRespuestasVsInstrucciones: 3, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta); // Se asume que el modelo contesta con 3 veces más palabras que lo que escribe el usuario, pero según el caso de uso y verbosidad usada se debe usar un valor más realista.
+        EscribirMensajes(null, null, null, respuestaConsulta, null);
+        respuesta += "Asistente IA: " + Environment.NewLine + respuestaConsulta + separadorMensajes;
         if (resultado == Resultado.Respondido && resultadoConsulta != Resultado.Respondido) resultado = resultadoConsulta; // Al primer resultado diferente de Respondido se queda con ese para reportar el resumen de este procedimiento. Si bien no es estrictamente correcto, sirve para fines de prueba poder registrar la aparición de un caso problemático en toda la conversación, así existan otros.
      
         información.AgregarLíneas(informaciónConsulta);
@@ -489,7 +519,7 @@ internal class Demostración {
         foreach (var iTókenesConsulta in tókenesConsulta.Values) {
 
             tókenes.AgregarSumando(iTókenesConsulta);
-            detalleTókenes += $"{cuentaMensaje}{(tókenesConsulta.Count == 1 ? "" : $"-{contadorTókenesConsulta}")}: " +
+            detalleTókenesPorConsulta += $"{cuentaMensaje}{(tókenesConsulta.Count == 1 ? "  " : $"-{contadorTókenesConsulta}")}: " +
                 $"{iTókenesConsulta}{Environment.NewLine}";
             contadorTókenesConsulta++;
 
@@ -511,20 +541,18 @@ internal class Demostración {
                 } else if (cuentaMensaje == 6) {
                     instrucción = "800000000";
                 }
-                if (cuentaMensaje <= 7) goto continuarConversación;
+                if (cuentaMensaje <= totalMensajes + 1) goto continuarConversación;
 
             }
 
         }
 
-        EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, mensajes);
+        detalleTókenesPorConsulta = $"Tókenes por consulta:{Environment.NewLine}" +
+            $"{detalleTókenesPorConsulta}E=Entrada C=Caché ¬=No S=Salida R=Razonamiento EM=Escritura Manual M=Minutos";
 
-        detalleTókenes = $"{detalleTókenes}{Environment.NewLine}";
-        var detalleAñadidoPrecio = rellenoInstrucciónSistema.Length == 0 ? ""
-            : $"Relleno de instrucción de sistema para forzar el uso de la caché de {rellenoInstrucciónSistema.Length} carácteres.{DobleLínea}";
-        return (respuesta, tókenes, $"{detalleAñadidoPrecio}{detalleTókenes}", error, información, resultado);
+        return (respuesta, tókenes, detalleTókenesPorConsulta, error, información, resultado);
 
-    } // ConsultaUsandoFunciones>
+    } // ConversaciónUsandoFunciones>
 
 
     /// <summary>

@@ -46,7 +46,7 @@ namespace Frugalia {
             if (comparisonType == StringComparison.Ordinal) return texto.Replace(valorAnterior, nuevoValor);
 
             int idx = 0;
-            int largoAnterior = valorAnterior.Length;
+            int longitudAnterior = valorAnterior.Length;
             var respuesta = "";
 
             while (idx < texto.Length) {
@@ -57,7 +57,7 @@ namespace Frugalia {
                     break;
                 }
                 respuesta += texto.Substring(idx, found - idx) + nuevoValor;
-                idx = found + largoAnterior;
+                idx = found + longitudAnterior;
 
             }
 
@@ -109,6 +109,13 @@ namespace Frugalia {
             texto.AppendLine(nuevaLínea);
 
         } // AgregarLínea>
+
+
+        public static void AgregarLíneaSiNoEstá(this StringBuilder texto, string nuevaLínea) {
+
+            if (!texto.ContieneLínea(nuevaLínea)) texto.AgregarLínea(nuevaLínea);
+
+        } // AgregarLíneaSiNoEstá>
 
 
         /// <summary>
@@ -179,6 +186,95 @@ namespace Frugalia {
             }
 
         } // ObtenerAleatorio>
+
+
+        /// <summary>
+        /// Detecta si una línea exacta ya está presente en el contenido del StringBuilder.
+        /// No realiza asignaciones de cadena para comparaciones Ordinal y OrdinalIgnoreCase.
+        /// Soporta saltos de línea CRLF (\r\n), LF (\n) y CR (\r).
+        /// </summary>
+        /// <param name="texto">Buffer a inspeccionar.</param>
+        /// <param name="línea">Línea a buscar (sin el salto de línea).</param>
+        /// <param name="comparison">Tipo de comparación. Optimizado para Ordinal y OrdinalIgnoreCase.</param>
+        /// <returns>true si existe una línea exactamente igual; false en caso contrario.</returns>
+        public static bool ContieneLínea(this StringBuilder texto, string línea, StringComparison comparison = StringComparison.Ordinal) { // Función escrita por GPT 5.1, no probada extensivamente.
+
+            if (texto == null) throw new ArgumentNullException(nameof(texto));
+            if (línea == null) throw new ArgumentNullException(nameof(línea));
+
+            int len = texto.Length;
+            int objetivoLen = línea.Length;
+            if (objetivoLen == 0) {
+               
+                int i = 0; // Considera que una línea vacía existe si hay dos saltos consecutivos o una línea final vacía
+                while (i <= len) {
+                    
+                    int inicio = i; // Encuentra fin de línea
+                    int fin = inicio;
+                    while (fin < len && texto[fin] != '\r' && texto[fin] != '\n') fin++;
+                    if (fin == inicio) return true; // línea vacía
+                    
+                    if (fin < len) { // Avanza sobre separador de línea
+                        if (texto[fin] == '\r' && fin + 1 < len && texto[fin + 1] == '\n') i = fin + 2;
+                        else i = fin + 1;
+                    } else {
+                        i = fin + 1;
+                    }
+                }
+
+                return false;
+
+            }
+
+            bool ignoreCase = comparison == StringComparison.OrdinalIgnoreCase; // Comparación optimizada para Ordinal y OrdinalIgnoreCase
+            bool usarOptimizado = comparison == StringComparison.Ordinal || comparison == StringComparison.OrdinalIgnoreCase;
+
+            int pos = 0;
+            while (pos <= len) {
+
+                int inicio = pos;
+                int fin = inicio;
+
+                while (fin < len && texto[fin] != '\r' && texto[fin] != '\n') fin++; // Encuentra fin de la línea actual
+
+                int longitudLíneaActual = fin - inicio;
+                if (longitudLíneaActual == objetivoLen) {
+
+                    if (usarOptimizado) {
+                        
+                        bool iguales = true; // Comparación carácter por carácter
+                        for (int k = 0; k < objetivoLen; k++) {
+
+                            char a = texto[inicio + k];
+                            char b = línea[k];
+                            if (ignoreCase) {
+                                a = char.ToUpperInvariant(a); // ToUpperInvariant minimiza coste cultural
+                                b = char.ToUpperInvariant(b);
+                            }
+                            if (a != b) { iguales = false; break; }
+
+                        }
+                        if (iguales) return true;
+
+                    } else {
+                       var tramo = texto.ToString(inicio, longitudLíneaActual); // Fallback: convierte solo el tramo a string y compara con reglas culturales
+                        if (string.Equals(tramo, línea, comparison)) return true;
+                    }
+
+                }
+               
+                if (fin < len) { // Avanza sobre separador de línea
+                    if (texto[fin] == '\r' && fin + 1 < len && texto[fin + 1] == '\n') pos = fin + 2; // CRLF
+                    else pos = fin + 1; // LF o CR
+                } else {
+                    pos = fin + 1; // Fin del buffer
+                }
+
+            }
+
+            return false;
+
+        } // ContieneLínea>
 
 
     } // General>

@@ -85,7 +85,7 @@ namespace Frugalia {
                 return null;
             }
 
-            var función = funciones.FirstOrDefault(f => f.Nombre == nombreFunción.ToLowerInvariant());
+            var función = funciones.FirstOrDefault(f => f.Nombre.Equals(nombreFunción, StringComparison.InvariantCultureIgnoreCase));
             if (función == null) {
                 error = ("", $"El nombre de la función {nombreFunción} no se encuentra en la lista de las funciones disponibles.");  
                 return null;
@@ -96,7 +96,8 @@ namespace Frugalia {
 
                 foreach (var parámetro in función.Parámetros) {
 
-                    var valorUsuario = parámetrosUsuario?.FirstOrDefault(nv => (nv.Nombre ?? "").ToLowerInvariant() == parámetro.Nombre).Valor;
+                    var valorUsuario = parámetrosUsuario?.FirstOrDefault(nv => 
+                        (nv.Nombre ?? "").Equals(parámetro.Nombre, StringComparison.InvariantCultureIgnoreCase)).Valor;
                     if (string.IsNullOrEmpty(valorUsuario)) {
 
                         if (parámetro.Requerido) {

@@ -24,7 +24,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using System.Text.Json;
 using static Frugalia.GlobalFrugalia;
@@ -56,6 +55,8 @@ namespace Frugalia {
 
         public CalidadAdaptable CalidadAdaptable { get; }
 
+        public bool EsCalidadAdaptable => CalidadAdaptable != CalidadAdaptable.No;
+
         public TratamientoNegritas TratamientoNegritas { get; }
 
         private string ClaveAPI { get; }
@@ -70,7 +71,7 @@ namespace Frugalia {
             $"Verbosidad = {Verbosidad}.{Environment.NewLine}" +
             $"Razonamiento = {Razonamiento}.{Environment.NewLine}" +
             $"Calidad adaptable = {CalidadAdaptable}.{Environment.NewLine}" +
-            $"Rellenar instrucciones de sistema = {(RellenarInstruccionesSistema ? "Sí" : "No")}.{Environment.NewLine}" +
+            $"Rellenar instrucciones del sistema = {(RellenarInstruccionesSistema ? "Sí" : "No")}.{Environment.NewLine}" +
             $"Restricción tókenes de salida {RestricciónTókenesSalida} y de razonamiento {RestricciónTókenesRazonamiento}.{Environment.NewLine}" +
             $"{(RestricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna ? $"Exclusión razonamiento alto en {RestricciónRazonamientoAlto}" : "")}" +
             $"{(RestricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna ? $" y exclusión razonamiento medio en {RestricciónRazonamientoMedio}." : ".")}" +
@@ -117,31 +118,32 @@ namespace Frugalia {
             Iniciado = true;
             RellenarInstruccionesSistema = rellenarInstruccionesSistema;
             información = textoInformación.ToString();
-            
+
         } // Servicio>
 
 
         /// <summary>
-        // Calcula automáticamente la nueva longitud objetivo de la instrucción de sistema para aprovechar el ahorro en el costo de lecturas tókenes de caché
-        // en OpenAI y similares. La idea es que si la instrucción de sistema se reutiliza muchas veces, conviene que su longitud compartida supere el umbral
-        // aproximado de cacheo (1024 tókenes para OpenAI). Esta función devuelve una nueva instrucción de sistema más larga que activaría la caché en llamadas
-        // posteriores y de esta manera obtener un costo reducido de tókenes de entrada de caché. Ver fórmula en comentario interno en la función.
+        // Calcula automáticamente la nueva longitud objetivo de la instrucción del sistema para aprovechar el ahorro en el costo de lecturas tókenes de caché
+        // en OpenAI y similares y devuelve un texto de relleno para la instrucción del sistema. La idea es que si la instrucción del sistema se reutiliza muchas
+        // veces, conviene que su longitud compartida supere el umbral aproximado de cacheo (1024 tókenes para OpenAI). Esta función devuelve un relleno para la
+        // instrucción del sistema que activaría la caché en llamadas posteriores y de esta manera obtener un costo reducido de tókenes de entrada de caché.
+        // Ver fórmula en comentario interno en la función.
         /// </summary>
-        /// <param name="conversacionesEnPocasHoras">
+        /// <param name="conversacionesDuranteCachéExtendida">
         /// Cantidad de conversaciones completas o solicitudes aisladas al modelo. Se debe considerar las llamadas dentro de una conversación como una unidad 
         /// completa porque en los casos de conversaciones, se usa el valor de instruccionesPorConversación para decidir si rellena o no la instrucción del
         /// sistema.
         /// </param>
         /// <param name="instrucciónSistema"></param>
-        /// <param name="instruccionesEnConversación">
+        /// <param name="consultasPorConversación">
         /// Cantidad de instrucciones del usuario en el contexto de una conversación. Por ejemplo, cuando se usa ConsultasConFunciones como un agente de servicio 
-        /// al cliente. Si la cantidad de mensajes esperada es muy alta, puede darse que no sea necesario rellenar las instrucciones de sistema porque es posible 
+        /// al cliente. Si la cantidad de mensajes esperada es muy alta, puede darse que no sea necesario rellenar las instrucciones del sistema porque es posible 
         /// que se active la caché sin necesidad de esto (debido al historial de mensajes que gastan tókenes de entrada), y en cambio si se rellenara en un 
         /// entorno en el que de todas maneras se iba activar la caché, solo traería gasto innecesario de tókenes de entrada de caché aunque baratos, suman.
         /// </param>
         /// <param name="proporciónPrimerInstrucciónVsSiguientes">
         /// Puede suceder que la primera instrucción de una conversación sea de mayor longitud que los demás. Este factor permite tener en cuenta este efecto para 
-        /// calcular el largo total de instrucciones del usuario en la conversación.
+        /// calcular la longitud total de instrucciones del usuario en la conversación.
         /// </param>
         /// <param name="proporciónRespuestasVsInstrucciones">
         /// Las respuestas del modelo también se incluyen en los tókenes de entrada para siguientes consultas en la misma conversación, entonces deben ser tenidos
@@ -151,14 +153,14 @@ namespace Frugalia {
         /// Tókenes de archivos y funciones
         /// </param>
         /// <returns></returns>
-        internal string ObtenerRellenoInstrucciónSistema(int conversacionesEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema,
-            Conversación conversación, int instruccionesPorConversación, double proporciónPrimerInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones, 
-            double tókenesAdicionales) {
+        internal static string ObtenerRellenoInstrucciónSistema(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema,
+            Conversación conversación, int consultasPorConversación, double proporciónPrimeraInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones,
+            double tókenesAdicionales, Modelo modelo, bool rellenarInstruccionesSistema, ref StringBuilder información) {
 
             /* Cálculos de longitud límite para que salga más barato dadas K llamadas estimadas en las próximas horas
 
-            K: Número de consultas totales reusando las instrucciones de sistema.
-            S: Tókenes iniciales de instrucciones de sistema.
+            K: Número de consultas totales reusando las instrucciones del sistema.
+            S: Tókenes iniciales de instrucciones del sistema.
             C: Costo por token.
             fE: El factor de éxito de uso de la caché. Si es 0.8, significa que de las K - 1 llamadas que deberían usar la caché, solo (K - 1) * 0,8 
                 de verdad resultan usando la caché.
@@ -182,43 +184,53 @@ namespace Frugalia {
             K = 50 -> S = 120,94
             K = inf -> S = 102,5
 
-            Caso límite: En un uso intensivo y recursivo de las instrucciones de sistema en entornos de producción donde se espera que fácilmente se superen 
-            50 llamadas en menos de un día, vale la pena aumentar la instrucción de sistema si no es posible resumirla por debajo de 120 tókenes que es 
+            Caso límite: En un uso intensivo y recursivo de las instrucciones del sistema en entornos de producción donde se espera que fácilmente se superen 
+            50 llamadas en menos de un día, vale la pena aumentar la instrucción del sistema si no es posible resumirla por debajo de 120 tókenes que es 
             aproximadamente 600 carácteres en español (pecando por exceso 5 caracteres por token) y elevarlo 1025 tókenes que serían pecando por exceso
             5120 carácteres para asegurarse que active la caché.
              
             */
 
-            if (!RellenarInstruccionesSistema) return "";
+            if (!rellenarInstruccionesSistema) return "";
             if (instrucciónSistema == null) instrucciónSistema = "";
             if (rellenoInstrucciónSistema == null) rellenoInstrucciónSistema = "";
-            if (instruccionesPorConversación <= 0)
-                throw new ArgumentOutOfRangeException(nameof(instruccionesPorConversación), "instruccionesPorConversación debe ser mayor a 0.");
-            if (proporciónPrimerInstrucciónVsSiguientes <= 0)
-                throw new ArgumentOutOfRangeException(nameof(proporciónPrimerInstrucciónVsSiguientes), "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0.");
-            if (proporciónRespuestasVsInstrucciones < 0)
-                throw new ArgumentOutOfRangeException(nameof(proporciónRespuestasVsInstrucciones), "proporciónRespuestasVsInstrucciones no puede ser negativo.");
+            if (!modelo.TieneCachéExtendidaGratuita() && conversacionesDuranteCachéExtendida > 1) {
+                conversacionesDuranteCachéExtendida = 1; // En el caso de modelos que solo guarden la caché por unos cuantos minutos (que se espera que sean los razonables para esperar otra respuesta del usuario en un contexto de una conversación) no se puede realizar ninguna optimización considerando múltiples conversaciones que se puedan dar en el transcurso del día y que reusen las instrucciones del sistema. Entonces solo se considera la optimización que tiene en cuenta la cantidad de mensajes en una conversación (consultasPorConversación) porque se espera que estos si puedan reusar la caché.
+                información.AgregarLíneaSiNoEstá($"Se forzó conversacionesDuranteCachéExtendida a 1 porque {modelo} no soporta caché extendida.");
+            }
+            if (conversacionesDuranteCachéExtendida < 1)
+                throw new ArgumentOutOfRangeException(nameof(consultasPorConversación), "conversacionesDuranteCachéExtendida debe ser mayor a 1.");
+            if (consultasPorConversación < 1)
+                throw new ArgumentOutOfRangeException(nameof(consultasPorConversación), "consultasPorConversación debe ser mayor a 1.");
+            if (proporciónPrimeraInstrucciónVsSiguientes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(proporciónPrimeraInstrucciónVsSiguientes), "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0.");
+            if (proporciónRespuestasVsInstrucciones <= 0)
+                throw new ArgumentOutOfRangeException(nameof(proporciónRespuestasVsInstrucciones), "proporciónRespuestasVsInstrucciones debe ser mayor a 0.");
+            if (tókenesAdicionales < 0)
+                throw new ArgumentOutOfRangeException(nameof(tókenesAdicionales), "tókenesAdicionales no puede ser negativo.");
 
-            if (Modelo.LímiteTókenesActivaciónCachéAutomática == null) return "";
-            if (Modelo.LímiteTókenesActivaciónCachéAutomática <= 0) throw new Exception("El límite de tókenes no puede ser 0 o negativo.");
-            if (!string.IsNullOrWhiteSpace(rellenoInstrucciónSistema)) { // Si ya se pasa el relleno de la instrucción de sistema de una íteración anterior, se usa esta sin realizar ningún cálculo.
+            if (modelo.LímiteTókenesActivaciónCachéAutomática == null) {
+                información.AgregarLínea($"Se omitió rellenar las instrucciones del sistema porque {modelo} no tiene activación automática gratuita de la caché.");
+                return ""; // En los modelos que no soportan la activación automática de la caché, rellenar la instrucción del sistema no genera ningún ahorro.
+            }
+
+            if (modelo.LímiteTókenesActivaciónCachéAutomática <= 0) throw new Exception("El límite de tókenes no puede ser 0 o negativo.");
+            if (!string.IsNullOrWhiteSpace(rellenoInstrucciónSistema)) { // Si ya se pasa el relleno de la instrucción del sistema de una íteración anterior, se usa esta sin realizar ningún cálculo.
                 return rellenoInstrucciónSistema;
             } else {
                 rellenoInstrucciónSistema = "";
             }
 
-            if (string.IsNullOrWhiteSpace(instrucciónSistema)) return ""; // Si no hay instrucción de sistema nunca va a compensar agregar 'algo' porque no hay nada que optimizar.
-            if (conversacionesEnPocasHoras <= 1) return ""; // Para 1 ejecución nunca justifica incrementar la instrucción de sistema.
-            if (instruccionesPorConversación <= 0) return ""; // No se permite que no existan instrucciones por conversación.
-            var factorDescuentoCaché = Modelo.ObtenerFactorDescuentoCaché(Modelo);
-            if (factorDescuentoCaché > 0.9) return ""; // Se le pone este control para el caso de modelos que no tienen descuento para tókenes de entrada en caché.
+            if (string.IsNullOrWhiteSpace(instrucciónSistema)) return ""; // Si no hay instrucción del sistema nunca va a compensar agregar 'algo' porque no hay nada que optimizar.
+            var factorDescuentoCaché = Modelo.ObtenerFactorDescuentoCaché(modelo);
+            if (factorDescuentoCaché > 0.9) return ""; // Se le pone este control para el caso de modelos que no tienen descuento para tókenes de entrada en caché. Se ignora el relleno cuando el descuento es menor o igual al 10%.
 
-            var consultasEnPocasHoras = conversacionesEnPocasHoras * instruccionesPorConversación;
-            var tókenesObjetivo = (int)Modelo.LímiteTókenesActivaciónCachéAutomática + 1 - tókenesAdicionales; // A partir de 1024 se activa la caché de tókenes de entrada https://platform.openai.com/docs/guides/prompt-caching para GPT.
+            var consultasDuranteCachéExtendida = conversacionesDuranteCachéExtendida * consultasPorConversación;
+            var tókenesObjetivo = (int)modelo.LímiteTókenesActivaciónCachéAutomática + 1 - tókenesAdicionales; // A partir de 1024 se activa la caché de tókenes de entrada https://platform.openai.com/docs/guides/prompt-caching para GPT.
             if (tókenesObjetivo <= 1) return ""; // No es necesario realizar relleno porque con los tókenes adicionales ya se alcanzó el límite de tókenes para la activación de la caché.
             var evaluarRellenarInstruccionesSistema = true;
 
-            if (conversación != null) { // En el uso típico de la conversación (como se hace en la función ObtenerConFunción()), lo usual es incluir las respuestas anteriores del modelo. Entonces se debe verificar en que casos la caché se activa sola y es económicamente más óptima que rellenar las instrucciones de sistema desde el principio. No se rellena en la mitad de la conversación porque eso implica un recálculo de la caché y la pérdida de todo el bloque de información repetida que puede ser guardable en caché, la decisión es o rellenarlo al principio o no hacerlo. En estos casos no se rellena las instrucciones del sistema.
+            if (conversación != null) { // En el uso típico de la conversación (como se hace en la función ObtenerConFunción()), lo usual es incluir las respuestas anteriores del modelo. Entonces se debe verificar en que casos la caché se activa sola y es económicamente más óptima que rellenar las instrucciones del sistema desde el principio. No se rellena en la mitad de la conversación porque eso implica un recálculo de la caché y la pérdida de todo el bloque de información repetida que puede ser guardable en caché, la decisión es o rellenarlo al principio o no hacerlo. En estos casos no se rellena las instrucciones del sistema.
 
                 /* Fórmula de cantidad de tókenes de entrada en el mensaje N. También se deriva una fórmula para el total de mensajes de entrada gastados hasta el mensaje N, pero esta fórmula aunque elegante matemáticamente no es útil porque no sirve para calcular el costo incluyendo el efecto de la caché.
 
@@ -243,7 +255,7 @@ namespace Frugalia {
   
                 Total Tókenes hasta N = (S + SumaMHasta1) + (S + SumaMHasta2 + SumaRHasta1) + (S + SumaMHasta3 + SumaRHasta2) + .... (S + SumaMHastaN + SumaRHastaN-1)
  
-                Considerando que R1=R2=R3=...=R y que M2=M3=M4=...=M, es decir que las respuestas del modelo son del mismo largo y que los mensajes del usuario son del mismo largo después del primero.
+                Considerando que R1=R2=R3=...=R y que M2=M3=M4=...=M, es decir que las respuestas del modelo son de la misma longitud y que los mensajes del usuario son de la misma longitud después del primero.
  
                 Total Tókenes = (S + M1) + (S + M1 + M + R) + (S + M1 + 2M + 2R) + (S + M1 + 3M + 3R) ... + (S + M1 + (N-1) * M + (N - 1) * R)
  
@@ -254,16 +266,16 @@ namespace Frugalia {
                 var m1 = Conversación.ObtenerTextoPrimeraInstrucción(conversación);
                 if (!string.IsNullOrWhiteSpace(m1)) {
 
-                    var largoM1 = m1.Length;
-                    var largoM = m1.Length / proporciónPrimerInstrucciónVsSiguientes;
-                    var largoR = largoM * proporciónRespuestasVsInstrucciones;
+                    var longitudM1 = m1.Length;
+                    var longitudM = m1.Length / proporciónPrimeraInstrucciónVsSiguientes;
+                    var longitudR = longitudM * proporciónRespuestasVsInstrucciones;
                     var tókenesS = (int)Math.Round(instrucciónSistema.Length / (double)CarácteresPorTokenInstrucciónSistemaTípicos);
                     double obtenerTókenes(int n, int tókenesObjetivoSRellena) { // Cantidad de tókenes de entrada gastados en el mensaje n y guardables en caché en el mensaje n - 1.
 
                         if (n < 1) return 0;
-                        var largoSRellena = tókenesS < tókenesObjetivoSRellena ? tókenesObjetivoSRellena : tókenesS;
-                        return largoSRellena + largoM1 / (double)CarácteresPorTokenTípicos 
-                            + (n - 1) * (largoM + largoR) / CarácteresPorTokenTípicos;
+                        var longitudSRellena = tókenesS < tókenesObjetivoSRellena ? tókenesObjetivoSRellena : tókenesS;
+                        return longitudSRellena + longitudM1 / (double)CarácteresPorTokenTípicos
+                            + (n - 1) * (longitudM + longitudR) / CarácteresPorTokenTípicos;
 
                     } // obtenerTókenes>
 
@@ -294,7 +306,7 @@ namespace Frugalia {
                         var tókenesObjetivoInstrucciónSistema = r * 128 + tókenesS;
                         var totalCostoTókenesConRelleno = 0.0;
 
-                        for (int n = 1; n <= instruccionesPorConversación; n++) {
+                        for (int n = 1; n <= consultasPorConversación; n++) {
 
                             var tókenesConRelleno = obtenerTókenes(n, tókenesObjetivoInstrucciónSistema);
                             var tókenesAnterioresConRelleno = obtenerTókenes(n - 1, tókenesObjetivoInstrucciónSistema);
@@ -320,12 +332,12 @@ namespace Frugalia {
             } // conversación != null>
 
             var tókenesMínimoParaRellenar
-                = (tókenesObjetivo / (double)consultasEnPocasHoras) * (1 + (consultasEnPocasHoras - 1) * (1 - (1 - factorDescuentoCaché) * FactorÉxitoCaché));
-            var largoMínimoParaRellenar = tókenesMínimoParaRellenar * CarácteresPorTokenInstrucciónSistemaTípicos;
+                = (tókenesObjetivo / consultasDuranteCachéExtendida) * (1 + (consultasDuranteCachéExtendida - 1) * (1 - (1 - factorDescuentoCaché) * FactorÉxitoCaché));
+            var longitudMínimaParaRellenar = tókenesMínimoParaRellenar * CarácteresPorTokenInstrucciónSistemaTípicos;
             var tókenesActuales = instrucciónSistema.Length / CarácteresPorTokenInstrucciónSistemaTípicos;
             var carácteresObjetivo = (int)Math.Ceiling(instrucciónSistema.Length + (tókenesObjetivo - tókenesActuales) * CarácteresPorTokenRellenoMáximos);
 
-            if (evaluarRellenarInstruccionesSistema && instrucciónSistema.Length > largoMínimoParaRellenar && instrucciónSistema.Length < carácteresObjetivo) {
+            if (evaluarRellenarInstruccionesSistema && instrucciónSistema.Length > longitudMínimaParaRellenar && instrucciónSistema.Length < carácteresObjetivo) {
 
                 var inicioRelleno = $"{Fin} A continuación se incluye un texto genérico de ejemplo que no forma parte " + // No quitar la parte {fin} porque es útil para insertar otras instrucciones antes del texto relleno.
                     "de la lógica de negocio. No debes usar su contenido para responder al usuario. ";
@@ -354,23 +366,29 @@ namespace Frugalia {
 
             } // else: rellenoInstrucciónSistema permanece en "".
 
+            if (rellenoInstrucciónSistema.Length > 0)
+                información.AgregarLínea($"Relleno de {rellenoInstrucciónSistema.Length} carácteres de la instrucción del sistema para forzar la activación de " +
+                    $"la caché.");
+
             return rellenoInstrucciónSistema;
 
         } // ObtenerRellenoInstrucciónSistema>
 
 
-        internal Opciones ObtenerOpciones(string instrucciónSistema, bool buscarEnInternet, int largoInstrucciónÚtil, List<Función> funciones,
-            ref StringBuilder información) => new Opciones(Familia, instrucciónSistema, Modelo, Razonamiento, RestricciónRazonamientoAlto, 
-                RestricciónRazonamientoMedio, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, largoInstrucciónÚtil, Verbosidad, buscarEnInternet, 
-                funciones, ref información);
+        internal static Opciones ObtenerOpciones(string instrucciónSistema, bool buscarEnInternet, int longitudInstrucciónÚtil, Familia familia, Modelo modelo,
+            Razonamiento razonamiento, Verbosidad verbosidad, RestricciónRazonamiento restricciónRazonamientoAlto,
+            RestricciónRazonamiento restricciónRazonamientoMedio, RestricciónTókenesSalida restricciónTókenesSalida,
+            RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, List<Función> funciones, ref StringBuilder información)
+                => new Opciones(familia, instrucciónSistema, modelo, razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio,
+                    restricciónTókenesSalida, restricciónTókenesRazonamiento, longitudInstrucciónÚtil, verbosidad, buscarEnInternet, funciones, ref información);
 
 
-        private Respuesta ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, 
+        private static Respuesta ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, Cliente cliente, bool lote,
             ref Dictionary<string, Tókenes> tókenes, out Resultado resultado) {
 
             if (!string.IsNullOrEmpty(instrucción) && conversación != null) throw new Exception("Debe haber instrucción o conversación, pero no ambas.");
 
-            var (respuesta, tókenesUsadosEnConsulta, resultado2) = Cliente.ObtenerRespuesta(instrucción, conversación, opciones, modelo, Lote);
+            var (respuesta, tókenesUsadosEnConsulta, resultado2) = cliente.ObtenerRespuesta(instrucción, conversación, opciones, modelo, lote);
             resultado = resultado2;
             AgregarSumandoPosibleNulo(ref tókenes, tókenesUsadosEnConsulta);
 
@@ -393,8 +411,11 @@ namespace Frugalia {
         /// al modelo</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        private Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
-            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesInstrucciónÚtil, out string respuestaTextoLimpio, 
+        private static Respuesta Responder(string instrucción, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
+            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesInstrucciónÚtil, Cliente cliente, Familia familia, Modelo modelo, bool lote, 
+            Razonamiento razonamiento, Verbosidad verbosidad, bool esCalidadAdaptable, RestricciónTókenesSalida restricciónTókenesSalida,
+            RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, CalidadAdaptable calidadAdaptable, TratamientoNegritas tratamientoNegritas,
+            RestricciónRazonamiento restricciónRazonamientoMedio, RestricciónRazonamiento restricciónRazonamientoAlto, out string respuestaTextoLimpio,
             ref Dictionary<string, Tókenes> tókenes, ref StringBuilder información, out Resultado resultado) {
 
             resultado = Resultado.Respondido;
@@ -407,20 +428,20 @@ namespace Frugalia {
             if (tókenes == null) tókenes = new Dictionary<string, Tókenes>();
             var últimaInstruccion = instrucción;
             if (conversación != null) últimaInstruccion = Conversación.ObtenerTextoÚltimaInstrucción(conversación);
-            
-            Respuesta respuesta;
-            var esCalidadAdaptable = CalidadAdaptable != CalidadAdaptable.No;
-            var largoInstrucciónÚtil = ObtenerLargoInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema, 
-                tókenesAdicionalesInstrucciónÚtil * CarácteresPorTokenTípicos, esCalidadAdaptable);
-            información.AgregarLínea($"Largo instrucción útil = {largoInstrucciónÚtil} carácteres.");
 
-            var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, largoInstrucciónÚtil, funciones, ref información);
+            Respuesta respuesta;
+            var longitudInstrucciónÚtil = ObtenerLongitudInstrucciónÚtil(últimaInstruccion, instrucciónSistema, rellenoInstrucciónSistema,
+                tókenesAdicionalesInstrucciónÚtil * CarácteresPorTokenTípicos, esCalidadAdaptable);
+            if (EsRazonamientoAdaptable(razonamiento)) información.AgregarLínea($"Longitud instrucción útil = {longitudInstrucciónÚtil} carácteres.");
+
+            var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, longitudInstrucciónÚtil, familia, modelo, razonamiento, verbosidad, 
+                restricciónRazonamientoAlto, restricciónRazonamientoMedio, restricciónTókenesSalida, restricciónTókenesRazonamiento, funciones, ref información);
             if (esCalidadAdaptable) {
 
                 var instrucciónAplicable = string.IsNullOrEmpty(instrucción) ? últimaInstruccion : instrucción;
-                if (instrucciónAplicable.IndexOf(UsaModeloMuchoMejor, StringComparison.OrdinalIgnoreCase) >= 0 
+                if (instrucciónAplicable.IndexOf(UsaModeloMuchoMejor, StringComparison.OrdinalIgnoreCase) >= 0
                     || instrucciónAplicable.IndexOf(UsaModeloMejor, StringComparison.OrdinalIgnoreCase) >= 0
-                    || instrucciónAplicable.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción de sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
+                    || instrucciónAplicable.IndexOf(LoHiceBien, StringComparison.OrdinalIgnoreCase) >= 0) { // Para evitar que algún usuario escriba las etiquetas especiales en su mensaje y haga que el modelo repita esas etiquetas forzando el uso de un modelo más costoso sin ser necesario. Esto se podría manejar también a nivel de la instrucción del sistema si los usuarios se pusieran más creativos con formas de forzar a que el modelo conteste con esas etiquetas específicas.
 
                     información.AgregarLínea("El usuario escribió palabras protegidas.");
 
@@ -440,13 +461,13 @@ namespace Frugalia {
                     : $"{instruccionesOriginales}.{InstrucciónAutoevaluación}";
                 opciones.EscribirInstrucciónSistema(nuevasInstruccionesSistema);
 
-                var restricciónTókenesSalida = RestricciónTókenesSalida; // Hace copia para no reemplazar la propiedad original. Solo se reduce cuando inicia en Alta o Media.
-                var restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento;
+                var restricciónTókenesSalidaCopia = restricciónTókenesSalida; // Hace copia para no reemplazar la propiedad original. Solo se reduce cuando inicia en Alta o Media.
+                var restricciónTókenesRazonamientoCopia = restricciónTókenesRazonamiento;
                 var reintentoMenosRestrictivoRealizado = false;
 
                 reintentarMenosRestrictiva:
-                var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out Resultado resultadoInicial);
-                var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(TratamientoNegritas);
+                var respuestaInicial = ObtenerRespuesta(instrucción, conversación, opciones, modelo, cliente, lote, ref tókenes, out Resultado resultadoInicial);
+                var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(tratamientoNegritas);
 
                 int nivelMejoramientoSugerido;
                 if (textoRespuesta.Contains(LoHiceBien)) {
@@ -464,39 +485,39 @@ namespace Frugalia {
 
                         var informaciónMáximosTókenesAlcanzados = $"No se terminó la respuesta en los tókenes máximos";
 
-                        if (Modelo.ObtenerTamaño() == Tamaño.Pequeño || Modelo.ObtenerTamaño() == Tamaño.MuyPequeño) {
-                                                      
+                        if (modelo.ObtenerTamaño() == Tamaño.Pequeño || modelo.ObtenerTamaño() == Tamaño.MuyPequeño) {
+
                             var modificadaRestricción = false;
-                            switch (restricciónTókenesSalida) { // Debido a que normalmente el con el modo CalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
+                            switch (restricciónTókenesSalidaCopia) { // Debido a que normalmente el con el modo CalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
                             case RestricciónTókenesSalida.Alta:
-                                
-                                restricciónTókenesSalida = RestricciónTókenesSalida.Media;
+
+                                restricciónTókenesSalidaCopia = RestricciónTókenesSalida.Media;
                                 modificadaRestricción = true;
                                 break;
 
                             case RestricciónTókenesSalida.Media:
 
-                                restricciónTókenesSalida = RestricciónTókenesSalida.Baja;
+                                restricciónTókenesSalidaCopia = RestricciónTókenesSalida.Baja;
                                 modificadaRestricción = true;
                                 break;
 
                             case RestricciónTókenesSalida.Baja:
-                            case RestricciónTókenesSalida.Ninguna:                                
+                            case RestricciónTókenesSalida.Ninguna:
                                 break;
                             default:
                                 throw new NotImplementedException();
                             }
 
-                            switch (restricciónTókenesRazonamiento) { // Debido a que normalmente el con el modo CalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
+                            switch (restricciónTókenesRazonamientoCopia) { // Debido a que normalmente el con el modo CalidadAdaptable se hace consulta inicialmente con un modelo pequeño o muy pequeño, se acepta unas consultas adicionales reduciendo la restricción a los tókenes de salida, hasta máximo nivel bajo. Esto significa que se llegaría aceptar hasta 3 veces más tókenes de salida de lo normal, que considerando las 3 respuestas, serían 1 + 2 + 3 = 6 veces más tókenes de lo normal. Lo cual puede ser aceptable en términos de costos en modelos pequeños y muy pequeños.
                             case RestricciónTókenesRazonamiento.Alta:
 
-                                restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Media;
+                                restricciónTókenesRazonamientoCopia = RestricciónTókenesRazonamiento.Media;
                                 modificadaRestricción = true;
                                 break;
 
                             case RestricciónTókenesRazonamiento.Media:
 
-                                restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Baja;
+                                restricciónTókenesRazonamientoCopia = RestricciónTókenesRazonamiento.Baja;
                                 modificadaRestricción = true;
                                 break;
 
@@ -510,10 +531,10 @@ namespace Frugalia {
                             if (modificadaRestricción) {
 
                                 if (!reintentoMenosRestrictivoRealizado) { // Se asegura que se hace solo un intento de reducción de restricción de tókenes de salida. Más de un intento, se puede tardar mucho la consulta y escalar el costo de una manera que no debería ser automática.
-                                                            
+
                                     información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Se reintentó con menos restricciones.");
-                                    opciones.EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, 
-                                        Modelo, largoInstrucciónÚtil, restricciónTókenesSalida, restricciónTókenesRazonamiento, Verbosidad, ref información);
+                                    opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio,
+                                        modelo, longitudInstrucciónÚtil, restricciónTókenesSalidaCopia, restricciónTókenesRazonamientoCopia, verbosidad, ref información);
                                     reintentoMenosRestrictivoRealizado = true;
                                     goto reintentarMenosRestrictiva;
 
@@ -531,7 +552,7 @@ namespace Frugalia {
                             información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Cómo el modelo no era muy pequeño o pequeño, no se reintentó.");
                             nivelMejoramientoSugerido = 0; // Para modelos medios o grandes, puede no justificar el costo extra de la llamada adicionales para intentar corregir este problema usando una menor restricción de máximos tókenes de salida.
                         }
-                                               
+
                     } else { // El modelo olvidó agregar la etiqueta de autoevaluación. No tiene problemas de máximos tókenes de salida alcanzados.
 
                         resultado = Resultado.SinAutoevaluación; // El modelo no contestó con la etiqueta correcta. No debería pasar mucho. Se devuelve el estado apropiado al usuario librería para que pueda llevar un registro de cuándo sucede esto y tomar las acciones necesarias. Al usuario del programa se le responde normalmente sin realizar ningún mejoramiento del modelo. Lo peor que puede pasa es que el usuario a veces obtenga resultados no tan buenos con un modelo más pequeño, es similar a lo que sucede cuando el modelo es ignorantemente confidente y se califica [lo-hice-bien] sin haberlo hecho bien.
@@ -546,20 +567,20 @@ namespace Frugalia {
 
                     respuesta = respuestaInicial;
                     if (resultado != Resultado.SinAutoevaluación) resultado = resultadoInicial;
-                    información.AgregarLínea($"No se realizó mejoramiento por encima del modelo {Modelo} y de razonamiento {Razonamiento}.");
+                    información.AgregarLínea($"No se realizó mejoramiento por encima del modelo {modelo} y de razonamiento {razonamiento}.");
 
                 } else {
 
-                    var modeloMejoradoNulable = Modelo.ObtenerModeloMejorado(Modelo, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
+                    var modeloMejoradoNulable = Modelo.ObtenerModeloMejorado(modelo, calidadAdaptable, nivelMejoramientoSugerido, ref información);
                     if (modeloMejoradoNulable == null) {
                         respuesta = respuestaInicial; // No hay modelos disponibles por encima del usado inicialmente.
                         resultado = resultadoInicial;
                     } else {
 
                         var modeloMejorado = (Modelo)modeloMejoradoNulable;
-                        var razonamientoMejorado = ObtenerRazonamientoMejorado(Razonamiento, CalidadAdaptable, nivelMejoramientoSugerido, ref información);
+                        var razonamientoMejorado = ObtenerRazonamientoMejorado(razonamiento, calidadAdaptable, nivelMejoramientoSugerido, ref información);
 
-                        if (Modelo.Nombre == modeloMejorado.Nombre && razonamientoMejorado == Razonamiento) {
+                        if (modelo.Nombre == modeloMejorado.Nombre && razonamientoMejorado == razonamiento) {
                             respuesta = respuestaInicial;
                             resultado = resultadoInicial;
                             información.AgregarLínea($"No se repitió la consulta mejorada porque se retringió el mejoramiento.");
@@ -569,11 +590,11 @@ namespace Frugalia {
 
                             opciones.EscribirInstrucciónSistema(instruccionesOriginales); // Con el nuevo modelo usa las instrucciones originales, sin la instrucción de autoevaluacion porque solo se autoevaluará una vez.
 
-                            opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio,
-                                modeloMejorado, largoInstrucciónÚtil, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, Verbosidad, ref información);
-                           
-                            respuesta = ObtenerRespuesta(instrucción, conversación, opciones, modeloMejorado, ref tókenes, out resultado);
-                            
+                            opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, restricciónRazonamientoAlto, restricciónRazonamientoMedio,
+                                modeloMejorado, longitudInstrucciónÚtil, restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, ref información);
+
+                            respuesta = ObtenerRespuesta(instrucción, conversación, opciones, modeloMejorado, cliente, lote, ref tókenes, out resultado);
+
                             if (resultado == Resultado.MáximosTókenesAlcanzados)
                                 información.AgregarLínea($"Se alcanzó la cantidad máxima de tókenes en la consulta mejorada. Se recomienda aumentar los tókenes " +
                                     $"máximos de razonamiento o la verbosidad si en tu caso de uso estás encontrando frecuentemente esta situación."); // Se prefiere no reintentar con una restricción menor en máximos tókenes de salida en estos casos porque al ser un modelo mejorado no solo es más caro si no que también puede generar más tókenes de razonamiento. Entonces repetir de manera automática la consulta con menos restricción de tókenes podría ser costoso para el usuario de la librería.
@@ -585,14 +606,14 @@ namespace Frugalia {
                 }
 
             } else {
-                respuesta = ObtenerRespuesta(instrucción, conversación, opciones, Modelo, ref tókenes, out resultado);
+                respuesta = ObtenerRespuesta(instrucción, conversación, opciones, modelo, cliente, lote, ref tókenes, out resultado);
             }
 
-            respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(TratamientoNegritas);
+            respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(tratamientoNegritas);
             respuestaTextoLimpio = esCalidadAdaptable
                 ? respuestaTextoLimpio.Replace(LoHiceBien, "").Replace(UsaModeloMejor, "").Replace(UsaModeloMuchoMejor, "") : respuestaTextoLimpio; // También se limpia el texto MedioRecomendado y el GrandeRecomendado porque podría darse el caso en el que el modelo sugiera un modelo superior, pero no hayan modelos superiores disponbiles.
             respuestaTextoLimpio = respuestaTextoLimpio.TrimEnd();
-            if (resultado == Resultado.MáximosTókenesAlcanzados) 
+            if (resultado == Resultado.MáximosTókenesAlcanzados)
                 respuestaTextoLimpio = "No pude completar la respuesta porque se alcanzó el límite de texto o de capacidad de razonamiento. " +
                     "Intenta hacer una consulta más sencilla, concreta o separarla en varias preguntas."; // Este mensaje no sigue el tono especificado por el usuario de la libreria en instrucciones sistema, pero se acepta por ser algo que no debería suceder mucho. Se prefiere responder al usuario del programa con un tono diferente esperado que no responderle nada.
             return respuesta;
@@ -607,39 +628,42 @@ namespace Frugalia {
         /// <param name="instrucción">Instrucción del usuario específica.</param>
         /// <param name="error"></param>
         /// <returns></returns>
-        public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
+        public string Consulta(int consultasDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
             out string error, out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado, bool buscarEnInternet = false) {
 
             información = new StringBuilder();
             tókenes = new Dictionary<string, Tókenes>();
             resultado = Resultado.Abortado;
             if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
-            if (consultasEnPocasHoras <= 0) { error = "consultasEnPocasHoras debe ser mayor a 0."; return null; }
+            if (consultasDuranteCachéExtendida <= 0) { error = "consultasDuranteCachéExtendida debe ser mayor a 0."; return null; }
             if (string.IsNullOrWhiteSpace(instrucción)) { error = "La instrucción del usuario no puede ser vacía."; return null; }
 
             if (instrucciónSistema == null) instrucciónSistema = "";
 
             try {
 
-                instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, conversación: null,
-                    instruccionesPorConversación: 1, proporciónPrimerInstrucciónVsSiguientes: 1, proporciónRespuestasVsInstrucciones: 1, tókenesAdicionales: 0);
+                instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema,
+                    conversación: null, consultasPorConversación: 1, proporciónPrimeraInstrucciónVsSiguientes: 1, proporciónRespuestasVsInstrucciones: 1,
+                    tókenesAdicionales: 0, Modelo, RellenarInstruccionesSistema, ref información);
 
                 if (EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
                     error = $"Se supera el límite de tókenes de entrada permitidos ({Modelo.TókenesEntradaLímiteSeguro}) para el modelo {Modelo}. " +
-                        "Reduce el tamaño de la instrucción de sistema o la instrucción del usuario, o usa un modelo con límite mayor.";
+                        "Reduce el tamaño de la instrucción del sistema o la instrucción del usuario, o usa un modelo con límite mayor.";
                     return null;
                 }
 
                 var razonamientoEfectivo = ObtenerRazonamientoEfectivo(Razonamiento, RestricciónRazonamientoAlto, RestricciónRazonamientoMedio, Modelo,
-                    ObtenerLargoInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema, largoAdicional: 0, 
+                    ObtenerLongitudInstrucciónÚtil(instrucción, instrucciónSistema, rellenoInstrucciónSistema, longitudAdicional: 0,
                     CalidadAdaptable != CalidadAdaptable.No), out _); // No se agrega a la información el resultado de esta función porque esta función se vuelve a llamar internamente en Responder().
                 if (buscarEnInternet && (razonamientoEfectivo == RazonamientoEfectivo.Ninguno)) { // Buscar en internet no se permite hacer con Razonamiento = Ninguno.
                     error = "No se puede ejecutar una búsqueda en internet con Razonamiento = Ninguno.";
                     return null;
                 }
 
-                Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null, 
-                    tókenesAdicionalesInstrucciónÚtil: 0, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                Responder(instrucción, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
+                    tókenesAdicionalesInstrucciónÚtil: 0, Cliente, Familia, Modelo, Lote, Razonamiento, Verbosidad, EsCalidadAdaptable, RestricciónTókenesSalida, 
+                    RestricciónTókenesRazonamiento, CalidadAdaptable, TratamientoNegritas, RestricciónRazonamientoMedio, RestricciónRazonamientoAlto, 
+                    out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
@@ -657,7 +681,7 @@ namespace Frugalia {
         /// <summary>
         /// Con archivos.
         /// </summary>
-        /// <param name="consultasEnPocasHoras"></param>
+        /// <param name="conversacionesDuranteCachéExtendida"></param>
         /// <param name="instrucciónSistema"></param>
         /// <param name="rellenoInstrucciónSistema"></param>
         /// <param name="instrucción"></param>
@@ -666,15 +690,15 @@ namespace Frugalia {
         /// <param name="tókenes"></param>
         /// <param name="tipoArchivo"></param>
         /// <returns></returns>
-        public string Consulta(int consultasEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
-            List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo, out StringBuilder información, 
+        public string Consulta(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, string instrucción,
+            List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo, out StringBuilder información,
             out Resultado resultado) {
 
             resultado = Resultado.Abortado;
             información = new StringBuilder();
             tókenes = new Dictionary<string, Tókenes>();
             if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
-            if (consultasEnPocasHoras <= 0) { error = "consultasEnPocasHoras debe ser mayor a 0."; return null; }
+            if (conversacionesDuranteCachéExtendida <= 0) { error = "conversacionesDuranteCachéExtendida debe ser mayor a 0."; return null; }
             if (string.IsNullOrWhiteSpace(instrucción)) { error = "La instrucción del usuario no puede ser vacía."; return null; }
 
             if (instrucciónSistema == null) instrucciónSistema = "";
@@ -684,16 +708,16 @@ namespace Frugalia {
 
                 var tókenesArchivos = Archivador.EstimarTókenes(rutasArchivos);
 
-                instrucciónSistema += ObtenerRellenoInstrucciónSistema(consultasEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema, 
-                    conversación: null, instruccionesPorConversación: 1, proporciónPrimerInstrucciónVsSiguientes: 1, proporciónRespuestasVsInstrucciones: 1, 
-                    tókenesAdicionales: tókenesArchivos);
+                instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema,
+                    conversación: null, consultasPorConversación: 1, proporciónPrimeraInstrucciónVsSiguientes: 1, proporciónRespuestasVsInstrucciones: 1,
+                    tókenesAdicionales: tókenesArchivos, Modelo, RellenarInstruccionesSistema, ref información);
 
                 if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
 
-                if (tókenesArchivos 
+                if (tókenesArchivos
                     + EstimarTókenesEntradaInstrucciones(instrucción, instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
                     error = $"Se supera el límite de tókenes de entrada permitidos ({Modelo.TókenesEntradaLímiteSeguro}) para el modelo {Modelo}. " +
-                        "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o los archivos adjuntos, o usa un modelo con un límite mayor.";
+                        "Reduce el tamaño de la instrucción del sistema, la instrucción del usuario o los archivos adjuntos, o usa un modelo con un límite mayor.";
                     return null;
                 }
 
@@ -702,8 +726,9 @@ namespace Frugalia {
                 if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) { error = conversaciónConArchivosYError.Error; return null; }
 
                 var respuesta = Responder(instrucción: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
-                    buscarEnInternet: false, funciones: null, tipoArchivo != TipoArchivo.Imagen ? tókenesArchivos : 0, // Si los archivos son imágenes, por el momento no se suman los tókenes del archivo a los tókenes de entrada adicionales porque el caso de imágenes muy simples (por ejemplo, un imagen de un solo color) no implicarían una alta carga de razonamiento adicional requerido, en cambio imágenes más complejas como fotos de tablas nutricionales sí implicarían una alta carga de razonamiento adicional. Por lo tanto, derivar los tókenes adicionales de entrada de los tókenes del tamaño del archivo de la imagen no sería muy apropiado. Si se quisiera ser más estricto, se debería preanalizar la imagen para determinar que tanta carga de razonamiento extra puede requerir.
-                    out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                    buscarEnInternet: false, funciones: null, tipoArchivo != TipoArchivo.Imagen ? tókenesArchivos : 0, Cliente, Familia, Modelo, Lote, Razonamiento,  // Si los archivos son imágenes, por el momento no se suman los tókenes del archivo a los tókenes de entrada adicionales porque el caso de imágenes muy simples (por ejemplo, un imagen de un solo color) no implicarían una alta carga de razonamiento adicional requerido, en cambio imágenes más complejas como fotos de tablas nutricionales sí implicarían una alta carga de razonamiento adicional. Por lo tanto, derivar los tókenes adicionales de entrada de los tókenes del tamaño del archivo de la imagen no sería muy apropiado. Si se quisiera ser más estricto, se debería preanalizar la imagen para determinar que tanta carga de razonamiento extra puede requerir.
+                    Verbosidad, EsCalidadAdaptable, RestricciónTókenesSalida, RestricciónTókenesRazonamiento, CalidadAdaptable, TratamientoNegritas, 
+                    RestricciónRazonamientoMedio, RestricciónRazonamientoAlto, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
                 error = null;
                 return respuestaTextoLimpio;
 
@@ -721,49 +746,107 @@ namespace Frugalia {
 
 
         /// <summary>
-        /// Con funciones.
+        /// Ejecuta una consulta en el contexto de una conversación reutilizable, habilitando llamadas a funciones.
+        /// El modelo puede solicitar ejecutar una o varias funciones, y tras cada ejecución se retroalimenta la conversación
+        /// con el resultado para que el modelo continúe hasta producir la respuesta final al usuario o hasta alcanzar
+        /// el límite de iteraciones permitido.
         /// </summary>
-        /// <param name="conversacionesEnPocasHoras"></param>
-        /// <param name="instrucciónSistema"></param>
-        /// <param name="rellenoInstrucciónSistema"></param>
-        /// <param name="conversación"></param>
-        /// <param name="funciones"></param>
-        /// <param name="error"></param>
-        /// <param name="tókenes"></param>
-        /// <param name="funciónEjecutada"></param>
-        /// <returns></returns>
-        public string Consulta(int conversacionesEnPocasHoras, string instrucciónSistema, ref string rellenoInstrucciónSistema, Conversación conversación,
-            List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int instruccionesPorConversación,
+        /// <param name="conversacionesDuranteCachéExtendida">
+        /// Estimación de cuántas conversaciones completas se reutilizarán durante la ventana de caché extendida del modelo.
+        /// Se usa para decidir si conviene rellenar las instrucciones del sistema para activar la caché de lectura y reducir costos.
+        /// </param>
+        /// <param name="instrucciónSistema">
+        /// Instrucciones del sistema (rol, tono, reglas y límites) que guían el comportamiento del asistente durante toda la consulta.
+        /// Pueden ser rellenadas automáticamente para activar caché según configuración y estimación de uso.
+        /// </param>
+        /// <param name="rellenoInstrucciónSistema">
+        /// Texto de relleno agregado a las instrucciones del sistema para superar el umbral de activación de caché de entrada del modelo.
+        /// Se pasa por referencia para conservar y reutilizar el mismo relleno en llamadas subsecuentes, evitando recalcularlo.
+        /// </param>
+        /// <param name="conversación">
+        /// Conversación reutilizable que contiene el historial de mensajes del usuario y del asistente IA.
+        /// No debe ser nula; se usará para agregar respuestas y resultados de funciones durante el ciclo de consulta.
+        /// </param>
+        /// <param name="funciones">
+        /// Lista de funciones disponibles para que el modelo solicite su ejecución cuando lo estime necesario.
+        /// Cada función define su nombre, parámetros y lógica de ejecución.
+        /// </param>
+        /// <param name="error">
+        /// Devuelve la descripción del error si la consulta falla (por ejemplo, por superar límites de tókenes de entrada,
+        /// argumentos de función inválidos o alcanzar el máximo de iteraciones). Nulo si no hubo errores.
+        /// </param>
+        /// <param name="tókenes">
+        /// Devuelve el detalle de tókenes consumidos, separando cada iteración del ciclo de funciones
+        /// (se agrega un sufijo con el número de consulta). Útil para auditoría de costos.
+        /// </param>
+        /// <param name="consultasPorConversación">
+        /// Estimación de la cantidad de instrucciones del usuario que se darán dentro de una conversación típica.
+        /// Se usa para el cálculo del relleno de instrucciones del sistema y su conveniencia económica.
+        /// </param>
+        /// <param name="proporciónPrimerInstrucciónVsSiguientes">
+        /// Relación entre la longitud de la primera instrucción del usuario y la longitud promedio de las siguientes.
+        /// Se utiliza para estimar la evolución del costo de entrada y el efecto de la caché.
+        /// </param>
+        /// <param name="proporciónRespuestasVsInstrucciones">
+        /// Relación entre la longitud de las respuestas del asistente y la de las instrucciones del usuario.
+        /// Se usa en el modelo de estimación de tókenes de entrada acumulados para evaluar el relleno de sistema.
+        /// </param>
+        /// <param name="funciónEjecutada">
+        /// Indica si, durante la consulta, se llegó a ejecutar al menos una función. True si se ejecutó alguna; false en caso contrario.
+        /// </param>
+        /// <param name="información">
+        /// Devuelve un registro informativo de decisiones internas (relleno de sistema, cambios de restricciones,
+        /// sugerencias del modelo, selección de modelo y razonamiento, advertencias y otros eventos relevantes).
+        /// </param>
+        /// <param name="resultado">
+        /// Devuelve el estado final de la consulta: Respondido, Abortado, MáximosTókenesAlcanzados, MáximasIteracionesConFunción,
+        /// SinAutoevaluación o OtroError, según corresponda.
+        /// </param>
+        /// <param name="usarModeloYRazonamientoMínimosEnRespuestaFunción">Cuando el modelo solicita ejecutar una función, luego de obtener el resultado de la 
+        /// función, se vuelve a llamar al modelo para que genere la respuesta final al usuario. En esta segunda llamada, por lo general no es necesario usar 
+        /// un modelo grande ni un razonamiento alto, ya que el trabajo pesado lo hizo la primera llamada al modelo para decidir qué función ejecutar y cómo 
+        /// ejecutarla. Por lo tanto, si este parámetro es verdadero, se fuerza a que en la segunda llamada se use el modelo más pequeño disponible y razonamiento 
+        /// ninguno. Esto podría reducir costos y tiempos de respuesta. Si se desea que en la segunda llamada se use el mismo modelo y razonamiento 
+        /// que en la primera llamada, se debe pasar falso en este parámetro. Aunque en el papel suena a buena idea, la utilidad de pasar verdadero en este 
+        /// parámetro dependerá del caso de uso. Sí la conversación ya traía caché activada, al pasar a otro modelo esa caché ya no será accesible para el nuevo
+        /// modelo, por lo tanto todos los tókenes del contexto de la conversación se cobrarán a precio de no caché. Esto, dependiendo de la tabla de precios y 
+        /// del modelo de partida, podría hacer que resulte ser más cara la respuesta final con el modelo más pequeño y con un deterioro en la calidad de la
+        /// respuesta.</param>
+        /// <returns>
+        /// El texto de respuesta final para el usuario, limpio de marcas auxiliares internas. Devuelve null si ocurre un error.
+        /// </returns>
+        public string Consulta(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, Conversación conversación,
+            List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int consultasPorConversación,
             double proporciónPrimerInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones, out bool funciónEjecutada, out StringBuilder información, 
-            out Resultado resultado) {
+            out Resultado resultado, bool usarModeloYRazonamientoMínimosEnRespuestaFunción = false) {
 
             resultado = Resultado.Abortado;
             información = new StringBuilder();
             tókenes = new Dictionary<string, Tókenes>();
             funciónEjecutada = false;
             if (!Iniciado) { error = "No se ha iniciado correctamente el servicio."; return null; }
-            if (conversacionesEnPocasHoras <= 0) { error = "conversacionesEnPocasHoras debe ser mayor a 0."; return null; }
-            if (instruccionesPorConversación <= 0) { error = "instruccionesPorConversación debe ser mayor a 0."; return null; }
+            if (conversacionesDuranteCachéExtendida <= 0) { error = "conversacionesDuranteCachéExtendida debe ser mayor a 0."; return null; }
+            if (consultasPorConversación <= 0) { error = "consultasPorConversación debe ser mayor a 0."; return null; }
             if (proporciónPrimerInstrucciónVsSiguientes <= 0) { error = "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0."; return null; }
             if (proporciónRespuestasVsInstrucciones < 0) { error = "proporciónRespuestasVsInstrucciones no puede ser negativo."; return null; }
             if (conversación == null) { error = "No se permite pasar objeto conversación en nulo. Se debe reusar la conversación."; return null; }
 
             if (instrucciónSistema == null) instrucciónSistema = "";
 
-            var máximasConsultas = 5; // Límite de iteraciones entre llamadas a la función y a la IA para evitar que se quede en un ciclo infinito.
+            var máximasConsultasFunciones = 5; // Límite de iteraciones entre llamadas a la función y a la IA para evitar que se quede en un ciclo infinito.
             var consultas = 0;
 
             try {
 
                 var tókenesFunciones = Función.EstimarTókenes(funciones);
-                instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesEnPocasHoras, instrucciónSistema, ref rellenoInstrucciónSistema,
-                    conversación, instruccionesPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones, 
-                    tókenesAdicionales: tókenesFunciones);
+                instrucciónSistema += ObtenerRellenoInstrucciónSistema(conversacionesDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema,
+                    conversación, consultasPorConversación, proporciónPrimerInstrucciónVsSiguientes, proporciónRespuestasVsInstrucciones,
+                    tókenesAdicionales: tókenesFunciones, Modelo, RellenarInstruccionesSistema, ref información);
 
                 if (conversación.EstimarTókenesTotales() + tókenesFunciones // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
                     + EstimarTókenesEntradaInstrucciones("", instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
                     error = $"Se supera el límite de tókenes de entrada permitidos ({Modelo.TókenesEntradaLímiteSeguro}) para el modelo {Modelo}. " +
-                        "Reduce el tamaño de la instrucción de sistema, la instrucción del usuario o las funciones, o usa un modelo con un límite mayor.";
+                        "Reduce el tamaño de la instrucción del sistema, la instrucción del usuario o las funciones, o usa un modelo con un límite mayor.";
                     return null;
                 }
 
@@ -774,14 +857,29 @@ namespace Frugalia {
                 do { // Se sigue llamando a la API mientras esta siga solicitando ejecutar funciones y termina cuando el modelo ya no pida más; lo habitual es que el modelo se ejecute dos veces: primero identifica que necesita una función y luego usa el resultado para responder al usuario. Podrían existir casos en los que intente varias funciones en cola, así que se permite repetirse las veces necesarias dentro de un límite razonable.
 
                     consultas++;
-                    if (consultas > máximasConsultas) {
+                    if (consultas > máximasConsultasFunciones) {
                         resultado = Resultado.MáximasIteracionesConFunción;
-                        error = $"Se llegó al máximo de {máximasConsultas} consultas en la función ConsultaConFunciones() y no se pudo llegar a una solución.";
+                        error = $"Se llegó al máximo de {máximasConsultasFunciones} consultas en la función ConsultaConFunciones() y no se pudo llegar a una solución.";
                         return null;
                     }
+
+                    var tókenesConsulta = new Dictionary<string, Tókenes>();
+                    var modeloAUsar = Modelo;
+                    var razonamientoAUsar = Razonamiento;
+                    if (usarModeloYRazonamientoMínimosEnRespuestaFunción && funciónEjecutadaÚltimaConsulta) { // Una vez se tiene la respuesta requerida por el usuario, componer el mensaje de respuesta por lo general no requiere alto razonamiento ni modelos grandes.
+                        modeloAUsar = ObtenerModeloMásPequeño(Modelo.Familia);
+                        razonamientoAUsar = Razonamiento.Ninguno;
+                    }
+
                     respuesta = Responder(instrucción: null, conversación, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet: false,
-                        funciones, tókenesFunciones, out respuestaTextoLimpio, ref tókenes, ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
+                        funciones, tókenesFunciones, Cliente, Familia, modeloAUsar, Lote, razonamientoAUsar, Verbosidad, EsCalidadAdaptable,
+                        RestricciónTókenesSalida, RestricciónTókenesRazonamiento, CalidadAdaptable, TratamientoNegritas, RestricciónRazonamientoMedio, 
+                        RestricciónRazonamientoAlto, out respuestaTextoLimpio, ref tókenesConsulta, ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
                     funciónEjecutadaÚltimaConsulta = false;
+
+                    foreach (var cv in tókenesConsulta) {
+                        tókenes.Add($"{cv.Key}-{consultas}", cv.Value); // Se separan los tókenes por cada consulta de la función para poder hacer una supervisión más granular de los tókenes gastados en este ciclo Do...While. 
+                    }
 
                     foreach (var ítemRespuesta in respuesta.ObtenerÍtemsRespuesta()) {
 

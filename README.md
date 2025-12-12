@@ -40,7 +40,7 @@ Frugalia está pensada para actuar como capa intermedia y ayudarte a resolver pr
 
 ### 1. Optimización de costos por diseño
    
-•	Relleno inteligente de instrucciones de sistema (Prompt Padding Optimization): La librería implementa un mecanismo inteligente que rellena las instrucciones de sistema para activar la caché de tókenes en los modelos compatibles (como GPT). Esto reduce el costo de las consultas repetidas, aprovechando los descuentos de la caché de entrada.
+•	Relleno inteligente de instrucciones del sistema (Prompt Padding Optimization): La librería implementa un mecanismo inteligente que rellena las instrucciones del sistema para activar la caché de tókenes en los modelos compatibles (como GPT). Esto reduce el costo de las consultas repetidas, aprovechando los descuentos de la caché de entrada.
 
 •	Control y visualización de costos: Cada consulta devuelve el costo estimado en moneda local, desglosando el uso de tókenes en caché, no caché, razonamiento y almacenamiento, para una gestión transparente y precisa.
 
@@ -95,7 +95,7 @@ if (!string.IsNullOrEmpty(errorInicio)) {
 
 var rellenoInstruccionSistema = "";
 var respuesta = servicio.Consulta(
-   consultasEnPocasHoras: 10,
+   consultasDuranteCachéExtendida: 10,
    instrucciónSistema: "Eres un asistente breve y directo.",
    ref rellenoInstruccionSistema,
    instrucción: "Explícame qué hace Frugalia en dos frases.",

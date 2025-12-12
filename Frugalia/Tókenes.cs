@@ -65,7 +65,7 @@ namespace Frugalia {
         /// <summary>
         /// Clave que identifica un grupo de tókenes sumables.
         /// </summary>
-        public string Clave => $"{NombreModelo}|{Lote}|{MinutosEscrituraManualCaché}";
+        public string Clave => $"{NombreModelo}{(Lote ? "-lote" : "")}{(MinutosEscrituraManualCaché == 0 ? "" : $"-{MinutosEscrituraManualCaché}mincaché")}";
 
 
         internal Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché, int? escrituraManualCaché, 
@@ -126,8 +126,8 @@ namespace Frugalia {
         } // +>
 
 
-        public override string ToString() => $"{NombreModelo}{(Lote ? "-lote" : "")}: ENC={EntradaNoCaché} EC={EntradaCaché} SNR={SalidaNoRazonamiento} " +
-            $"SR={SalidaRazonamiento} EMC={EscrituraManualCaché} MEMC={MinutosEscrituraManualCaché}";
+        public override string ToString() => $"{Clave}: E¬C={EntradaNoCaché,4} EC={EntradaCaché,4} S¬R={SalidaNoRazonamiento,4} " +
+            $"SR={SalidaRazonamiento,4} EMC={EscrituraManualCaché,4} MEMC={MinutosEscrituraManualCaché,4}";
 
 
         private static decimal CalcularCostoMonedaLocalTókenes(int tókenes, decimal costoPorMillón, decimal tasaCambioUsd)
@@ -214,7 +214,7 @@ namespace Frugalia {
 
             }
 
-            return $"{texto}Total Todos: {FormatearMoneda(totalTodos)}";
+            return $"{texto}Total todos: {FormatearMoneda(totalTodos)}";
 
         } // ObtenerTextoCostoTókenes>
 
