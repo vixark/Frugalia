@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using static Frugalia.GlobalFrugalia;
-using static Frugalia.General;
 
 
 namespace Frugalia {
@@ -106,7 +105,15 @@ namespace Frugalia {
 
         private Func<string, bool> FunciónTieneCachéExtendidaGratuita { get; }
 
-        internal bool TieneCachéExtendidaGratuita() => FunciónTieneCachéExtendidaGratuita(Nombre); // Funcionalidad de modelos que activan la caché automáticamente (Por ejemplo, GPT) que permiten establecer la duración de la caché por varias horas sin costo adicional. En el caso de GPT por 24 horas.
+        internal bool TieneCachéExtendidaGratuita() {
+
+            if (FunciónTieneCachéExtendidaGratuita == null) {
+                return FunciónTieneCachéExtendidaGratuita(Nombre);
+            } else {
+                throw new Exception($"No se ha configurado la función TieneCAchéExtendidaGratuita para {Nombre}"); 
+            }
+
+        } // Funcionalidad de modelos que activan la caché automáticamente (Por ejemplo, GPT) que permiten establecer la duración de la caché por varias horas sin costo adicional. En el caso de GPT por 24 horas.
 
 
         internal Modelo(string nombre, Familia familia, decimal precioEntradaNoCaché, decimal precioEntradaCaché, decimal precioSalidaNoRazonamiento,
@@ -173,14 +180,14 @@ namespace Frugalia {
         internal static double ObtenerFactorDescuentoCaché(Modelo modelo) => (double)(modelo.PrecioEntradaCaché / (modelo).PrecioEntradaNoCaché);
 
 
-        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido, 
+        internal static Modelo? ObtenerModeloMejorado(Modelo modeloOriginal, CalidadAdaptable calidadAdaptable, int nivelMejoramientoSugerido,
             ref StringBuilder información) {
 
             var nivelMejoramiento = ObtenerNivelMejoramientoModeloEfectivo(calidadAdaptable, nivelMejoramientoSugerido);
 
             if (nivelMejoramiento == 0) { información.AgregarLínea($"No se mejoró el modelo."); return modeloOriginal; }
             if (nivelMejoramiento < 0 || nivelMejoramiento >= 3) throw new Exception("Parámetro incorrecto nivelesMejoramiento. Solo puede ser 1 o 2.");
- 
+
             reintentar:
             var nombreModeloMejorado = nivelMejoramiento == 2 ? modeloOriginal.NombreModelo2NivelesSuperior : modeloOriginal.NombreModelo1NivelSuperior;
             if (nombreModeloMejorado.Contains("[deshabilitado]")) nombreModeloMejorado = "";

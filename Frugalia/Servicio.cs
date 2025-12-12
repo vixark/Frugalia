@@ -153,9 +153,9 @@ namespace Frugalia {
         /// Tókenes de archivos y funciones
         /// </param>
         /// <returns></returns>
-        internal static string ObtenerRellenoInstrucciónSistema(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema,
-            Conversación conversación, int consultasPorConversación, double proporciónPrimeraInstrucciónVsSiguientes, double proporciónRespuestasVsInstrucciones,
-            double tókenesAdicionales, Modelo modelo, bool rellenarInstruccionesSistema, ref StringBuilder información) {
+        internal static string ObtenerRellenoInstrucciónSistema(int conversacionesDuranteCachéExtendida, string instrucciónSistema, 
+            ref string rellenoInstrucciónSistema, Conversación conversación, int consultasPorConversación, double proporciónPrimeraInstrucciónVsSiguientes, 
+            double proporciónRespuestasVsInstrucciones, double tókenesAdicionales, Modelo modelo, bool rellenarInstruccionesSistema, ref StringBuilder información) {
 
             /* Cálculos de longitud límite para que salga más barato dadas K llamadas estimadas en las próximas horas
 
@@ -198,10 +198,10 @@ namespace Frugalia {
                 conversacionesDuranteCachéExtendida = 1; // En el caso de modelos que solo guarden la caché por unos cuantos minutos (que se espera que sean los razonables para esperar otra respuesta del usuario en un contexto de una conversación) no se puede realizar ninguna optimización considerando múltiples conversaciones que se puedan dar en el transcurso del día y que reusen las instrucciones del sistema. Entonces solo se considera la optimización que tiene en cuenta la cantidad de mensajes en una conversación (consultasPorConversación) porque se espera que estos si puedan reusar la caché.
                 información.AgregarLíneaSiNoEstá($"Se forzó conversacionesDuranteCachéExtendida a 1 porque {modelo} no soporta caché extendida.");
             }
-            if (conversacionesDuranteCachéExtendida < 1)
-                throw new ArgumentOutOfRangeException(nameof(consultasPorConversación), "conversacionesDuranteCachéExtendida debe ser mayor a 1.");
-            if (consultasPorConversación < 1)
-                throw new ArgumentOutOfRangeException(nameof(consultasPorConversación), "consultasPorConversación debe ser mayor a 1.");
+            if (conversacionesDuranteCachéExtendida <= 0)
+                throw new ArgumentOutOfRangeException(nameof(conversacionesDuranteCachéExtendida), "conversacionesDuranteCachéExtendida debe ser mayor a 0.");
+            if (consultasPorConversación <= 0)
+                throw new ArgumentOutOfRangeException(nameof(consultasPorConversación), "consultasPorConversación debe ser mayor a 0.");
             if (proporciónPrimeraInstrucciónVsSiguientes <= 0)
                 throw new ArgumentOutOfRangeException(nameof(proporciónPrimeraInstrucciónVsSiguientes), "proporciónPrimerInstrucciónVsSiguientes debe ser mayor a 0.");
             if (proporciónRespuestasVsInstrucciones <= 0)
