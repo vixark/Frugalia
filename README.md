@@ -94,13 +94,14 @@ if (!string.IsNullOrEmpty(errorInicio)) {
 }
 
 var rellenoInstruccionSistema = "";
-var respuesta = servicio.Consulta(
+var respuesta = servicio.Consultar(
    consultasDuranteCachéExtendida: 10,
    instrucciónSistema: "Eres un asistente breve y directo.",
    ref rellenoInstruccionSistema,
    mensajeUsuario: "Explícame qué hace Frugalia en dos frases.",
    out string error,
    out var tokens,
+   tasaDeCambioUsd = 4000,
    buscarEnInternet: false
 );
 

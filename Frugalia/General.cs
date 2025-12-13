@@ -128,7 +128,7 @@ namespace Frugalia {
         /// <param name="valor">Valor que se desea redondear.</param>
         /// <param name="cifrasSignificativas">Número de cifras significativas (>= 1). Por defecto 1.</param>
         /// <returns>Valor redondeado a las cifras significativas especificadas.</returns>
-        public static decimal Redondear(decimal valor, int cifrasSignificativas) {
+        public static decimal Redondear(decimal valor, int cifrasSignificativas = 1) {
 
             if (cifrasSignificativas < 1) throw new ArgumentOutOfRangeException(nameof(cifrasSignificativas), "cifrasSignificativas debe ser mayor o igual a 1.");
             if (valor == 0) return 0;

@@ -106,6 +106,12 @@ namespace Frugalia {
                 return;
             }
 
+            if (tasaDeCambioUsd <= 0) {
+                error = "La tasa de cambio a dólares no puede ser 0 o menor.";
+                Iniciado = false;
+                return;
+            }
+
             ClaveAPI = claveAPI;
             Modelo = (Modelo)modelo;
             Familia = Modelo.Familia;
@@ -149,10 +155,6 @@ namespace Frugalia {
         /// </param>
         /// <param name="tókenesPromedioMensajeUsuario">
         /// Tókenes promedio de los usuarios, incluyendo el primer mensaje.
-        /// </param>
-        /// <param name="tókenesPrimerMensajeUsuario">
-        /// Puede suceder que el primer mensaje de usuario de una conversación sea de mayor longitud que los demás. Ya que siempre se tiene
-        /// el primer mensaje al obtener el relleno de la instrucción de sistema, es importante usarlo para tener hacer estimación más cercana a la realidad.
         /// </param>
         /// <param name="tókenesPromedioMensajeIA">
         /// Las respuestas del modelo también se incluyen en los tókenes de entrada para siguientes consultas en la misma conversación, entonces deben ser tenidos
@@ -680,6 +682,7 @@ namespace Frugalia {
         /// </summary>
         /// <param name="instrucciónSistema">Rol, tono, formato respuesta, reglas generales, límites, comportamiento del agente, etc.</param>
         /// <param name="error"></param>
+        /// <param name="rellenoInstrucciónSistema">Si se pasa un espacio " ", se omitirá la evaluación del relleno de instrucción del sistema.</param>
         /// <returns></returns>
         public string Consultar(int consultasDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, string mensajeUsuario,
             out string error, out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado, bool buscarEnInternet = false) {
@@ -735,7 +738,7 @@ namespace Frugalia {
         /// </summary>
         /// <param name="conversacionesDuranteCachéExtendida"></param>
         /// <param name="instrucciónSistema"></param>
-        /// <param name="rellenoInstrucciónSistema"></param>
+        /// <param name="rellenoInstrucciónSistema">Si se pasa un espacio " ", se omitirá la evaluación del relleno de instrucción del sistema.</param>
         /// <param name="mensajeUsuario"></param>
         /// <param name="rutasArchivos"></param>
         /// <param name="error"></param>
@@ -812,7 +815,8 @@ namespace Frugalia {
         /// </param>
         /// <param name="rellenoInstrucciónSistema">
         /// Texto de relleno agregado a las instrucciones del sistema para superar el umbral de activación de caché de entrada del modelo.
-        /// Se pasa por referencia para conservar y reutilizar el mismo relleno en llamadas subsecuentes, evitando recalcularlo.
+        /// Se pasa por referencia para conservar y reutilizar el mismo relleno en llamadas subsecuentes, evitando recalcularlo. 
+        /// Si se pasa un espacio " ", se omitirá la evaluación del relleno de instrucción del sistema. 
         /// </param>
         /// <param name="conversación">
         /// Conversación reutilizable que contiene el historial de mensajes del usuario y del asistente IA.
