@@ -98,7 +98,7 @@ var respuesta = servicio.Consulta(
    consultasDuranteCachéExtendida: 10,
    instrucciónSistema: "Eres un asistente breve y directo.",
    ref rellenoInstruccionSistema,
-   instrucción: "Explícame qué hace Frugalia en dos frases.",
+   mensajeUsuario: "Explícame qué hace Frugalia en dos frases.",
    out string error,
    out var tokens,
    buscarEnInternet: false

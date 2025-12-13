@@ -55,8 +55,8 @@ namespace Frugalia {
 
         private Func<List<string>, string, TipoArchivo, (Conversación Conversación, string Error)> FunciónObtenerConversaciónConArchivos { get; }
 
-        internal (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string instrucción, TipoArchivo tipoArchivo)
-            => FunciónObtenerConversaciónConArchivos(rutasArchivos, instrucción, tipoArchivo);
+        internal (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string mensajeUsuario, TipoArchivo tipoArchivo)
+            => FunciónObtenerConversaciónConArchivos(rutasArchivos, mensajeUsuario, tipoArchivo);
 
 
         private Archivador(Familia familia) {
@@ -74,10 +74,10 @@ namespace Frugalia {
 
                 };
 
-                FunciónObtenerConversaciónConArchivos = (rutasArchivos, instrucción, tipoArchivo) => {
+                FunciónObtenerConversaciónConArchivos = (rutasArchivos, mensajeUsuario, tipoArchivo) => {
 
                     if (rutasArchivos == null || rutasArchivos.Count == 0) return (null, "Debe enviarse al menos un archivo.");
-                    if (string.IsNullOrWhiteSpace(instrucción)) return (null, "La instrucción asociada a los archivos no puede estar vacía.");
+                    if (string.IsNullOrWhiteSpace(mensajeUsuario)) return (null, "El mensaje del usuario asociado a los archivos no puede estar vacío.");
 
                     string error = null;
 
@@ -102,7 +102,7 @@ namespace Frugalia {
                         }
 
                     }
-                    instruccionesYArchivos.Add(ResponseContentPart.CreateInputTextPart(instrucción));
+                    instruccionesYArchivos.Add(ResponseContentPart.CreateInputTextPart(mensajeUsuario));
 
                     var conversaciónConArchivosGPT = new List<ResponseItem>() { ResponseItem.CreateUserMessageItem(instruccionesYArchivos) };
 

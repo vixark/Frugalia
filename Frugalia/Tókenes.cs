@@ -130,7 +130,7 @@ namespace Frugalia {
             $"SR={SalidaRazonamiento,4} EMC={EscrituraManualCaché,4} MEMC={MinutosEscrituraManualCaché,4}";
 
 
-        private static decimal CalcularCostoMonedaLocalTókenes(int tókenes, decimal costoPorMillón, decimal tasaCambioUsd)
+        internal static decimal CalcularCostoMonedaLocalTókenes(int tókenes, decimal costoPorMillón, decimal tasaCambioUsd)
             => tókenes * (FactorPrecioFuturo * costoPorMillón / (decimal)1E6) * tasaCambioUsd;
 
 

@@ -44,8 +44,8 @@ namespace Frugalia {
 
         private Func<string, Conversación, Opciones, Modelo, bool, (Respuesta, Tókenes, Resultado)> FunciónObtenerRespuesta { get; }
 
-        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string instrucción, Conversación conversación, Opciones opciones, Modelo modelo, bool lote)
-            => FunciónObtenerRespuesta(instrucción, conversación, opciones, modelo, lote);
+        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, bool lote)
+            => FunciónObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, lote);
 
         private Func<Archivador> FunciónObtenerArchivador { get; }
 
@@ -61,16 +61,16 @@ namespace Frugalia {
 
                 ClienteGPT = new OpenAIClient(claveAPI);
 
-                FunciónObtenerRespuesta = (instrucción, conversación, opciones, modelo, lote) => {
+                FunciónObtenerRespuesta = (mensajeUsuario, conversación, opciones, modelo, lote) => {
 
                     var respondedorInicial = ClienteGPT.GetOpenAIResponseClient(modelo.Nombre);
                     OpenAIResponse respuestaGPT;
-                    if (!string.IsNullOrEmpty(instrucción)) {
-                        respuestaGPT = (OpenAIResponse)respondedorInicial.CreateResponse(instrucción, opciones.OpcionesGPT);
+                    if (!string.IsNullOrEmpty(mensajeUsuario)) {
+                        respuestaGPT = (OpenAIResponse)respondedorInicial.CreateResponse(mensajeUsuario, opciones.OpcionesGPT);
                     } else if (conversación != null) {
                         respuestaGPT = (OpenAIResponse)respondedorInicial.CreateResponse(conversación.ConversaciónGPT, opciones.OpcionesGPT);
                     } else {
-                        throw new InvalidOperationException("Debe haber al menos una instrucción o conversación.");
+                        throw new InvalidOperationException("Debe haber al menos un mensaje del usuario o conversación.");
                     }
 
                     Tókenes tókenes;

@@ -116,29 +116,39 @@ namespace Frugalia {
         public static string FormatearPesosColombianos(decimal pesos) => $"{FormatearMoneda(pesos)} COP";
 
 
-        public static string FormatearDólares(decimal pesos, decimal tasaCambioUSD) => $"{RedondearAUnaCifraSignificativa(pesos / tasaCambioUSD):0.#####} USD";
+        public static string FormatearDólares(decimal pesos, decimal tasaCambioUSD) => $"{Redondear(pesos / tasaCambioUSD, 2):0.#####} USD";
 
 
         public static string FormatearMoneda(decimal pesos) => $"{pesos:#,0.##} $";
 
 
         /// <summary>
-        /// Devuelve el valor con una sola cifra significativa conservando el orden de magnitud.
+        /// Devuelve el valor redondeado a la cantidad de cifras significativas indicada conservando el orden de magnitud.
         /// </summary>
         /// <param name="valor">Valor que se desea redondear.</param>
-        /// <returns>Valor redondeado a una cifra significativa.</returns>
-        public static decimal RedondearAUnaCifraSignificativa(decimal valor) {
+        /// <param name="cifrasSignificativas">Número de cifras significativas (>= 1). Por defecto 1.</param>
+        /// <returns>Valor redondeado a las cifras significativas especificadas.</returns>
+        public static decimal Redondear(decimal valor, int cifrasSignificativas) {
 
+            if (cifrasSignificativas < 1) throw new ArgumentOutOfRangeException(nameof(cifrasSignificativas), "cifrasSignificativas debe ser mayor o igual a 1.");
             if (valor == 0) return 0;
             var signo = Math.Sign(valor);
             var absoluto = Math.Abs(valor);
-            var potencia = Math.Pow(10, Math.Floor(Math.Log10((double)absoluto)));
+
+            var potencia = Math.Pow(10, Math.Floor(Math.Log10((double)absoluto))); // potencia = 10^floor(log10(absoluto))
             var escala = (decimal)potencia;
-            var normalizado = absoluto / escala;
-            var redondeado = Math.Round(normalizado, 0, MidpointRounding.ToEven);
+
+            var normalizado = absoluto / escala; // normalizado en [1,10)
+
+            var factor = (decimal)Math.Pow(10, cifrasSignificativas - 1); // factor para desplazar cifras significativas (p.ej. cifrasSignificativas=2 -> factor=10)
+
+            var normalizadoMultiplicado = normalizado * factor; // redondeamos el valor normalizado a cifrasSignificativas y volvemos a escalar
+            var redondeadoMultiplicado = Math.Round(normalizadoMultiplicado, 0, MidpointRounding.ToEven);
+            var redondeado = redondeadoMultiplicado / factor;
+
             return signo * redondeado * escala;
 
-        } // RedondearAUnaCifraSignificativa>
+        } // Redondear>
 
 
         /// <summary>
@@ -207,18 +217,18 @@ namespace Frugalia {
         internal static void LanzarExcepción(string mensaje) {
 
             Suspender();
-#if !DEBUG
+            #if !DEBUG
                 throw new Exception(mensaje);
-#endif
+            #endif
 
         } // LanzarExcepciónYSuspender>
 
 
         internal static void Suspender() {
 
-#if DEBUG
-            Debugger.Break();
-#endif
+            #if DEBUG
+                Debugger.Break();
+            #endif
 
         } // Suspender>
 

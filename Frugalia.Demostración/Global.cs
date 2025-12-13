@@ -72,7 +72,7 @@ internal static class Global {
     } // DesplazarContenidoHaciaArriba>
 
 
-    internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? instrucción, string? respuesta, string? archivo) {
+    internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? mensajeUsuario, string? respuesta, string? archivo) {
 
         if (!string.IsNullOrEmpty(instrucciónSistema)) {
             Escribir("");
@@ -84,9 +84,9 @@ internal static class Global {
             EscribirMultilíneaGris($"Relleno Sistema: {rellenoInstrucciónSistema}");
         }
 
-        if (!string.IsNullOrEmpty(instrucción)) {
+        if (!string.IsNullOrEmpty(mensajeUsuario)) {
             EscribirSeparador();
-            EscribirMultilíneaGris($"Usuario: {instrucción}");
+            EscribirMultilíneaGris($"Usuario: {mensajeUsuario}");
         }
 
         if (!string.IsNullOrEmpty(archivo)) {

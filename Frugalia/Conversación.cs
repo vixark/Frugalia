@@ -45,21 +45,21 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Action<string> AcciónAgregarInstrucción { get; }
+        private Action<string> AcciónAgregarMensajeUsuario { get; }
 
-        public void AgregarInstrucción(string instrucción) => AcciónAgregarInstrucción(instrucción);
+        public void AgregarMensajeUsuario(string mensajeUsuario) => AcciónAgregarMensajeUsuario(mensajeUsuario);
 
-        private Func<string> FunciónObtenerTextoPrimeraInstrucción { get; }
+        private Func<string> FunciónObtenerTextoPrimerMensajeUsuario { get; }
 
-        public string ObtenerTextoPrimeraInstrucción() => FunciónObtenerTextoPrimeraInstrucción();
+        public string ObtenerTextoPrimerMensajeUsuario() => FunciónObtenerTextoPrimerMensajeUsuario();
 
-        private Func<string> FunciónObtenerTextoÚltimaInstrucción { get; }
+        private Func<string> FunciónObtenerTextoÚltimoMensajeUsuario { get; }
 
-        public string ObtenerTextoÚltimaInstrucción() => FunciónObtenerTextoÚltimaInstrucción();
+        public string ObtenerTextoÚltimoMensajeUsuario() => FunciónObtenerTextoÚltimoMensajeUsuario();
 
-        private Func<TipoMensaje, List<string>> FunciónObtenerTextosInstrucciones { get; }
+        private Func<TipoMensaje, List<string>> FunciónObtenerMensajes { get; }
 
-        public List<string> ObtenerTextosInstrucciones(TipoMensaje tipoInstrucción) => FunciónObtenerTextosInstrucciones(tipoInstrucción);
+        public List<string> ObtenerTextosInstrucciones(TipoMensaje tipoInstrucción) => FunciónObtenerMensajes(tipoInstrucción);
 
         private Action<ÍtemRespuesta> AcciónAgregarÍtemRespuesta { get; }
 
@@ -75,16 +75,16 @@ namespace Frugalia {
 
                 ConversaciónGPT = new List<ResponseItem>();
 
-                AcciónAgregarInstrucción = instrucción => ConversaciónGPT.Add(ResponseItem.CreateUserMessageItem(instrucción));
+                AcciónAgregarMensajeUsuario = mensajeUsuario => ConversaciónGPT.Add(ResponseItem.CreateUserMessageItem(mensajeUsuario));
 
                 AcciónAgregarÍtemRespuesta = ítemRespuesta => ConversaciónGPT.Add(ítemRespuesta.ÍtemRespuestaGPT);
 
-                FunciónObtenerTextoPrimeraInstrucción = () => {
+                FunciónObtenerTextoPrimerMensajeUsuario = () => {
 
-                    var primeraInstrucción = ConversaciónGPT.OfType<MessageResponseItem>().FirstOrDefault(m => m.Role == MessageRole.User);
-                    if (primeraInstrucción != null) {
+                    var primerMensajeUsuario = ConversaciónGPT.OfType<MessageResponseItem>().FirstOrDefault(m => m.Role == MessageRole.User);
+                    if (primerMensajeUsuario != null) {
 
-                        var texto = primeraInstrucción.Content?.FirstOrDefault(p => !string.IsNullOrEmpty(p.Text));
+                        var texto = primerMensajeUsuario.Content?.FirstOrDefault(p => !string.IsNullOrEmpty(p.Text));
                         return texto?.Text ?? "";
 
                     } else {
@@ -93,12 +93,12 @@ namespace Frugalia {
 
                 };
 
-                FunciónObtenerTextoÚltimaInstrucción = () => {
+                FunciónObtenerTextoÚltimoMensajeUsuario = () => {
 
-                    var últimaInstrucción = ConversaciónGPT.OfType<MessageResponseItem>().LastOrDefault(m => m.Role == MessageRole.User);
-                    if (últimaInstrucción != null) {
+                    var últimoMensajeUsuario = ConversaciónGPT.OfType<MessageResponseItem>().LastOrDefault(m => m.Role == MessageRole.User);
+                    if (últimoMensajeUsuario != null) {
 
-                        var texto = últimaInstrucción.Content?.LastOrDefault(p => !string.IsNullOrEmpty(p.Text));
+                        var texto = últimoMensajeUsuario.Content?.LastOrDefault(p => !string.IsNullOrEmpty(p.Text));
                         return texto?.Text ?? "";
 
                     } else {
@@ -107,7 +107,7 @@ namespace Frugalia {
 
                 };
 
-                FunciónObtenerTextosInstrucciones = tipo => {
+                FunciónObtenerMensajes = tipo => {
 
                     var mensajes = ConversaciónGPT.OfType<MessageResponseItem>();
 
@@ -125,19 +125,19 @@ namespace Frugalia {
                         break;
                     }
 
-                    var textosInstrucciones = new List<string>();
+                    var textos = new List<string>();
                     foreach (var mensaje in filtrados) {
 
                         if (mensaje.Content == null) continue;
 
                         foreach (var parte in mensaje.Content) {
                             var texto = parte?.Text;
-                            if (!string.IsNullOrEmpty(texto)) textosInstrucciones.Add(texto);
+                            if (!string.IsNullOrEmpty(texto)) textos.Add(texto);
                         }
 
                     }
 
-                    return textosInstrucciones;
+                    return textos;
 
                 };
 
@@ -179,10 +179,10 @@ namespace Frugalia {
         } // EstimarTókenesTotales>
 
 
-        internal static string ObtenerTextoPrimeraInstrucción(Conversación conversación) => conversación?.ObtenerTextoPrimeraInstrucción() ?? "";
+        internal static string ObtenerTextoPrimeraInstrucción(Conversación conversación) => conversación?.ObtenerTextoPrimerMensajeUsuario() ?? "";
 
 
-        internal static string ObtenerTextoÚltimaInstrucción(Conversación conversación) => conversación?.ObtenerTextoÚltimaInstrucción() ?? "";
+        internal static string ObtenerTextoÚltimaInstrucción(Conversación conversación) => conversación?.ObtenerTextoÚltimoMensajeUsuario() ?? "";
 
 
     } // Conversación>
