@@ -591,9 +591,9 @@ namespace Frugalia {
                                 if (!reintentoMenosRestrictivoRealizado) { // Se asegura que se hace solo un intento de reducción de restricción de tókenes de salida. Más de un intento, se puede tardar mucho la consulta y escalar el costo de una manera que no debería ser automática.
 
                                     información.AgregarLínea($"{informaciónMáximosTókenesAlcanzados}. Se reintentó con menos restricciones.");
-                                    
+
                                     opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, modelo,
-                                        new Restricciones(restricciones.RazonamientoMuyAlto, restricciones.RazonamientoAlto, 
+                                        new Restricciones(restricciones.RazonamientoMuyAlto, restricciones.RazonamientoAlto,
                                         restricciones.RazonamientoMedio, restricciónTókenesSalidaCopia, restricciónTókenesRazonamientoCopia),
                                         longitudInstrucciónÚtil, verbosidad, ref información);
 
@@ -615,6 +615,8 @@ namespace Frugalia {
                             nivelMejoramientoSugerido = 0; // Para modelos medios o grandes, puede no justificar el costo extra de la llamada adicionales para intentar corregir este problema usando una menor restricción de máximos tókenes de salida.
                         }
 
+                    } else if (resultadoInicial == Resultado.TiempoSuperado) {
+                        nivelMejoramientoSugerido = 0; // No es necesario agregar información porque este resultado se reporta como error. Tampoco es necesario asignar el resultado porque se asigna en la rama de nivelMejoramientoSugerido = 0.
                     } else { // El modelo olvidó agregar la etiqueta de autoevaluación. No tiene problemas de máximos tókenes de salida alcanzados.
 
                         resultado = Resultado.SinAutoevaluación; // El modelo no contestó con la etiqueta correcta. No debería pasar mucho. Se devuelve el estado apropiado al usuario librería para que pueda llevar un registro de cuándo sucede esto y tomar las acciones necesarias. Al usuario del programa se le responde normalmente sin realizar ningún mejoramiento del modelo. Lo peor que puede pasa es que el usuario a veces obtenga resultados no tan buenos con un modelo más pequeño, es similar a lo que sucede cuando el modelo es ignorantemente confidente y se califica [lo-hice-bien] sin haberlo hecho bien.
