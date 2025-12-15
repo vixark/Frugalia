@@ -40,7 +40,7 @@ namespace Frugalia {
     }
 
     internal enum RazonamientoEfectivo { // La enumeración que se usa efectivamente en los modelos. Se separa de la otra para facilitar la depuración y evitar errores al estar escribiendo integraciones.
-        Ninguno, Bajo, Medio, Alto, MuyAlto
+        Ninguno = 0, Bajo = 1, Medio = 2, Alto = 3, MuyAlto = 4 // No se deben cambiar los valores de la enumeración porque se usan para la restricción del razonamiento según el tamaño del modelo.
     }
 
     public enum Verbosidad { Baja, Media, Alta }
@@ -93,6 +93,7 @@ namespace Frugalia {
     public enum Resultado {
         Respondido,
         Abortado,
+        TiempoSuperado,
         MáximosTókenesAlcanzados,
         MáximasIteracionesConFunción,
         SinAutoevaluación,
@@ -413,8 +414,8 @@ namespace Frugalia {
         internal static string ALetras(this int número) => (número == 1 ? "un" : (número == 2 ? "dos" : "?"));
 
 
-        internal static RazonamientoEfectivo ObtenerRazonamientoEfectivo(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int longitudInstrucciónÚtil, out StringBuilder información) {
+        internal static RazonamientoEfectivo ObtenerRazonamientoEfectivo(Razonamiento razonamiento, Modelo modelo, Restricciones restricciones,
+            int longitudInstrucciónÚtil, out StringBuilder información) {
 
             información = new StringBuilder();
 
@@ -516,25 +517,33 @@ namespace Frugalia {
             var tamaño = modelo.ObtenerTamaño();
             var aplicadaRestricción = false;
 
-            if (razonamientoEfectivo == RazonamientoEfectivo.Alto && restricciónRazonamientoAlto != RestricciónRazonamiento.Ninguna) {
+            void AplicarRestricción(ref RazonamientoEfectivo razonamientoEfectivo2, RestricciónRazonamiento restricciónRazonamiento, 
+                RazonamientoEfectivo razonamientoEfectivoEvaluado, Tamaño tamaño2) {
+                
+                if (razonamientoEfectivo2 != razonamientoEfectivoEvaluado) return;
+                if (restricciónRazonamiento == RestricciónRazonamiento.Ninguna) return;
 
-                if (restricciónRazonamientoAlto == RestricciónRazonamiento.ModelosPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Medio; }
-                } else if (restricciónRazonamientoAlto == RestricciónRazonamiento.ModelosMuyPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Medio; }
+                if (restricciónRazonamiento == RestricciónRazonamiento.ModelosPequeños) {
+
+                    if (tamaño2 == Tamaño.MuyPequeño || tamaño2 == Tamaño.Pequeño) { 
+                        aplicadaRestricción = true; 
+                        razonamientoEfectivo2 = razonamientoEfectivoEvaluado - 1; // Baja un nivel.
+                    } 
+
+                } else if (restricciónRazonamiento == RestricciónRazonamiento.ModelosMuyPequeños) {
+
+                    if (tamaño2 == Tamaño.MuyPequeño) { 
+                        aplicadaRestricción = true; 
+                        razonamientoEfectivo2 = razonamientoEfectivoEvaluado - 1; // Baja un nivel.
+                    } 
+
                 }
 
-            }
+            } // AplicarRestricción>
 
-            if (razonamientoEfectivo == RazonamientoEfectivo.Medio && restricciónRazonamientoMedio != RestricciónRazonamiento.Ninguna) { // Se debe poner después de la revisión de razonamiento Alto porque es posible que tenga doble restricción, entonces el anterior código lo pasa a razonamiento medio y el siguiente verifica si se debe pasar a razonamiento bajo.
-
-                if (restricciónRazonamientoMedio == RestricciónRazonamiento.ModelosPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño || tamaño == Tamaño.Pequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Bajo; }
-                } else if (restricciónRazonamientoMedio == RestricciónRazonamiento.ModelosMuyPequeños) {
-                    if (tamaño == Tamaño.MuyPequeño) { aplicadaRestricción = true; razonamientoEfectivo = RazonamientoEfectivo.Bajo; }
-                }
-
-            }
+            AplicarRestricción(ref razonamientoEfectivo, restricciones.RazonamientoMuyAlto, RazonamientoEfectivo.MuyAlto, tamaño);
+            AplicarRestricción(ref razonamientoEfectivo, restricciones.RazonamientoAlto, RazonamientoEfectivo.Alto, tamaño);
+            AplicarRestricción(ref razonamientoEfectivo, restricciones.RazonamientoMedio, RazonamientoEfectivo.Medio, tamaño);
 
             if (EsRazonamientoAdaptable(razonamiento)) información.AgregarLínea($"Razonamiento efectivo = {razonamientoEfectivo}.{(aplicadaRestricción ? " Aplicada restricción de razonamiento." : "")}");
 

@@ -102,31 +102,23 @@ internal class Demostración {
                 $"es la cantidad de conversaciones que usen la misma instrucción del sistema en 24 horas.{DobleLínea}La efectividad de esta función depende de " +
                 $"los valores de los parámetros que le pases, así que asegúrate de que los datos sí sean representativos de tu caso de uso.")) },
 
-        { 15, ($"Conversación y funciones con instrucción del sistema corta (sin caché y relleno no daría ahorro) (≈{ADólares(44.6M)}).",
-            "Relleno de Instrucción-del-istema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Corta), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
-                restricciónTókenesSalida: RestricciónTókenesSalida.Media )) },
-
-        { 16, ($"Conversación y funciones con instrucción del sistema larga (caché sin necesidad de relleno) (≈{ADólares(44.5M)}).",
+        { 15, ($"Conversación y funciones con instrucción del sistema corta (relleno no necesario) (≈{ADólares(124)}).",
             "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Larga), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false, 
-                restricciónTókenesSalida: RestricciónTókenesSalida.Media)) },
+            ConversaciónConFunciones(servicio, modelo, Longitud.Corta), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
 
-        { 17, ($"Conversación y funciones con instrucción del sistema media (caché con relleno) (≈{ADólares(53)}).",
+        { 16, ($"Conversación y funciones con mensaje del usuario muy largo (relleno no necesario) (≈{ADólares(170)}).",
+            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
+            ConversaciónConFunciones(servicio, modelo, Longitud.Corta, usarMensajeUsuarioMuyLargo: true), 
+                "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+
+        { 17, ($"Conversación y funciones con instrucción del sistema media (realizando relleno) (≈{ADólares(138)}).",
+            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
+            ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+
+        { 18, ($"Conversación y funciones con instrucción del sistema media (relleno desactivado) (≈{ADólares(172)}).",
             "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
             ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false, 
-                restricciónTókenesSalida: RestricciónTókenesSalida.Media )) },
-
-        { 18, ($"Conversación y funciones con instrucción del sistema media (relleno desactivado) (≈{ADólares(56.4M)}).",
-            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
-                restricciónTókenesSalida: RestricciónTókenesSalida.Media, rellenarInstruccionesSistema: false )) },
-
-        //{ 18, ($"Conversación con funciones considerando 10 consultas por día (≈{ADólares(1000000)}).", "Relleno de Instrucción del Sistema", (d) =>
-        //    Consultar((servicio, modelo) => ConversaciónConFunciones(servicio, modelo, usarInstrucciónMuyLarga: false, usarInstrucciónSistemaMuyLarga: false, 
-      //0), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) }, // Sin rellenos pero con más conversaciones previstas.
-
-
+                rellenarInstruccionesSistema: false)) },
 
         //{ 14, ("Consulta con archivos.", "Archivos", () =>
         //    Consultar(ConsultaConArchivos, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
@@ -224,9 +216,13 @@ internal class Demostración {
             return errorClaveAPI;
         }
 
+        var restricciones = new Restricciones {
+            TókenesSalida = restricciónTókenesSalida,
+            TókenesRazonamiento = restricciónTókenesRazonamiento
+        };
+
         var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
-            TasaDeCambioUsd, out string errorInicio, out string informaciónInicio, rellenarInstruccionesSistema, restricciónTókenesSalida: restricciónTókenesSalida,
-            restricciónTókenesRazonamiento: restricciónTókenesRazonamiento);
+            TasaDeCambioUsd, out string errorInicio, out string informaciónInicio, rellenarInstruccionesSistema, restricciones);
 
         Escribir("");
         var demostración = Demostraciones[númeroDemostración];
@@ -298,7 +294,7 @@ internal class Demostración {
             _ => throw new NotImplementedException(),
         };
 
-        var consultasDuranteCachéExtendida = 10;
+        var consultasDuranteCachéExtendida = 1;
 
         var respuesta = servicio.Consultar(consultasDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, mensajeUsuario, out string error,
             out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado);
@@ -345,11 +341,9 @@ internal class Demostración {
 
 
     internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado)
-        ConversaciónConFunciones(Servicio servicio, Modelo modelo, Longitud longitudInstrucciónSistema, int conversacionesDuranteCachéExtendida = 1,
+        ConversaciónConFunciones(Servicio servicio, Modelo modelo, Longitud longitudInstrucciónSistema, int conversacionesDuranteCachéExtendida = 3,
         bool usarMensajeUsuarioMuyLargo = false) {
 
-        var mensajeUsuario = "Hola, estoy interesado en conocer el precio de un accesorio Ala para el avión F40.";
-        
         var mensajeUsuarioMuyLargo = @"Hola, mira, me levanté algo apestado de la gripa, con la nariz toda tapada, la garganta raspada y esa sensación de que uno durmió pero no descansó, el tinto se me quemó porque me quedé mirando el celular como un zombi mientras la cafetera sonaba y yo ni caso, y en medio de todo ese desorden mental me puse a pensar que la vida a veces se siente como un avión que despega con turbulencia, medio desbalanceado, pero igual tiene que seguir su ruta, y entonces me acordé de que anoche estuve viendo videos de aviones, documentales raros de gente que restaura avionetas viejas y las deja como nuevas, y eso me dejó con la idea dando vueltas en la cabeza de que tal vez lo que necesito para salir de esta racha es hacer algo grande, algo que me saque de la rutina, algo completamente absurdo como, no sé, comprar un avión.
                 Mientras sorbía el primer tinto medio quemado, que sabía horrible pero igual me lo tomé porque ya qué, empecé a pensar en todas las cosas que han ido saliendo mal: la gripe que no se me quita, el trabajo que anda en piloto automático, los proyectos que uno deja a medias, las llamadas que no contesta, los chats que se acumulan como si fueran correos de spam, y encima mi mamá llamándome temprano a preguntarme si ya desayuné, si me estoy cuidando, que no me confíe de la gripa porque después se complica, y yo respondiendo medio dormido “sí, ma, tranquila, todo bien” mientras por dentro estoy pensando que tengo cero control de nada, que apenas estoy apagando incendios del día a día. En medio de esa conversación, ella se puso a hablar de que la vida es corta, que uno tiene que hacer lo que realmente quiere, que no se quede solo pensando sino que se decida, y aunque lo decía por otras cosas, en mi cabeza seguía rebotando la idea del bendito avión.
                 Después de colgar con ella, me quedé un rato divagando, mirando por la ventana, pensando en qué momento la vida se volvió una cadena de tareas por cumplir y no un plan de vuelo interesante, bien trazado, con un destino claro. Me acordé de un amigo que siempre decía que, si uno quiere cambiar algo de raíz, tiene que tomar una decisión que parezca irracional a primera vista pero que, por dentro, tenga todo el sentido del mundo. Y ahí fue cuando empecé a imaginar cómo sería tener un avión, no como capricho de millonario, sino como proyecto raro, algo entre hobby serio y negocio potencial, algo que me obligue a aprender, a organizarme, a planear rutas, a entender mantenimiento, a salir literalmente de donde estoy y ver las cosas desde más arriba, en otro nivel, como dicen por ahí.
@@ -359,29 +353,18 @@ internal class Demostración {
                 En ese momento, mientras leía sobre modelos, referencias y catálogos, me topé con la referencia del avión F40. No sé si fue casualidad o sesgo de confirmación porque ya tenía el F40 en la cabeza, pero el caso es que me quedé pensando en ese modelo en particular. Empecé a imaginar que, si algún día tengo un avión de ese estilo, querría saber no solo cuánto cuesta la aeronave en sí, sino también cuánto cuestan los accesorios que podría necesitar para adaptarlo a lo que yo quiera hacer: tal vez vuelos de entrenamiento, tal vez trayectos cortos entre ciudades cercanas, tal vez algún tipo de operación específica que todavía no tengo clara pero que se irá definiendo con el tiempo. Y claro, si uno va a soñar, mejor sueña con algo concreto, con una referencia clara, con un modelo puntual al que le puedas preguntar cosas específicas, como “¿cuánto vale tal accesorio de ala para el F40?”.
                 Mi mamá volvió a mandar mensajes por chat preguntando si ya me había tomado la pastilla para la gripa, y mientras le respondía que sí, aunque honestamente todavía no lo hacía, seguía navegando entre páginas, catálogos, descripciones técnicas, cosas que quizás no entiendo del todo pero que me hacen sentir que estoy avanzando un poquitico en ese sueño medio loco. Empecé a pensar que, si no organizo bien mis ideas, esto se va a quedar solo en una fantasía de martes por la mañana con gripa, café y divagaciones. Pero si empiezo por algo tan simple como preguntar por el precio de un accesorio específico, quizás pueda ir aterrizando el sueño en números, en decisiones, en pasos concretos.
                 Así que, después de todo este rodeo mental, después de levantarme apestado de la gripa, de quemar el tinto, de escuchar a mi mamá diciéndome que tome algo caliente y que me cuide, de pensar mil veces en si estoy tomando buenas decisiones en la vida o si solo estoy dejando que los días pasen, llegué a esta conclusión: tal vez el primer paso es simplemente pedir información clara sobre algo muy específico relacionado con ese posible avión. Nada de compromisos todavía, nada de decisiones enormes, solo un dato concreto que me ayude a dimensionar mejor el sueño. Y ese dato, en este momento, es el precio de un accesorio que me interesa especialmente porque afecta directamente el comportamiento del avión.
-                Por todo lo anterior, y dejando a un lado todo el rollo existencial, te resumo lo que realmente necesito: finalmente estoy interesado en conocer el precio de un accesorio de ala para el avión F40. Me gustaría saber cuánto cuesta ese accesorio de ala para el F40, de forma clara y directa, para poder seguir pensando si este sueño de comprar un avión tiene algún sentido realista o si se queda solo como una historia rara de una mañana con gripa, café quemado y muchas ideas dando vueltas en la cabeza.";
-        
-        if (usarMensajeUsuarioMuyLargo) mensajeUsuario = mensajeUsuarioMuyLargo; // Se usa para probar el uso de la caché desde el segundo mensaje, incluso en casos en los que no se está rellenando la instrucción del sistema, es decir cuando el parámetro conversacionesDuranteCachéExtendida es 1 que evita que se rellene instrucciones del sistema.
+                Por todo lo anterior, y dejando a un lado todo el rollo existencial, te resumo lo que realmente necesito: finalmente estoy interesado en conocer el precio de un accesorio de ala para el avión F40. Me gustaría saber cuánto cuesta ese accesorio de ala para el F40, de forma clara y directa, para poder seguir pensando si este sueño de comprar un avión tiene algún sentido realista o si se queda solo como una historia rara de una mañana con gripa, café quemado y 
+                muchas ideas dando vueltas en la cabeza."; // Se usa para probar el uso de la caché desde el segundo mensaje, incluso en casos en los que no se está rellenando la instrucción del sistema, es decir cuando el parámetro conversacionesDuranteCachéExtendida es 1 que evita que se rellene instrucciones del sistema.
 
-        var cuentaMensaje = 1;
-        var totalMensajes = 6;
-        var respuesta = "";
-        var conversación = new Conversación(modelo.Familia);
-        var tókenes = new Dictionary<string, Tókenes>();
-        var información = new StringBuilder();
-        var detalleTókenesPorConsulta = "";
-        var separadorMensajes = $"{Environment.NewLine}--------------------------------------------------------{Environment.NewLine}";
-        var númeroAleatorio = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en demostraciones siguientes porque se cambia la instrucción del sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
-        var rellenoInstrucciónSistema = "";
-        var resultado = Resultado.Respondido;
+        var númeroRepresentanteComercial = ObtenerAleatorio(0, 100000).ToString("D5"); // Se agrega para que no se use la caché en demostraciones siguientes porque se cambia la instrucción del sistema. Se usa para pruebas a la activación de la caché. Por ejemplo, para verificar que tan frecuente falla por que a OpenAI le dio la gana aún cuando se cumplen el requisito de 1024 tókenes mínimos.
 
-        var instrucciónSistemaBase = $"Eres la representante comercial número {númeroAleatorio} amable que se expresa con pocas frases: Responde en máximo 3 frases y las consultas sencillas en solo 1 frase. Usa el símbolo $ para indicar cantidades monetarias sin especificar nada sobre la moneda. Dirigete a los clientes con usted, no con tú ni vos. No inventes datos para las funciones si el usuario no te los ha dado. Cuando una función devuelve un JSON con error, interpreta el error, explica brevemente el problema al usuario y pide los datos faltantes. No inventes valores ni vuelvas a llamar la función si el usuario no te ha dado la información correcta. No sugieras continuar la conversación después de dar la respuesta final con el resultado de una función. Usa la descripción del producto cuando hables con el usuario y la referencia úsala siempre para pasarla a todas las funciones internas. No le menciones tu número de representante comercial al cliente.";
+        var instrucciónSistemaBase = $"Eres la representante comercial número {númeroRepresentanteComercial} amable, pero sarcástica que se expresa con pocas frases: Responde en máximo 3 frases y las consultas sencillas en solo 1 frase. Usa el símbolo $ para indicar cantidades monetarias sin especificar nada sobre la moneda. Dirigete a los clientes con usted, no con tú ni vos. No inventes datos para las funciones si el usuario no te los ha dado. Cuando una función devuelve un JSON con error, interpreta el error, explica brevemente el problema al usuario y pide los datos faltantes. No inventes valores ni vuelvas a llamar la función si el usuario no te ha dado la información correcta. No sugieras continuar la conversación después de dar la respuesta final con el resultado de una función. Usa la descripción del producto cuando hables con el usuario y la referencia úsala siempre para pasarla a todas las funciones internas. No le menciones tu número de representante comercial al cliente.";
 
-        var instrucciónSistemaCorta = $"{instrucciónSistemaBase}Esta es la base de datos de productos que tienes a tu disposición con este formato Referencia-Descripción: F40-Avion F40, F45-Avion F45, F50-Avión F50, M445-Motor M445, M448-Motor M448, H50-Accesorio Ala H50, H51-Accesorio Ala H51. Referencias de productos: F40, F45, F50, M445, M448, H50, H51.";
+        var instrucciónSistemaCorta = $"{instrucciónSistemaBase}Estos son los productos disponibles: M445-Motor M445, M448-Motor M448, H50-Accesorio Ala H50, H51-Accesorio Ala H51. Referencias de productos: F40, F45, F50, M445, M448, H50, H51.";
         
         var instrucciónSistemaMuyLarga = $"{instrucciónSistemaBase}Esta es la base de datos de productos que tienes a tu disposición con el formato Referencia-Descripción. " +
             "F40-Avión F40, avión ligero de entrenamiento básico de un solo motor, pensado para escuelas de vuelo pequeñas. " +
-            $"F{númeroAleatorio}-Avión F{númeroAleatorio}, variante del F40 con tanque de combustible ampliado para mayor autonomía en rutas regionales. " +
+            $"F{númeroRepresentanteComercial}-Avión F{númeroRepresentanteComercial}, variante del F40 con tanque de combustible ampliado para mayor autonomía en rutas regionales. " +
             "F42-Avión F42, versión con cabina reforzada y aviónica digital básica para entrenamiento instrumental. " +
             "F43-Avión F43, modelo ligero con configuración de cuatro plazas para uso mixto corporativo y personal. " +
             "F44-Avión F44, versión con alas reforzadas para pistas cortas y operación en aeródromos no pavimentados. " +
@@ -535,61 +518,81 @@ internal class Demostración {
             _ => throw new NotImplementedException()
         };
 
-        EscribirMensajes(instrucciónSistema, null, null, null, null);
+        var tókenes = new Dictionary<string, Tókenes>();
+        var detalleTókenesPorConsulta = $"Tókenes por consulta:{Environment.NewLine}";
+        var información = new StringBuilder();
+        var respuesta = "";
+        var error = "";
+        var resultado = Resultado.Respondido;
+        var rellenoInstrucciónSistema = ""; // Permite reusarlo en cada conversación, aunque no es necesario porque daría el mismo resultado en la primera consulta de cada conversación.
+        var totalMensajes = 6;
+        var separadorMensajes = $"{Environment.NewLine}--------------------------------------------------------{Environment.NewLine}";
 
-        continuarConversación:
+        EscribirMultilíneaCianOscuro($"Iniciando {conversacionesDuranteCachéExtendida} conversaciones de {totalMensajes} mensajes y {totalMensajes + 1} consultas " +
+            $"usando una instrucción del sistema {longitudInstrucciónSistema}{(usarMensajeUsuarioMuyLargo ? $" y un mensaje de usuario muy largo." : "")}. " +
+            $"Se hacen 2 consultas al responder usando una función.");
 
-        conversación.AgregarMensajeUsuario(mensajeUsuario);
-        EscribirMensajes(null, null, mensajeUsuario, null, null);
-        respuesta += "Usuario: " + Environment.NewLine + mensajeUsuario + separadorMensajes;
+        for (int c = 1; c <= conversacionesDuranteCachéExtendida; c++) {
+            
+            var conversación = new Conversación(modelo.Familia);
+            EscribirSeparador();
+            EscribirVerdeOscuro($"Conversación {c}:");
+            EscribirMensajes(instrucciónSistema, null, null, null, null);
 
-        var respuestaConsulta = servicio.Consultar(conversacionesDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, conversación,
-            [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
-                [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
-            out string error, out Dictionary<string, Tókenes> tókenesConsulta, consultasPorConversación: totalMensajes, tókenesPromedioMensajeUsuario: 10,
-            tókenesPromedioRespuestaIA: 100, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta); // Se asume que el modelo contesta con 10 veces más palabras que lo que escribe el usuario, pero según el caso de uso y verbosidad usada se debe usar un valor más realista.
-        EscribirMensajes(null, null, null, respuestaConsulta, null);
-        respuesta += "Asistente IA: " + Environment.NewLine + respuestaConsulta + separadorMensajes;
-        if (resultado == Resultado.Respondido && resultadoConsulta != Resultado.Respondido) resultado = resultadoConsulta; // Al primer resultado diferente de Respondido se queda con ese para reportar el resumen de este procedimiento. Si bien no es estrictamente correcto, sirve para fines de prueba poder registrar la aparición de un caso problemático en toda la conversación, así existan otros.
+            var númeroCliente = ObtenerAleatorio(0, 10000).ToString("D5");
 
-        información.AgregarLíneas(informaciónConsulta);
+            for (int m = 1; m <= totalMensajes; m++) {
 
-        var contadorTókenesConsulta = 1;
-        foreach (var iTókenesConsulta in tókenesConsulta.Values) {
+                var mensajeUsuario = m switch {
+                    1 =>  usarMensajeUsuarioMuyLargo ? mensajeUsuarioMuyLargo 
+                        : $"Hola mi nombre es Javier{númeroCliente}, estoy interesado en conocer el precio de un accesorio Ala para el avión F40.", // Es necesario hacer el primer mensaje diferente entre cada conversación para romper cualquier caché que se intentara formar incluyendo este primer mensaje para futuras conversaciones.
+                    2 => "Explicame mejor...",
+                    3 => "eres un robot?",
+                    4 => "ok, necesito el Accesorio de Ala M445",
+                    5 => "perdón el H51",
+                    6 => "800000000",
+                    _ => throw new NotImplementedException(),
+                };
 
-            tókenes.AgregarSumando(iTókenesConsulta);
-            detalleTókenesPorConsulta += $"{cuentaMensaje}{(tókenesConsulta.Count == 1 ? "  " : $"-{contadorTókenesConsulta}")}: " +
-                $"{iTókenesConsulta}{Environment.NewLine}";
-            contadorTókenesConsulta++;
+                conversación.AgregarMensajeUsuario(mensajeUsuario);
+                EscribirMensajes(null, null, mensajeUsuario, null, null);
+                respuesta += "Usuario: " + Environment.NewLine + mensajeUsuario + separadorMensajes;
 
-        }
+                var respuestaConsulta = servicio.Consultar(conversacionesDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, conversación,
+                    [new Función("ObtenerPrecio", ObtenerPrecio, "Obtiene el precio de un producto que se encuentre en la base de datos de productos.",
+                        [ new Parámetro("referencia", "string", "Referencia del producto", true), new Parámetro("nit", "string", "Nit del cliente", true)])],
+                    out error, out Dictionary<string, Tókenes> tókenesConsulta, consultasPorConversación: totalMensajes, tókenesPromedioMensajeUsuario: 10,
+                    tókenesPromedioRespuestaIA: 60, out bool seLLamóFunción, out StringBuilder informaciónConsulta, out Resultado resultadoConsulta); // Se asume que el modelo contesta con 6 veces más palabras que lo que escribe el usuario, pero según el caso de uso y verbosidad usada se debe usar un valor más realista.
+                EscribirMensajes(null, null, null, respuestaConsulta, null);
+                respuesta += "Asistente IA: " + Environment.NewLine + respuestaConsulta + separadorMensajes;
 
-        if (string.IsNullOrEmpty(error)) {
+                if (!string.IsNullOrEmpty(error) || resultado != Resultado.Respondido) goto fin;
 
-            if (!seLLamóFunción) { // Sigue conversando hasta que por fin llame a la función o hasta que el usuario se canse y deje de responder.
+                información.AgregarLíneas(informaciónConsulta);
 
-                cuentaMensaje++;
-                if (cuentaMensaje == 2) {
-                    mensajeUsuario = "Explicame mejor...";
-                } else if (cuentaMensaje == 3) {
-                    mensajeUsuario = "eres un robot?";
-                } else if (cuentaMensaje == 4) {
-                    mensajeUsuario = "ok, necesito el Accesorio de Ala M445";
-                } else if (cuentaMensaje == 5) {
-                    mensajeUsuario = "perdón el H51";
-                } else if (cuentaMensaje == 6) {
-                    mensajeUsuario = "800000000";
+                if (seLLamóFunción) {
+                    respuesta += "Ejecutada función." + Environment.NewLine + separadorMensajes;
+                    EscribirMensajes(null, null, null, null, null, "Ejecutada función");
                 }
-                if (cuentaMensaje <= totalMensajes + 1) goto continuarConversación;
 
-            }
+                var contadorTókenesConsulta = 1;
+                foreach (var iTókenesConsulta in tókenesConsulta.Values) {
 
-        }
+                    tókenes.AgregarSumando(iTókenesConsulta);
+                    detalleTókenesPorConsulta += $"C{c}-M{m}{(tókenesConsulta.Count == 1 ? "  " : $"-{contadorTókenesConsulta}")}: " +
+                        $"{iTókenesConsulta}{Environment.NewLine}";
+                    contadorTókenesConsulta++;
 
-        detalleTókenesPorConsulta = $"Tókenes por consulta:{Environment.NewLine}" +
-            $"{detalleTókenesPorConsulta}E=Entrada C=Caché ¬=No S=Salida R=Razonamiento EM=Escritura Manual M=Minutos";
+                }
 
-        return (respuesta, tókenes, detalleTókenesPorConsulta, error, información, resultado);
+            } // for m = 1 to totalMensajes > 
+
+        } // for c = 1 to conversacionesDuranteCachéExtendida >
+
+        detalleTókenesPorConsulta += $"E=Entrada C=Caché ¬=No S=Salida R=Razonamiento EM=Escritura Manual M=Minutos{DobleLínea}";
+
+        fin:
+        return (respuesta, tókenes, detalleTókenesPorConsulta.TrimEnd(), error, información, resultado);
 
     } // ConversaciónUsandoFunciones>
 

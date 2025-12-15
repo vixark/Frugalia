@@ -72,7 +72,8 @@ internal static class Global {
     } // DesplazarContenidoHaciaArriba>
 
 
-    internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? mensajeUsuario, string? respuesta, string? archivo) {
+    internal static void EscribirMensajes(string? instrucciónSistema, string? rellenoInstrucciónSistema, string? mensajeUsuario, string? respuesta, 
+        string? archivo, string? información = null) {
 
         if (!string.IsNullOrEmpty(instrucciónSistema)) {
             Escribir("");
@@ -97,6 +98,11 @@ internal static class Global {
         if (!string.IsNullOrEmpty(respuesta)) {
             EscribirSeparador();
             EscribirMultilíneaGris($"Asistente IA: {respuesta}");
+        }
+
+        if (!string.IsNullOrEmpty(información)) {
+            EscribirSeparador();
+            EscribirMultilíneaGris($"Información: {información}");
         }
 
     } // EscribirMensajes>

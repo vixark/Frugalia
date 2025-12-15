@@ -55,8 +55,7 @@ namespace Frugalia {
 
         private Action<int> AcciónEscribirMáximosTókenesSalida { get; }
 
-        private Func<RazonamientoEfectivo, RestricciónRazonamiento, RestricciónRazonamiento, Modelo, int, StringBuilder>
-            FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
+        private Func<RazonamientoEfectivo, Modelo, int, StringBuilder> FunciónEscribirOpcionesRazonamientoYObtenerInformación { get; }
 
 
         /// <summary>
@@ -76,20 +75,17 @@ namespace Frugalia {
         /// <param name="verbosidad"></param>
         /// <param name="información"></param>
         /// <exception cref="Exception"></exception>
-        internal void EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto,
-            RestricciónRazonamiento restricciónRazonamientoMedio, Modelo modelo, int longitudInstrucciónÚtil, RestricciónTókenesSalida restricciónTókenesSalida,
-            RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, ref StringBuilder información) {
+        internal void EscribirOpcionesRazonamientoYLímitesTókenes(Razonamiento razonamiento, Modelo modelo, Restricciones restricciones, 
+            int longitudInstrucciónÚtil, Verbosidad verbosidad, ref StringBuilder información) {
 
-            var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo,
-                longitudInstrucciónÚtil, out StringBuilder informaciónRazonamientoEfectivo);
+            var razonamientoEfectivo = ObtenerRazonamientoEfectivo(razonamiento, modelo, restricciones, longitudInstrucciónÚtil, 
+                out StringBuilder informaciónRazonamientoEfectivo);
             if (!informaciónRazonamientoEfectivo.EsNuloOVacío()) información.AgregarLíneas(informaciónRazonamientoEfectivo);
 
-            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamientoEfectivo, restricciónRazonamientoAlto,
-                restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil);
+            var informaciónOpcionesRazonamiento = FunciónEscribirOpcionesRazonamientoYObtenerInformación(razonamientoEfectivo, modelo, longitudInstrucciónÚtil);
             if (!informaciónOpcionesRazonamiento.EsNuloOVacío()) información.AgregarLíneas(informaciónOpcionesRazonamiento);
 
-            var máximosTókenesSalidaYRazonamiento
-                = ObtenerMáximosTókenesSalidaYRazonamiento(restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, razonamientoEfectivo);
+            var máximosTókenesSalidaYRazonamiento = ObtenerMáximosTókenesSalidaYRazonamiento(restricciones, verbosidad, razonamientoEfectivo);
 
             if (máximosTókenesSalidaYRazonamiento <= 0) throw new Exception("No se permiten valores negativos o cero para máximosTókenesSalida.");
             if (máximosTókenesSalidaYRazonamiento != SinLímiteTókenes) AcciónEscribirMáximosTókenesSalida(máximosTókenesSalidaYRazonamiento);
@@ -97,9 +93,8 @@ namespace Frugalia {
         } // EscribirOpcionesRazonamientoYLímitesTókenes>
 
 
-        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, RestricciónRazonamiento restricciónRazonamientoAlto, RestricciónRazonamiento restricciónRazonamientoMedio,
-            RestricciónTókenesSalida restricciónTókenesSalida, RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, int longitudInstrucciónÚtil,
-            Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
+        internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, Restricciones restricciones, 
+            int longitudInstrucciónÚtil, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
 
             Familia = familia;
 
@@ -110,7 +105,7 @@ namespace Frugalia {
 
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
-                FunciónEscribirOpcionesRazonamientoYObtenerInformación = (razonamientoE2, rRazonamientoAlto2, rRazonamientoMedio2, modelo2, longitudIU2) => {
+                FunciónEscribirOpcionesRazonamientoYObtenerInformación = (razonamientoE2, modelo2, longitudIU2) => {
 
                     var información2 = new StringBuilder(); // No se ha escrito aún, pero se deja por si es necesario llenarlo más adelante.
 
@@ -159,8 +154,7 @@ namespace Frugalia {
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
-                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, restricciónRazonamientoAlto, restricciónRazonamientoMedio, modelo, longitudInstrucciónÚtil,
-                    restricciónTókenesSalida, restricciónTókenesRazonamiento, verbosidad, ref información);
+                EscribirOpcionesRazonamientoYLímitesTókenes(razonamiento, modelo, restricciones, longitudInstrucciónÚtil, verbosidad, ref información);
 
                 if (!modelo.VerbosidadesPermitidas.Contains(verbosidad)) {
                     if (verbosidad != Verbosidad.Media) throw new Exception($"El modelo {modelo} no soporta configuración de la verbosidad diferente de Media."); // Se considera que la verbosidad Media es la que tienen los modelos que no permiten especificar la verbosidad y por lo tanto se les pasó vacía la lista de verbosidades permitidas al crear el Modelo.
@@ -235,8 +229,9 @@ namespace Frugalia {
         /// <param name="verbosidad"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        internal static int ObtenerMáximosTókenesSalidaYRazonamiento(RestricciónTókenesSalida restricciónTókenesSalida,
-            RestricciónTókenesRazonamiento restricciónTókenesRazonamiento, Verbosidad verbosidad, RazonamientoEfectivo razonamientoEfectivo) {
+        internal static int ObtenerMáximosTókenesSalidaYRazonamiento(Restricciones restricciones, Verbosidad verbosidad, RazonamientoEfectivo razonamientoEfectivo) {
+
+            var (_, _, _, restricciónTókenesSalida, restricciónTókenesRazonamiento) = restricciones;
 
             if ((restricciónTókenesRazonamiento == RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida != RestricciónTókenesSalida.Ninguna)
                 || restricciónTókenesRazonamiento != RestricciónTókenesRazonamiento.Ninguna && restricciónTókenesSalida == RestricciónTókenesSalida.Ninguna)

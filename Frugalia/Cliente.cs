@@ -25,6 +25,7 @@
 using OpenAI;
 using OpenAI.Responses;
 using System;
+using System.Threading;
 using static Frugalia.General;
 
 
@@ -42,10 +43,10 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Func<string, Conversación, Opciones, Modelo, bool, (Respuesta, Tókenes, Resultado)> FunciónObtenerRespuesta { get; }
+        private Func<string, Conversación, Opciones, Modelo, bool, int, (Respuesta, Tókenes, Resultado)> FunciónObtenerRespuesta { get; }
 
-        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, bool lote)
-            => FunciónObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, lote);
+        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, bool lote, 
+            int segundosLímite) => FunciónObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, lote, segundosLímite);
 
         private Func<Archivador> FunciónObtenerArchivador { get; }
 
@@ -61,16 +62,31 @@ namespace Frugalia {
 
                 ClienteGPT = new OpenAIClient(claveAPI);
 
-                FunciónObtenerRespuesta = (mensajeUsuario, conversación, opciones, modelo, lote) => {
+                FunciónObtenerRespuesta = (mensajeUsuario, conversación, opciones, modelo, lote, segundosLímite) => {
 
-                    var respondedorInicial = ClienteGPT.GetOpenAIResponseClient(modelo.Nombre);
+                    var respondedor = ClienteGPT.GetOpenAIResponseClient(modelo.Nombre);
                     OpenAIResponse respuestaGPT;
-                    if (!string.IsNullOrEmpty(mensajeUsuario)) {
-                        respuestaGPT = (OpenAIResponse)respondedorInicial.CreateResponse(mensajeUsuario, opciones.OpcionesGPT);
-                    } else if (conversación != null) {
-                        respuestaGPT = (OpenAIResponse)respondedorInicial.CreateResponse(conversación.ConversaciónGPT, opciones.OpcionesGPT);
-                    } else {
-                        throw new InvalidOperationException("Debe haber al menos un mensaje del usuario o conversación.");
+                    var resultado = Resultado.Respondido;
+
+                    using (var cancelador = new CancellationTokenSource()) {
+
+                        cancelador.CancelAfter(TimeSpan.FromSeconds(segundosLímite));
+
+                        try {
+
+                            if (!string.IsNullOrEmpty(mensajeUsuario)) {
+                                respuestaGPT = (OpenAIResponse)respondedor.CreateResponse(mensajeUsuario, opciones.OpcionesGPT, cancelador.Token);
+                            } else if (conversación != null) {
+                                respuestaGPT = (OpenAIResponse)respondedor.CreateResponse(conversación.ConversaciónGPT, opciones.OpcionesGPT, cancelador.Token);
+                            } else {
+                                throw new InvalidOperationException("Debe haber al menos un mensaje del usuario o conversación.");
+                            }
+
+                        } catch (OperationCanceledException) {
+                            resultado = Resultado.TiempoSuperado;
+                            return (new Respuesta(null), new Tókenes(), resultado);
+                        }
+
                     }
 
                     Tókenes tókenes;
@@ -80,8 +96,7 @@ namespace Frugalia {
                         tókenes = new Tókenes(modelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
                             respuestaGPT.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGPT.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
                     }
-
-                    var resultado = Resultado.Respondido;
+                    
                     if (respuestaGPT?.IncompleteStatusDetails?.Reason.Value.ToString() == "max_output_tokens")
                         resultado = Resultado.MáximosTókenesAlcanzados;
 

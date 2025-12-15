@@ -61,7 +61,7 @@ namespace Frugalia {
 
                 FunciónObtenerTextoRespuesta = (tratamientoNegritas) => {
 
-                    var respuesta = RespuestaGPT.GetOutputText() ?? "";
+                    var respuesta = RespuestaGPT?.GetOutputText() ?? "";
 
                     if (respuesta.Contains("**")) {
 
@@ -84,7 +84,7 @@ namespace Frugalia {
 
                 };
 
-                FunciónObtenerÍtemsRespuesta = () => RespuestaGPT?.OutputItems == null ? new List<ÍtemRespuesta>() // No debería pasar que devuelva respuesta vacía, pero se considera el caso por si llega a suceder.
+                FunciónObtenerÍtemsRespuesta = () => RespuestaGPT?.OutputItems == null ? new List<ÍtemRespuesta>() 
                     : RespuestaGPT.OutputItems.Select(i => new ÍtemRespuesta(i)).ToList();
 
                 break;
