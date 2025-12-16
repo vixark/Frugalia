@@ -25,6 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 
 
@@ -187,6 +188,52 @@ namespace Frugalia {
 
 
         /// <summary>
+        /// Agrega varias nuevas líneas a un texto guardado en un StringBuilder, evitando duplicados de línea.
+        /// Recorre cada línea de <paramref name="nuevasLíneas"/> y solo agrega aquellas que no existan ya como línea completa en <paramref name="texto"/>.
+        /// </summary>
+        /// <param name="texto">Texto destino donde se agregarán las líneas.</param>
+        /// <param name="nuevasLíneas">Texto de origen cuyas líneas se intentarán agregar.</param>
+        /// <exception cref="ArgumentNullException">Si <paramref name="texto"/> es nulo.</exception>
+        public static void AgregarLíneasSiNoEstán(this StringBuilder texto, StringBuilder nuevasLíneas) { // Función escrita por GPT 5.1. No probada extensivamente.
+
+            if (texto == null) throw new ArgumentNullException(nameof(texto), "El método AgregarLíneasSiNoEstán() no permite nulos.");
+            if (nuevasLíneas == null || nuevasLíneas.Length == 0) return;
+
+            int len = nuevasLíneas.Length;
+            int pos = 0;
+
+            while (pos <= len) {
+
+                int inicio = pos;
+                int fin = inicio;
+
+                while (fin < len && nuevasLíneas[fin] != '\r' && nuevasLíneas[fin] != '\n') fin++;
+
+                int longitudLínea = fin - inicio;
+                if (longitudLínea > 0) {
+
+                    string línea = nuevasLíneas.ToString(inicio, longitudLínea);
+                    if (!texto.ContieneLínea(línea)) texto.AgregarLínea(línea);
+
+                } else {
+
+                    if (!texto.ContieneLínea(string.Empty)) texto.AgregarLínea(string.Empty);
+
+                }
+
+                if (fin < len) {
+                    if (nuevasLíneas[fin] == '\r' && fin + 1 < len && nuevasLíneas[fin + 1] == '\n') pos = fin + 2;
+                    else pos = fin + 1;
+                } else {
+                    pos = fin + 1;
+                }
+
+            }
+
+        } // AgregarLíneasSiNoEstán>
+
+
+        /// <summary>
         /// Indica si el StringBuilder es nulo o está vacío (Length == 0).
         /// Equivalente a string.IsNullOrEmpty pero para StringBuilder.
         /// </summary>
@@ -243,6 +290,42 @@ namespace Frugalia {
 
 
         /// <summary>
+        /// Normaliza una cadena para usarla como nombre de archivo o identificador seguro.
+        /// </summary>
+        /// <param name="texto"></param>
+        /// <returns></returns>
+        public static string Normalizar(string texto) {
+
+            if (string.IsNullOrWhiteSpace(texto)) return texto;
+
+            texto = texto.Trim().ToLowerInvariant();
+
+            var formD = texto.Normalize(NormalizationForm.FormD); // Quita diacríticos (tildes/ñ -> n, ó -> o, etc.)
+            var sb = new StringBuilder(formD.Length);
+
+            foreach (char ch in formD) {
+
+                var uc = CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (uc == UnicodeCategory.NonSpacingMark) continue;
+
+                if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' || ch == ':' || ch == '.') { // Permite solo caracteres seguros para APIs problemáticas.
+                    sb.Append(ch);
+                } else if (char.IsWhiteSpace(ch)) {
+                    sb.Append('-');
+                } else {
+                    sb.Append('-');
+                }
+
+            }
+
+            var respuesta = sb.ToString().Trim('-');
+            while (respuesta.Contains("--")) respuesta = respuesta.Replace("--", "-");
+            return respuesta;
+
+        } // Normalizar>
+
+
+        /// <summary>
         /// Detecta si una línea exacta ya está presente en el contenido del StringBuilder.
         /// No realiza asignaciones de cadena para comparaciones Ordinal y OrdinalIgnoreCase.
         /// Soporta saltos de línea CRLF (\r\n), LF (\n) y CR (\r).
@@ -251,7 +334,7 @@ namespace Frugalia {
         /// <param name="línea">Línea a buscar (sin el salto de línea).</param>
         /// <param name="comparison">Tipo de comparación. Optimizado para Ordinal y OrdinalIgnoreCase.</param>
         /// <returns>true si existe una línea exactamente igual; false en caso contrario.</returns>
-        public static bool ContieneLínea(this StringBuilder texto, string línea, StringComparison comparison = StringComparison.Ordinal) { // Función escrita por GPT 5.1, no probada extensivamente.
+        public static bool ContieneLínea(this StringBuilder texto, string línea, StringComparison comparison = StringComparison.Ordinal) { // Función escrita por GPT 5.1. No probada extensivamente.
 
             if (texto == null) throw new ArgumentNullException(nameof(texto));
             if (línea == null) throw new ArgumentNullException(nameof(línea));

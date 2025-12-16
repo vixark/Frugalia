@@ -142,6 +142,12 @@ namespace Frugalia {
 
         internal const string Fin = ".[fin].";
 
+        public static string AdvertenciaGrupoCachéDemostración = $"{DobleLínea}No uses el texto '{GrupoCachéDemostración}' en la variable GrupoCaché.{DobleLínea}¿Qué es GrupoCaché?{Environment.NewLine}Es el nombre bajo el cual se agrupan las consultas y se mejora el aprovechamiento de la caché cuando se repite la misma parte inicial de instrucciones del sistema + funciones + otras. No es una clave única de esa parte inicial ni un número único por consulta ni un identificador único del usuario.{DobleLínea}¿Por qué no debes dejarlo en '{GrupoCachéDemostración}'?{Environment.NewLine}Porque estarías usando el mismo valor que Frugalia usa para pruebas y se podría superar el umbral de consultas por minuto en el mismo grupo y con el mismo inicio que recomiendan los modelos, lo que puede degradar la caché y hacerte pagar más (para modelos GPT lee más en https://platform.openai.com/docs/guides/prompt-caching).{DobleLínea}Qué valor deberías usar:{Environment.NewLine}- Si tu aplicación tiene poco tráfico: usa un valor estable por aplicación y versión. Por ejemplo, frugalia-nombredetuapp.{Environment.NewLine}- Si tu aplicación tiene mucho tráfico: usa unos pocos valores diferentes para repartir la carga. Por ejemplo, puedes agrupar por consultas con instrucciones comunes: frugalia-nombredetuapp-identificarimágenes y otro con frugalia-nombredetuapp-chatservicioalcliente. También puedes agrupar por grupos de usuarios: frugalia-nombredetuapp-g07 asignando cada usuario a un grupo de forma permanente de tal manera que el mismo usuario siempre tenga asignado el mismo grupo. O con una combinación de ambos: frugalia-nombredetuapp-identificarimágenes-g04.{DobleLínea}Qué valores no deberías usar:{Environment.NewLine}- No generes un valor nuevo en cada consulta porque esto empeora el funcionamiento de la caché.{Environment.NewLine}- No uses valores asociados a un usuario en particular. Esto reduce la efectividad de la caché porque el servidor no podría compartir textos en caché entre diferentes usuarios.{DobleLínea}Para cambiarlo, modifica GlobalFrugalia.cs > GrupoCaché.{DobleLínea}Si no entiendes este texto (¡no te culpo!), cámbialo a texto vacío y se desactivará el agrupamiento de textos en caché y las consultas funcionarán, aunque con caché menos efectiva y costos ligeramente más altos. Sin embargo, te sugiero usar un valor adecuado según tu caso de uso para que la caché funcione óptimamente y se logre el máximo ahorro de dinero en tus consultas.";
+
+        public const string GrupoCaché = "frugalia-demostración"; // Cambia este valor según la explicación de la línea anterior. Cámbialo a texto vacío ("") para desactivar la funcionalidad de grupos de caché.
+
+        public const string GrupoCachéDemostración = "frugalia-demostración"; // No cambiar este valor.
+
         internal readonly static string InstrucciónAutoevaluación = "\n\nPrimero responde normalmente al usuario.\n\nDespués evalúa tu " +
             "propia respuesta y en la última línea escribe exactamente una de estas etiquetas, sola, sin dar explicaciones de tu elección:\n\n" +
             $"{LoHiceBien}\n{UsaModeloMejor}\n{UsaModeloMuchoMejor}\n\nUsa:\n{LoHiceBien}: Si tu respuesta fue buena, tiene " +
@@ -149,9 +155,9 @@ namespace Frugalia {
             "buena en calidad, sentido o completitud, o si a la consulta le faltan detalles, contexto o no la entiendes bien.\n" +
             $"{UsaModeloMuchoMejor}: Si la consulta es muy compleja, requiere conocimiento experto o trata temas delicados."; // Alrededor de 650 carácteres.
 
-        internal const int CarácteresLímiteInstrucciónParaSubirRazonamiento = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto. El valor de 750 es ligeramente superior a la longitud de InstrucciónAutoevaluación, por lo tanto al establecer CalidadAdaptable diferente de No y Razonamiento adaptable y sumarle la longitud de instrucción del sistema y de usuario, casi siempre subirá de razonamiento.
+        public const int CarácteresLímiteInstrucciónParaSubirRazonamiento = 750; // Aproximadamente 250 tókenes. Los límites de 750 y 2400 caracteres son a criterio. Se prefiere subir el razonamiento un poco antes (pagando algo más) para reducir errores, repreguntas y consultas repetidas (que valen más), que a la larga también consumen tókenes y empeoran la experiencia de usuario. Se encontró que cuando los textos son muy largos el agente se confunde y olvida cosas como preguntar un dato necesario para la función, al subir el nivel de razonamiento disminuye un poco este efecto. El valor de 750 es ligeramente superior a la longitud de InstrucciónAutoevaluación, por lo tanto al establecer CalidadAdaptable diferente de No y Razonamiento adaptable y sumarle la longitud de instrucción del sistema y de usuario, casi siempre subirá de razonamiento.
 
-        internal const int CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles = 2400; // Aproximadamente 800 tokenes.
+        public const int CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles = 2400; // Aproximadamente 800 tokenes.
 
         internal const int MáximosTókenesSalidaBaseVerbosidadBaja = 200;
 
@@ -230,7 +236,8 @@ namespace Frugalia {
 
         /// <summary>
         /// Obtiene la longitud útil de la todas las instrucciones considerando el mensaje del usuario, la instrucción del sistema rellenada,
-        /// el relleno de la instrucción del sistema (que no cuenta para la longitud útil), la longitud adicional y si es una consulta de calidad adaptable.
+        /// el relleno de la instrucción del sistema (que no cuenta para la longitud útil), la longitud adicional y si es una consulta de calidad adaptable
+        /// incluye la instrucción de autoevaluación.
         /// </summary>
         /// <param name="instrucciónSistemaRellena">Instrucción del sistema rellena.</param>
         /// <param name="rellenoInstrucciónSistema">Relleno del instruccion del sistema que no se tiene en cuenta para la longitud útil.</param>

@@ -37,7 +37,7 @@ namespace Frugalia {
     internal class Opciones {
 
 
-        internal ResponseCreationOptions OpcionesGPT { get; }
+        internal CreateResponseOptions OpcionesGPT { get; }
 
         internal object OpcionesGemini { get; }
 
@@ -94,14 +94,14 @@ namespace Frugalia {
 
 
         internal Opciones(Familia familia, string instrucciónSistema, Modelo modelo, Razonamiento razonamiento, Restricciones restricciones, 
-            int longitudInstrucciónÚtil, Verbosidad verbosidad, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
+            int longitudInstrucciónÚtil, Verbosidad verbosidad, string grupoCaché, bool buscarEnInternet, List<Función> funciones, ref StringBuilder información) {
 
             Familia = familia;
 
             switch (Familia) {
             case Familia.GPT:
 
-                OpcionesGPT = new ResponseCreationOptions();
+                OpcionesGPT = new CreateResponseOptions();
 
                 AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
 
@@ -178,8 +178,18 @@ namespace Frugalia {
 
                 }
 
-                if (modelo.UsaCachéExtendida) OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
+                if (modelo.UsaCachéExtendida) {
 
+                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona adecuadamente por 24 horas. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
+                    if (!string.IsNullOrWhiteSpace(grupoCaché)) {
+                        OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_key"), grupoCaché);
+                        información.AgregarLíneaSiNoEstá($"Se estableció el grupo de caché {grupoCaché}.");
+                    } else {
+                        información.AgregarLíneaSiNoEstá("No se estableció el grupo de caché, por lo tanto el funcionamiento de la caché no será óptimo.");
+                    }
+
+                }
+                   
                 if (buscarEnInternet) OpcionesGPT.Tools.Add(ResponseTool.CreateWebSearchTool());
 
                 if (funciones != null) {

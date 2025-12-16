@@ -64,8 +64,8 @@ namespace Frugalia {
 
                 FunciónObtenerRespuesta = (mensajeUsuario, conversación, opciones, modelo, lote, segundosLímite) => {
 
-                    var respondedor = ClienteGPT.GetOpenAIResponseClient(modelo.Nombre);
-                    OpenAIResponse respuestaGPT;
+                    var respondedor = ClienteGPT.GetResponsesClient(modelo.Nombre);
+                    ResponseResult respuestaGPT;
                     var resultado = Resultado.Respondido;
 
                     using (var cancelador = new CancellationTokenSource()) {
@@ -74,13 +74,15 @@ namespace Frugalia {
 
                         try {
 
+                            opciones.OpcionesGPT.InputItems.Clear(); // Aunque deberían venir vacía porque no se está asignando este valor al crear el objeto OpcionesGPT, se limpia para asegurar que quede vacía..
                             if (!string.IsNullOrEmpty(mensajeUsuario)) {
-                                respuestaGPT = (OpenAIResponse)respondedor.CreateResponse(mensajeUsuario, opciones.OpcionesGPT, cancelador.Token);
+                                opciones.OpcionesGPT.InputItems.Add(ResponseItem.CreateUserMessageItem(mensajeUsuario));
                             } else if (conversación != null) {
-                                respuestaGPT = (OpenAIResponse)respondedor.CreateResponse(conversación.ConversaciónGPT, opciones.OpcionesGPT, cancelador.Token);
+                                foreach (var item in conversación.ConversaciónGPT) opciones.OpcionesGPT.InputItems.Add(item);
                             } else {
                                 throw new InvalidOperationException("Debe haber al menos un mensaje del usuario o conversación.");
                             }
+                            respuestaGPT = respondedor.CreateResponse(opciones.OpcionesGPT, cancelador.Token);
 
                         } catch (OperationCanceledException) {
                             resultado = Resultado.TiempoSuperado;

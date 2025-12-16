@@ -80,7 +80,7 @@ internal static class Global {
             EscribirMultilíneaGris($"Sistema: {instrucciónSistema}");
         }
 
-        if (!string.IsNullOrEmpty(rellenoInstrucciónSistema)) {
+        if (!string.IsNullOrWhiteSpace(rellenoInstrucciónSistema)) {
             EscribirSeparador();
             EscribirMultilíneaGris($"Relleno Sistema: {rellenoInstrucciónSistema}");
         }

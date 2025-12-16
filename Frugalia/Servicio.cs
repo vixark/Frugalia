@@ -50,8 +50,6 @@ namespace Frugalia {
 
         public CalidadAdaptable CalidadAdaptable { get; }
 
-        public bool EsCalidadAdaptable => CalidadAdaptable != CalidadAdaptable.No;
-
         public TratamientoNegritas TratamientoNegritas { get; }
 
         private string ClaveAPI { get; }
@@ -66,6 +64,10 @@ namespace Frugalia {
 
         internal readonly decimal TasaDeCambioUsd; 
 
+        public bool EsCalidadAdaptable => CalidadAdaptable != CalidadAdaptable.No;
+
+        private string GrupoCaché { get; }
+
 
         public string Descripción => $"Modelo = {Familia} {Modelo}{(Lote ? " Lote" : "")}.{Environment.NewLine}" +
             $"Verbosidad = {Verbosidad}.{Environment.NewLine}" +
@@ -78,13 +80,14 @@ namespace Frugalia {
 
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
-            TratamientoNegritas tratamientoNegritas, string claveAPI, decimal tasaDeCambioUsd, out string error, out string información, 
-            bool rellenarInstruccionesSistema = true, Restricciones restricciones = null, int segundosLímitePorConsulta = 60) {
+            TratamientoNegritas tratamientoNegritas, string claveAPI, decimal tasaDeCambioUsd, string grupoCaché, out string error, out string advertencia, 
+            out string información, bool rellenarInstruccionesSistema = true, Restricciones restricciones = null, int segundosLímitePorConsulta = 60) {
 
             información = "";
             var textoInformación = new StringBuilder(); // Se deja para futuro uso.
 
             error = null;
+            advertencia = null;
             var modelo = Modelo.ObtenerModelo(nombreModelo);
             if (modelo == null) {
                 error = $"El modelo '{nombreModelo}' no es válido.";
@@ -108,6 +111,14 @@ namespace Frugalia {
                 error = "Los segundos límite por consulta no pueden ser 0 o menores.";
                 Iniciado = false;
                 return;
+            }
+
+            if (!System.IO.File.Exists(@"D:\Proyectos\Frugalia\grupo-caché-frugalia-demostración-permitido.txt") 
+                && grupoCaché.StartsWith(GrupoCachéDemostración)) {
+                GrupoCaché = "";
+                advertencia = AdvertenciaGrupoCachéDemostración;
+            } else {
+                GrupoCaché = Normalizar(grupoCaché); // Se deben quitar tildes y símbolos porque las APIs pueden poner problema con ellos.
             }
 
             Restricciones = restricciones ?? new Restricciones(); // Si es nulo, se inicia con los valores por defecto.
@@ -435,9 +446,10 @@ namespace Frugalia {
 
 
         internal static Opciones ObtenerOpciones(string instrucciónSistema, bool buscarEnInternet, int longitudInstrucciónÚtil, Familia familia, Modelo modelo,
-            Razonamiento razonamiento, Verbosidad verbosidad, Restricciones restricciones, List<Función> funciones, ref StringBuilder información)
-                => new Opciones(familia, instrucciónSistema, modelo, razonamiento, restricciones, longitudInstrucciónÚtil, verbosidad, buscarEnInternet, funciones,
-                    ref información);
+            Razonamiento razonamiento, Verbosidad verbosidad, string grupoCaché, Restricciones restricciones, 
+            List<Función> funciones, ref StringBuilder información)
+                => new Opciones(familia, instrucciónSistema, modelo, razonamiento, restricciones, longitudInstrucciónÚtil, verbosidad, grupoCaché, 
+                    buscarEnInternet, funciones, ref información);
 
 
         private static Respuesta ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, Cliente cliente, bool lote,
@@ -470,9 +482,9 @@ namespace Frugalia {
         /// <exception cref="Exception"></exception>
         private static Respuesta ObtenerRespuesta(string mensajeUsuario, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
             bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesInstrucciónÚtil, Cliente cliente, Familia familia, Modelo modelo, bool lote, 
-            Razonamiento razonamiento, Verbosidad verbosidad, bool esCalidadAdaptable, Restricciones restricciones, CalidadAdaptable calidadAdaptable, 
-            TratamientoNegritas tratamientoNegritas, int segundosLímite, out string respuestaTextoLimpio, ref Dictionary<string, Tókenes> tókenes, 
-            ref StringBuilder información, out Resultado resultado) {
+            Razonamiento razonamiento, Verbosidad verbosidad, string grupoCaché, bool esCalidadAdaptable, Restricciones restricciones, 
+            CalidadAdaptable calidadAdaptable, TratamientoNegritas tratamientoNegritas, int segundosLímite, out string respuestaTextoLimpio, 
+            ref Dictionary<string, Tókenes> tókenes, ref StringBuilder información, out Resultado resultado) {
 
             resultado = Resultado.Respondido;
 
@@ -490,8 +502,8 @@ namespace Frugalia {
                 tókenesAdicionalesInstrucciónÚtil * CarácteresPorTokenTípicos, esCalidadAdaptable);
             if (EsRazonamientoAdaptable(razonamiento)) información.AgregarLínea($"Longitud instrucción útil = {longitudInstrucciónÚtil} carácteres.");
 
-            var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, longitudInstrucciónÚtil, familia, modelo, razonamiento, verbosidad, restricciones,
-                funciones, ref información);
+            var opciones = ObtenerOpciones(instrucciónSistema, buscarEnInternet, longitudInstrucciónÚtil, familia, modelo, razonamiento, verbosidad, grupoCaché,
+                restricciones, funciones, ref información);
 
             if (esCalidadAdaptable) {
 
@@ -616,7 +628,10 @@ namespace Frugalia {
                         }
 
                     } else if (resultadoInicial == Resultado.TiempoSuperado) {
-                        nivelMejoramientoSugerido = 0; // No es necesario agregar información porque este resultado se reporta como error. Tampoco es necesario asignar el resultado porque se asigna en la rama de nivelMejoramientoSugerido = 0.
+
+                        nivelMejoramientoSugerido = 0; // No es necesario asignar el resultado porque se asigna en la rama de nivelMejoramientoSugerido = 0.
+                        información.AgregarLínea("Se alcanzó el tiempo límite para la consulta.");
+
                     } else { // El modelo olvidó agregar la etiqueta de autoevaluación. No tiene problemas de máximos tókenes de salida alcanzados.
 
                         resultado = Resultado.SinAutoevaluación; // El modelo no contestó con la etiqueta correcta. No debería pasar mucho. Se devuelve el estado apropiado al usuario librería para que pueda llevar un registro de cuándo sucede esto y tomar las acciones necesarias. Al usuario del programa se le responde normalmente sin realizar ningún mejoramiento del modelo. Lo peor que puede pasa es que el usuario a veces obtenga resultados no tan buenos con un modelo más pequeño, es similar a lo que sucede cuando el modelo es ignorantemente confidente y se califica [lo-hice-bien] sin haberlo hecho bien.
@@ -733,7 +748,7 @@ namespace Frugalia {
                 }
 
                 ObtenerRespuesta(mensajeUsuario, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
-                    tókenesAdicionalesInstrucciónÚtil: 0, Cliente, Familia, Modelo, Lote, Razonamiento, Verbosidad, EsCalidadAdaptable, Restricciones, 
+                    tókenesAdicionalesInstrucciónÚtil: 0, Cliente, Familia, Modelo, Lote, Razonamiento, Verbosidad, GrupoCaché, EsCalidadAdaptable, Restricciones, 
                     CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
 
                 error = null;
@@ -798,7 +813,7 @@ namespace Frugalia {
 
                 var respuesta = ObtenerRespuesta(mensajeUsuario: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
                     buscarEnInternet: false, funciones: null, tipoArchivo != TipoArchivo.Imagen ? tókenesArchivos : 0, Cliente, Familia, Modelo, Lote, // Si los archivos son imágenes, por el momento no se suman los tókenes del archivo a los tókenes de entrada adicionales porque el caso de imágenes muy simples (por ejemplo, un imagen de un solo color) no implicarían una alta carga de razonamiento adicional requerido, en cambio imágenes más complejas como fotos de tablas nutricionales sí implicarían una alta carga de razonamiento adicional. Por lo tanto, derivar los tókenes adicionales de entrada de los tókenes del tamaño del archivo de la imagen no sería muy apropiado. Si se quisiera ser más estricto, se debería preanalizar la imagen para determinar que tanta carga de razonamiento extra puede requerir.
-                    Razonamiento, Verbosidad, EsCalidadAdaptable, Restricciones, CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, 
+                    Razonamiento, Verbosidad, GrupoCaché, EsCalidadAdaptable, Restricciones, CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, 
                     out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
 
                 error = null;
@@ -938,9 +953,9 @@ namespace Frugalia {
                     }
 
                     respuesta = ObtenerRespuesta(mensajeUsuario: null, conversación, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet: false,
-                        funciones, tókenesFunciones, Cliente, Familia, modeloAUsar, Lote, razonamientoAUsar, Verbosidad, EsCalidadAdaptable, Restricciones, 
-                        CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, out respuestaTextoLimpio, ref tókenesConsulta, ref información, 
-                        out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
+                        funciones, tókenesFunciones, Cliente, Familia, modeloAUsar, Lote, razonamientoAUsar, Verbosidad, GrupoCaché, EsCalidadAdaptable, 
+                        Restricciones, CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, out respuestaTextoLimpio, ref tókenesConsulta, 
+                        ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
                     
                     funciónEjecutadaÚltimaConsulta = false;
 

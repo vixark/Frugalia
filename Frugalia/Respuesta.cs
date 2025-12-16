@@ -36,7 +36,7 @@ namespace Frugalia {
     internal class Respuesta {
 
 
-        internal OpenAIResponse RespuestaGPT { get; set; }
+        internal ResponseResult RespuestaGPT { get; set; }
 
         internal object RespuestaGemini { get; set; }
 
@@ -107,7 +107,7 @@ namespace Frugalia {
         } // Respuesta>
 
 
-        internal Respuesta(OpenAIResponse respuestaGPT) : this(Familia.GPT) => RespuestaGPT = respuestaGPT;
+        internal Respuesta(ResponseResult respuestaGPT) : this(Familia.GPT) => RespuestaGPT = respuestaGPT;
 
 
     } // Respuesta>
