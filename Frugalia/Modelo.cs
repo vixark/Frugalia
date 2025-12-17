@@ -25,8 +25,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using static Frugalia.GlobalFrugalia;
 using static Frugalia.General;
+using static Frugalia.GlobalFrugalia;
 
 
 namespace Frugalia {
@@ -96,11 +96,15 @@ namespace Frugalia {
         /// Descuento aplicable por operaciones en lote (no en tiempo real) que típicamente se tardan 24 horas. Los descuentos aplican para los PreciosEntrada 
         /// y PreciosSalida, pero no para PreciosEscrituraManualCaché.
         /// </summary>
-        internal decimal FracciónDescuentoEntradaYSalidaPorLote { get; }
+        internal decimal FactorDescuentoEntradaYSalidaPorLote { get; }
 
-        internal decimal? FracciónDescuentoEscrituraCachéPorLote { get; }
+        internal decimal? FactorDescuentoEscrituraCachéPorLote { get; }
 
-        internal decimal FracciónDescuentoLecturaCachePorLote { get; } // Gemini y OpenAI no aplican descuento, pero Claude sí.
+        internal decimal FactorDescuentoLecturaCachePorLote { get; } // Gemini y OpenAI no aplican descuento, pero Claude sí.
+
+        internal double? FactorÉxitoCaché { get; } // Si OpenAI funcionara bien no debería pasar que no se active la caché en el segundo mensaje de una conversación que tiene instrucciones del sistema rellenadas desde el primer mensaje, pero sí pasa. En algunos casos OpenAI simplemente ignora la caché. Se hizo un experimento rellenando más las instrucciones del sistema y queda demostrado que no es cuestión del tamaño de tokenes de la función ni que se cambie ni nada, simplemente a veces no lo coge, con 1294 tókenes hay más que suficiente para garantizar que toda la instruccion sistema es superior a 1024 . 1294 - 10 (o lo que sea del mensaje del usuario) - 73 de la función  = 1211 1: ENC = 1294 EC = 0 SNR = 103 SR = 0 2: ENC = 1402 EC = 0 SNR = 222 SR = 0 OpenAI describe el prompt caching como una optimización de “best effort”, no determinista como un contrato fuerte tipo: “si el prefijo coincide, 100 % te voy a servir desde caché”. Así que básicamente dicen, si no funciona, no me culpen. Lo mejor entonces es asumir un % de éxito que se incorporá en la fórmula para solo engordar las instrucciones del sistema que considerando ese porcentaje de éxito de uso de la caché logren ahorros. 0.8 es un valor que se tira al aire basado en un pequeño experimento limitado: se ejecutó 10 veces una conversación de 6-7 mensajes y se obtuvo una tasa de fallo de 13%, es decir un factor de éxito de 0.87. Después se hizo otro ensayo y se encontró que en algunos casos podría bajar hasta 75%, entonces este es un valor que puede estar entre 75% y 85%. Se elige el valor de 0.75 como límite inferior del rango observado, adoptando un enfoque conservador para evitar sobreestimar la efectividad de la caché, especialmente porque rellenar las instrucciones del sistema puede empeorar ligeramente el comportamiento del agente. Así, se prefiere asumir el peor caso razonable (0.75) para proteger costos y evitar optimizaciones demasiado agresivas. Se usa el mismo valor para todas las familias de modelos porque no se conoce aún su funcionamiento interno respecto a la caché. Actualización: Después de muchos ensayos se descubrió que los modelos diferentes tienen diferente factor de éxito de caché y además también depende de si se tiene activada la función grupo de caché, así que estos valores pasaron a ser propiedades de los modelos en vez de factores generales.
+
+        internal double? FactorÉxitoCachéConGrupoCaché { get; }
 
         public string Descripción => $"{Familia} {Nombre}";
 
@@ -114,11 +118,11 @@ namespace Frugalia {
         internal Modelo(string nombre, Familia familia, decimal precioEntradaNoCaché, decimal precioEntradaCaché, decimal precioSalidaNoRazonamiento,
             decimal precioSalidaRazonamiento, decimal? precioEscrituraManualCachéRefrescablePor5Minutos, decimal? precioEscrituraManualCachéRefrescablePor60Minutos,
             decimal? precioAlmacenamientoCachéPorHora, int? límiteTókenesActivaciónCachéAutomática, int tókenesEntradaMáximos,
-            decimal fracciónDescuentoEntradaYSalidaPorLote, decimal fracciónDescuentoLecturaCachePorLote, decimal? fracciónDescuentoEscrituraCachéPorLote,
+            decimal factorDescuentoEntradaYSalidaPorLote, decimal factorDescuentoLecturaCachePorLote, decimal? factorDescuentoEscrituraCachéPorLote,
             bool usaCachéExtendida, string nombreModelo1NivelSuperior = "", string nombreModelo2NivelesSuperior = "", 
             string nombreModelo3NivelesSuperior = "", List<RazonamientoEfectivo> razonamientosEfectivosPermitidos = null, 
             List<RazonamientoEfectivo> razonamientosEfectivosNoPermitidos = null, List<Verbosidad> verbosidadesPermitidas = null, 
-            List<Verbosidad> verbosidadesNoPermitidas = null) {
+            List<Verbosidad> verbosidadesNoPermitidas = null, double? factorÉxitoCaché = null, double? factorÉxitoCachéConGrupoCaché = null) {
 
             Nombre = nombre;
             PrecioEntradaNoCaché = precioEntradaNoCaché;
@@ -134,12 +138,17 @@ namespace Frugalia {
             PrecioAlmacenamientoCachéPorHora = precioAlmacenamientoCachéPorHora;
             LímiteTókenesActivaciónCachéAutomática = límiteTókenesActivaciónCachéAutomática;
             TókenesEntradaMáximos = tókenesEntradaMáximos;
-            FracciónDescuentoEntradaYSalidaPorLote = fracciónDescuentoEntradaYSalidaPorLote;
-            FracciónDescuentoEscrituraCachéPorLote = fracciónDescuentoEscrituraCachéPorLote;
-            FracciónDescuentoLecturaCachePorLote = fracciónDescuentoLecturaCachePorLote;
+            FactorDescuentoEntradaYSalidaPorLote = factorDescuentoEntradaYSalidaPorLote;
+            FactorDescuentoEscrituraCachéPorLote = factorDescuentoEscrituraCachéPorLote;
+            FactorDescuentoLecturaCachePorLote = factorDescuentoLecturaCachePorLote;
             UsaCachéExtendida = usaCachéExtendida; // Debido a que se encontró que no necesariamente habilitan la caché extendida para modelos nuevos como gpt-5-mini y si para viejos como gpt-4.1, se prefiere establecer por defecto usaCachéExtendida = falso, además porque principalmente aplica para modelos de la familia GPT. https://platform.openai.com/docs/guides/prompt-caching.
+            if (UsaCachéExtendida && (factorÉxitoCaché == null || factorÉxitoCachéConGrupoCaché == null)) 
+                throw new Exception($"El modelo {nombre} que usa caché extendida debe establecer su factorÉxitoCaché y factorÉxitoCachéConGrupoCaché.");
+            
             RazonamientosEfectivosPermitidos = CompilarElementosPermitidos(razonamientosEfectivosPermitidos, razonamientosEfectivosNoPermitidos);
             VerbosidadesPermitidas = CompilarElementosPermitidos(verbosidadesPermitidas, verbosidadesNoPermitidas);
+            FactorÉxitoCaché = factorÉxitoCaché;
+            FactorÉxitoCachéConGrupoCaché = factorÉxitoCachéConGrupoCaché;
 
         } // Modelo>
 

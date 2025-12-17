@@ -182,8 +182,15 @@ namespace Frugalia {
 
                     OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona adecuadamente por 24 horas. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
                     if (!string.IsNullOrWhiteSpace(grupoCaché)) {
-                        OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_key"), grupoCaché);
-                        información.AgregarLíneaSiNoEstá($"Se estableció el grupo de caché {grupoCaché}.");
+
+                        if (modelo.FactorÉxitoCachéConGrupoCaché <= modelo.FactorÉxitoCaché) {
+                            información.AgregarLíneaSiNoEstá($"No se estableció el grupo de caché porque el modelo {modelo} tiene un FactorÉxitoCachéConGrupoCaché " +
+                                $"menor o igual al FactorÉxitoCaché (sin grupo caché).");
+                        } else {
+                            OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_key"), grupoCaché);
+                            información.AgregarLíneaSiNoEstá($"Se estableció el grupo de caché {grupoCaché}.");
+                        }
+
                     } else {
                         información.AgregarLíneaSiNoEstá("No se estableció el grupo de caché, por lo tanto el funcionamiento de la caché no será óptimo.");
                     }

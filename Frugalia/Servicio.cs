@@ -79,6 +79,10 @@ namespace Frugalia {
             $"{Restricciones}{Environment.NewLine}";
 
 
+        public static double ObtenerFactorCaché(Modelo modelo, string grupoCaché) => 
+            !string.IsNullOrWhiteSpace(grupoCaché) ? (double)modelo.FactorÉxitoCachéConGrupoCaché : (double)modelo.FactorÉxitoCaché;
+
+
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
             TratamientoNegritas tratamientoNegritas, string claveAPI, decimal tasaDeCambioUsd, string grupoCaché, out string error, out string advertencia, 
             out string información, bool rellenarInstruccionesSistema = true, Restricciones restricciones = null, int segundosLímitePorConsulta = 60) {
@@ -114,7 +118,7 @@ namespace Frugalia {
             }
 
             if (!System.IO.File.Exists(@"D:\Proyectos\Frugalia\grupo-caché-frugalia-demostración-permitido.txt") 
-                && grupoCaché.StartsWith(GrupoCachéDemostración)) {
+                && grupoCaché != null && grupoCaché.StartsWith(GrupoCachéDemostración)) {
                 GrupoCaché = "";
                 advertencia = AdvertenciaGrupoCachéDemostración;
             } else {
@@ -173,7 +177,7 @@ namespace Frugalia {
         /// <returns></returns>
         internal static string ObtenerRellenoInstrucciónSistema(bool rellenarInstruccionesSistema, ref string rellenoInstrucciónSistema, 
             int conversacionesDuranteCachéExtendida, string instrucciónSistema, double tókenesFunciones, double tókenesArchivos, Modelo modelo, 
-            decimal tasaDeCambioUsd, ref StringBuilder información, int consultasPorConversación = 1, Conversación conversación = null, 
+            decimal tasaDeCambioUsd, string grupoCaché, ref StringBuilder información, int consultasPorConversación = 1, Conversación conversación = null, 
             double? tókenesPromedioMensajeUsuario = null, double? tókenesPromedioRespuestaIA = null) {
 
             /* Cálculos de longitud límite para que salga más barato dadas K llamadas estimadas en las próximas horas
@@ -257,7 +261,7 @@ namespace Frugalia {
             }
 
             var s = tókenesInstrucciónSistema + tókenesArchivos + tókenesFunciones;
-            var fE = FactorÉxitoCaché;
+            var fE = ObtenerFactorCaché(modelo, grupoCaché);
             var fD = Modelo.ObtenerFactorDescuentoCaché(modelo);
             var sObj = (int)modelo.LímiteTókenesActivaciónCachéAutomática + 1.0; // Para GPT a partir de 1024 se activa la caché de tókenes de entrada https://platform.openai.com/docs/guides/prompt-caching.
             bool rellenarS;
@@ -339,7 +343,7 @@ namespace Frugalia {
                 var menorTotalCostoTókenesConRelleno = decimal.MaxValue;
                 var rellenoDelMenorCosto = 0.0;
                 información.AgregarLínea($"Tókenes estimados: Sistema + Funciones + Archivos = {s:N0}   1er Mensaje Usuario = {m1:N0}   " +
-                    $"Usuario = {m:N0} / mensaje   IA = {r:N0} / mensaje   % Éxito Caché = {FactorÉxitoCaché:0%}");
+                    $"Usuario = {m:N0} / mensaje   IA = {r:N0} / mensaje   % Éxito Caché = {ObtenerFactorCaché(modelo, grupoCaché):0%}");
                 
                 for (int iR = 0; iR <= cantidadRellenosProbar; iR++) { // Itera entre diferentes posibilidades de relleno usando escalas de 128 tókenes.
 
@@ -730,7 +734,8 @@ namespace Frugalia {
             try {
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(RellenarInstruccionesSistema, ref rellenoInstrucciónSistema,
-                    consultasDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos: 0, Modelo, TasaDeCambioUsd, ref información);
+                    consultasDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos: 0, Modelo, TasaDeCambioUsd, GrupoCaché, 
+                    ref información);
 
                 if (EstimarTókenesEntradaInstrucciones(mensajeUsuario, instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
                     error = $"Se supera el límite de tókenes de entrada permitidos ({Modelo.TókenesEntradaLímiteSeguro}) para el modelo {Modelo}. " +
@@ -796,7 +801,8 @@ namespace Frugalia {
                 var tókenesArchivos = Archivador.EstimarTókenes(rutasArchivos);
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(RellenarInstruccionesSistema, ref rellenoInstrucciónSistema, 
-                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos, Modelo, TasaDeCambioUsd, ref información);
+                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos, Modelo, TasaDeCambioUsd, GrupoCaché, 
+                    ref información);
 
                 if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
 
@@ -921,8 +927,8 @@ namespace Frugalia {
                 var tókenesFunciones = Función.EstimarTókenes(funciones);
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(RellenarInstruccionesSistema, ref rellenoInstrucciónSistema, 
-                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones, tókenesArchivos: 0, Modelo, TasaDeCambioUsd, ref información, 
-                    consultasPorConversación, conversación, tókenesPromedioMensajeUsuario, tókenesPromedioRespuestaIA);
+                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones, tókenesArchivos: 0, Modelo, TasaDeCambioUsd, GrupoCaché,
+                    ref información, consultasPorConversación, conversación, tókenesPromedioMensajeUsuario, tókenesPromedioRespuestaIA);
 
                 if (conversación.EstimarTókenesTotales() + tókenesFunciones // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
                     + EstimarTókenesEntradaInstrucciones("", instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {

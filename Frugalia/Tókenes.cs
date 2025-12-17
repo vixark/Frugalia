@@ -146,8 +146,8 @@ namespace Frugalia {
                 if (tókenes.Lote) Suspender(); // Verificar funcionamiento.
                 var clave = tókenes.Clave;
                 var modelo = tókenes.Modelo;
-                var factorEntradaYSalida = tókenes.Lote ? modelo.FracciónDescuentoEntradaYSalidaPorLote : 1m;
-                var factorLecturaCaché = tókenes.Lote ? modelo.FracciónDescuentoLecturaCachePorLote : 1m;
+                var factorEntradaYSalida = tókenes.Lote ? modelo.FactorDescuentoEntradaYSalidaPorLote : 1m;
+                var factorLecturaCaché = tókenes.Lote ? modelo.FactorDescuentoLecturaCachePorLote : 1m;
                 var pesosNoCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaNoCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd) * factorEntradaYSalida;
                 var pesosCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaCaché, modelo.PrecioEntradaCaché, tasaCambioUsd) * factorLecturaCaché;
                 var pesosNoRazonamiento = CalcularCostoMonedaLocalTókenes(tókenes.SalidaNoRazonamiento, modelo.PrecioSalidaNoRazonamiento, tasaCambioUsd) 
@@ -196,7 +196,7 @@ namespace Frugalia {
                     texto += $"{clave}: {tókenes.Error}{Environment.NewLine}";
                 } else {
 
-                    var factorEscrituraCaché = tókenes.Lote ? (modelo.FracciónDescuentoEscrituraCachéPorLote ?? 1) : 1m; // Si es vacío no hay descuento, entonces el factor es 1.
+                    var factorEscrituraCaché = tókenes.Lote ? (modelo.FactorDescuentoEscrituraCachéPorLote ?? 1) : 1m; // Si es vacío no hay descuento, entonces el factor es 1.
                     pesosEscrituraManualCaché *= factorEscrituraCaché;
 
                     var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraManualCaché;

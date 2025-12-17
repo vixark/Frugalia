@@ -37,6 +37,8 @@ internal class Demostración {
 
     internal static string RutaClaveAPI = @"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt";
 
+    public const string GrupoCaché = "frugalia-demostración"; // Cambia este valor según la explicación en GlobalFrugalia.cs > AdvertenciaGrupoCachéDemostración. Cámbialo a texto vacío ("") para desactivar el uso de grupos de caché.
+
     internal static string SugerenciaNoUsarResultados = $"No uses estos resultados específicos para tu caso de uso, te recomiendo que pruebes con tus propios " +
         "datos si esta función te genera ahorros.";
 
@@ -90,20 +92,7 @@ internal class Demostración {
                 restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // Se equivocó en una no sugirió nunca mejora de modelo. Si se sube el nivel de complejidad matemático (por ejemplo matrices 5x5 o más) se encontró que nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
         
         { 14, ($"Explicación de la función.", "Relleno de Instrucción del Sistema", (d) =>
-            EscribirTítuloYTexto("Relleno de Instrucción del Sistema", "La instrucción del sistema es un texto que permite configurar el tono, rol y demás " +
-                "características del asistente de IA. Cuando se tiene una conversación de varios mensajes con el modelo, la instrucción del sistema se envía con " +
-                "los mensajes anteriores como contexto. Al ser un texto estable en todas las consultas de la conversación, es posible incrementar su longitud " +
-                $"para que el modelo detecte un bloque de texto grande y constante al inicio de cada consulta y active la caché.{DobleLínea}" +
-                $"La caché permite que en las próximas consultas el costo de los tókenes de entrada se reduzca hasta el 10% de su valor original. Pero al " +
-                "aumentar la longitud de la instrucción del sistema, también aumentan los tókenes de entrada. Por eso se hace una optimización matemática " +
-                "usando datos como la cantidad de conversaciones durante la caché extendida, la cantidad de mensajes por conversación, la longitud de la " +
-                "instrucción del sistema y la longitud promedio de los mensajes del usuario, para decidir en qué casos es viable rellenar la " +
-                "instrucción del sistema para conseguir ahorros.{DobleLínea}El funcionamiento de la caché en los modelos es incierto, por lo tanto se considera que la caché " +
-                $"se activará en el {FactorÉxitoCaché:P0} de las veces que se llega al límite requerido. No todos los modelos tienen activación automática gratuita " +
-                "de la caché, entonces no se darían ahorros al rellenar la instrucción del sistema, estos casos se manejan transparentemente para el usuario de " +
-                $"la librería. El valor del parámetro 'conversaciones durante la caché extendida' depende del modelo, en el caso de la familia de modelos GPT, " +
-                $"es la cantidad de conversaciones que usen la misma instrucción del sistema en 24 horas.{DobleLínea}La efectividad de esta función depende de " +
-                $"los valores de los parámetros que le pases, así que asegúrate de que los datos sí sean representativos de tu caso de uso.")) },
+            EscribirTítuloYTexto("Relleno de Instrucción del Sistema", $"La instrucción del sistema es un texto que permite configurar el tono, rol y demás características del asistente de IA. Cuando se tiene una conversación de varios mensajes con el modelo, la instrucción del sistema se envía con los mensajes anteriores como contexto. Al ser un texto estable en todas las consultas de la conversación, es posible incrementar su longitud para que el modelo detecte un bloque de texto grande y constante al inicio de cada consulta y active la caché.{DobleLínea}La caché permite que en las próximas consultas el costo de los tókenes de entrada se reduzca hasta el 10% de su valor original. Pero al aumentar la longitud de la instrucción del sistema, también aumentan los tókenes de entrada. Por eso se hace una optimización matemática usando datos como la cantidad de conversaciones durante la caché extendida, la cantidad de mensajes por conversación, la longitud de la instrucción del sistema y la longitud promedio de los mensajes del usuario, para decidir en qué casos es viable rellenar la instrucción del sistema para conseguir ahorros.{DobleLínea}El funcionamiento de la caché en los modelos es incierto, por lo tanto se considera que la caché se activará en el {0.50:P0} a el {0.95:P0} de las veces que se llega al límite requerido (el % de éxito depende del modelo y de si se está usando grupo de caché). No todos los modelos tienen activación automática gratuita de la caché, entonces no se darían ahorros al rellenar la instrucción del sistema, estos casos se manejan transparentemente para el usuario de la librería. El valor del parámetro 'conversaciones durante la caché extendida' depende del modelo, en el caso de la familia de modelos GPT, es la cantidad de conversaciones que usen la misma instrucción del sistema en 24 horas.{DobleLínea}La efectividad de esta función depende de los valores de los parámetros que le pases, así que asegúrate de que los datos sí sean representativos de tu caso de uso.")) },
 
         { 15, ($"Conversación y funciones con instrucción del sistema corta (relleno no necesario) (≈{ADólares(124)}).",
             "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
@@ -186,7 +175,8 @@ internal class Demostración {
         } else {
 
             var ensayos = 1;
-            for (int i = 0; i < ensayos; i++) {
+            for (int i = 1; i <= ensayos; i++) {
+                if (ensayos > 1) EscribirMultilíneaMagenta($"Ensayo {i}", agregarLíneasEnBlancoAlrededor: true);
                 _ = Demostraciones[númeroDemostración].Consultar(númeroDemostración); // Se omite guardar la respuesta porque todos los textos de interés se están escribiendo directamente en la consola. Aún asi se deja las funciones devolviendo la respuesta por si se le quiere dar otro uso.
             }
 
