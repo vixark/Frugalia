@@ -142,8 +142,11 @@ namespace Frugalia {
             FactorDescuentoEscrituraCachéPorLote = factorDescuentoEscrituraCachéPorLote;
             FactorDescuentoLecturaCachePorLote = factorDescuentoLecturaCachePorLote;
             UsaCachéExtendida = usaCachéExtendida; // Debido a que se encontró que no necesariamente habilitan la caché extendida para modelos nuevos como gpt-5-mini y si para viejos como gpt-4.1, se prefiere establecer por defecto usaCachéExtendida = falso, además porque principalmente aplica para modelos de la familia GPT. https://platform.openai.com/docs/guides/prompt-caching.
-            if (UsaCachéExtendida && (factorÉxitoCaché == null || factorÉxitoCachéConGrupoCaché == null)) 
-                throw new Exception($"El modelo {nombre} que usa caché extendida debe establecer su factorÉxitoCaché y factorÉxitoCachéConGrupoCaché.");
+            
+            if (LímiteTókenesActivaciónCachéAutomática != null && límiteTókenesActivaciónCachéAutomática > 0 
+                && (factorÉxitoCaché == null || factorÉxitoCachéConGrupoCaché == null)) 
+                    throw new Exception($"El modelo {nombre} que con LímiteTókenesActivaciónCachéAutomática > 0 debe establecer " +
+                        $"su factorÉxitoCaché y factorÉxitoCachéConGrupoCaché.");
             
             RazonamientosEfectivosPermitidos = CompilarElementosPermitidos(razonamientosEfectivosPermitidos, razonamientosEfectivosNoPermitidos);
             VerbosidadesPermitidas = CompilarElementosPermitidos(verbosidadesPermitidas, verbosidadesNoPermitidas);

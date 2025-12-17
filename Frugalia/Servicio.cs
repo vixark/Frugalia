@@ -80,7 +80,9 @@ namespace Frugalia {
 
 
         public static double ObtenerFactorCaché(Modelo modelo, string grupoCaché) => 
-            !string.IsNullOrWhiteSpace(grupoCaché) ? (double)modelo.FactorÉxitoCachéConGrupoCaché : (double)modelo.FactorÉxitoCaché;
+            string.IsNullOrWhiteSpace(grupoCaché) ? (double)modelo.FactorÉxitoCaché :
+            ((double)modelo.FactorÉxitoCachéConGrupoCaché > (double)modelo.FactorÉxitoCaché  // En Opciones no se usa el grupo de caché si FactorÉxitoCachéConGrupoCaché no es mayor a FactorÉxitoCaché, entonces en los cálculos también se debe considerar que se usará FactorÉxitoCaché si se encuentra este caso.
+                ? (double)modelo.FactorÉxitoCachéConGrupoCaché : (double)modelo.FactorÉxitoCaché);
 
 
         public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
