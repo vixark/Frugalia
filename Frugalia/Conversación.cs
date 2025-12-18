@@ -37,7 +37,7 @@ namespace Frugalia {
     public class Conversación {
 
 
-        internal List<ResponseItem> ConversaciónGPT { get; }
+        internal List<ResponseItem> ConversaciónGpt { get; }
 
         internal List<object> ConversaciónGemini { get; }
 
@@ -73,15 +73,15 @@ namespace Frugalia {
             switch (Familia) {
             case Familia.GPT:
 
-                ConversaciónGPT = new List<ResponseItem>();
+                ConversaciónGpt = new List<ResponseItem>();
 
-                AcciónAgregarMensajeUsuario = mensajeUsuario => ConversaciónGPT.Add(ResponseItem.CreateUserMessageItem(mensajeUsuario));
+                AcciónAgregarMensajeUsuario = mensajeUsuario => ConversaciónGpt.Add(ResponseItem.CreateUserMessageItem(mensajeUsuario));
 
-                AcciónAgregarÍtemRespuesta = ítemRespuesta => ConversaciónGPT.Add(ítemRespuesta.ÍtemRespuestaGPT);
+                AcciónAgregarÍtemRespuesta = ítemRespuesta => ConversaciónGpt.Add(ítemRespuesta.ÍtemRespuestaGpt);
 
                 FunciónObtenerTextoPrimerMensajeUsuario = () => {
 
-                    var primerMensajeUsuario = ConversaciónGPT.OfType<MessageResponseItem>().FirstOrDefault(m => m.Role == MessageRole.User);
+                    var primerMensajeUsuario = ConversaciónGpt.OfType<MessageResponseItem>().FirstOrDefault(m => m.Role == MessageRole.User);
                     if (primerMensajeUsuario != null) {
 
                         var texto = primerMensajeUsuario.Content?.FirstOrDefault(p => !string.IsNullOrEmpty(p.Text));
@@ -95,7 +95,7 @@ namespace Frugalia {
 
                 FunciónObtenerTextoÚltimoMensajeUsuario = () => {
 
-                    var últimoMensajeUsuario = ConversaciónGPT.OfType<MessageResponseItem>().LastOrDefault(m => m.Role == MessageRole.User);
+                    var últimoMensajeUsuario = ConversaciónGpt.OfType<MessageResponseItem>().LastOrDefault(m => m.Role == MessageRole.User);
                     if (últimoMensajeUsuario != null) {
 
                         var texto = últimoMensajeUsuario.Content?.LastOrDefault(p => !string.IsNullOrEmpty(p.Text));
@@ -109,7 +109,7 @@ namespace Frugalia {
 
                 FunciónObtenerMensajes = tipo => {
 
-                    var mensajes = ConversaciónGPT.OfType<MessageResponseItem>();
+                    var mensajes = ConversaciónGpt.OfType<MessageResponseItem>();
 
                     IEnumerable<MessageResponseItem> filtrados;
                     switch (tipo) {
@@ -161,7 +161,7 @@ namespace Frugalia {
         } // Conversación>
 
 
-        public Conversación(List<ResponseItem> conversaciónGPT) : this(Familia.GPT) => ConversaciónGPT = conversaciónGPT;
+        public Conversación(List<ResponseItem> conversaciónGpt) : this(Familia.GPT) => ConversaciónGpt = conversaciónGpt;
 
 
         public double EstimarTókenesTotales() {

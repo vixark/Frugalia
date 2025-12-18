@@ -28,6 +28,7 @@ using System.Text;
 using System.Text.Json;
 using static Frugalia.GlobalFrugalia;
 using static Frugalia.General;
+using System.Linq;
 
 
 namespace Frugalia {
@@ -52,9 +53,9 @@ namespace Frugalia {
 
         public TratamientoNegritas TratamientoNegritas { get; }
 
-        private string ClaveAPI { get; }
+        public ModoServicio Modo { get; }
 
-        private bool Lote { get; }
+        private string ClaveAPI { get; }
 
         private bool Iniciado { get; }
 
@@ -69,7 +70,7 @@ namespace Frugalia {
         private string GrupoCaché { get; }
 
 
-        public string Descripción => $"Modelo = {Familia} {Modelo}{(Lote ? " Lote" : "")}.{Environment.NewLine}" +
+        public string Descripción => $"Modelo = {Familia} {Modelo} {Modo}.{Environment.NewLine}" +
             $"Verbosidad = {Verbosidad}.{Environment.NewLine}" +
             $"Razonamiento = {Razonamiento}.{Environment.NewLine}" +
             $"Segundos límite por consulta = {SegundosLímitePorConsulta}.{Environment.NewLine}" +
@@ -79,14 +80,22 @@ namespace Frugalia {
             $"{Restricciones}{Environment.NewLine}";
 
 
-        public static double ObtenerFactorCaché(Modelo modelo, string grupoCaché) => 
-            string.IsNullOrWhiteSpace(grupoCaché) ? (double)modelo.FactorÉxitoCaché :
-            ((double)modelo.FactorÉxitoCachéConGrupoCaché > (double)modelo.FactorÉxitoCaché  // En Opciones no se usa el grupo de caché si FactorÉxitoCachéConGrupoCaché no es mayor a FactorÉxitoCaché, entonces en los cálculos también se debe considerar que se usará FactorÉxitoCaché si se encuentra este caso.
-                ? (double)modelo.FactorÉxitoCachéConGrupoCaché : (double)modelo.FactorÉxitoCaché);
+        public static double ObtenerFactorCaché(Modelo modelo, string grupoCaché) {
+
+            if (modelo.LímiteTókenesActivaciónCachéAutomática == null) {
+                return 0; // No se usa en cálculos. 0% tiene sentido porque no hay nunca activación de caché automática para esos modelos.
+            } else {
+                return string.IsNullOrWhiteSpace(grupoCaché) ? (double)modelo.FactorÉxitoCaché :
+                    ((double)modelo.FactorÉxitoCachéConGrupoCaché > (double)modelo.FactorÉxitoCaché  // En Opciones no se usa el grupo de caché si FactorÉxitoCachéConGrupoCaché no es mayor a FactorÉxitoCaché, entonces en los cálculos también se debe considerar que se usará FactorÉxitoCaché si se encuentra este caso.
+                        ? (double)modelo.FactorÉxitoCachéConGrupoCaché : (double)modelo.FactorÉxitoCaché);
+
+            }
+
+        } // ObtenerFactorCaché>
 
 
-        public Servicio(string nombreModelo, bool lote, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
-            TratamientoNegritas tratamientoNegritas, string claveAPI, decimal tasaDeCambioUsd, string grupoCaché, out string error, out string advertencia, 
+        public Servicio(string nombreModelo, ModoServicio modo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
+            TratamientoNegritas tratamientoNegritas, string claveAPI, decimal tasaDeCambioUsd, string grupoCaché, out string error, out string advertencia,
             out string información, bool rellenarInstruccionesSistema = true, Restricciones restricciones = null, int segundosLímitePorConsulta = 60) {
 
             información = "";
@@ -97,24 +106,25 @@ namespace Frugalia {
             var modelo = Modelo.ObtenerModelo(nombreModelo);
             if (modelo == null) {
                 error = $"El modelo '{nombreModelo}' no es válido.";
-                Iniciado = false;
-                return;
+            } else {
+
+                if (string.IsNullOrWhiteSpace(claveAPI)) error = "La clave de la API no puede ser nula ni vacía.";
+                if (tasaDeCambioUsd <= 0) error = "La tasa de cambio a dólares no puede ser 0 o menor.";
+                if (segundosLímitePorConsulta <= 0) error = "Los segundos límite por consulta no pueden ser 0 o menores.";
+                if (calidadAdaptable != CalidadAdaptable.No && modo == ModoServicio.Lote) error = "No se puede usar calidad adaptable en consultas en lote.";
+                
+                var familia = ((Modelo)modelo).Familia;
+                if (!ModosServicioDisponibles.TryGetValue(familia, out ModoServicio[] modosServicio)) {
+                    error = $"No hay modos de servicio disponibles para la familia {familia}.";
+                } else if (!modosServicio.Contains(modo)) {
+                    error = $"El modelo {nombreModelo} de la familia {familia} no tiene definido el factor de precio para el modo de servicio {modo}.";
+                } else if (!((Modelo)modelo).FactoresPrecio[modo].Disponible) {
+                    error = $"El modo de servicio {modo} no está disponible para el modelo {nombreModelo}.";
+                }
+
             }
 
-            if (string.IsNullOrWhiteSpace(claveAPI)) {
-                error = "La clave de la API no puede ser nula ni vacía.";
-                Iniciado = false;
-                return;
-            }
-
-            if (tasaDeCambioUsd <= 0) {
-                error = "La tasa de cambio a dólares no puede ser 0 o menor.";
-                Iniciado = false;
-                return;
-            }
-
-            if (segundosLímitePorConsulta <= 0) {
-                error = "Los segundos límite por consulta no pueden ser 0 o menores.";
+            if (!string.IsNullOrEmpty(error)) {
                 Iniciado = false;
                 return;
             }
@@ -135,7 +145,7 @@ namespace Frugalia {
             Verbosidad = verbosidad;
             CalidadAdaptable = calidadAdaptable;
             TratamientoNegritas = tratamientoNegritas;
-            Lote = lote;
+            Modo = modo;
             Cliente = new Cliente(Familia, ClaveAPI);
             Iniciado = true;
             RellenarInstruccionesSistema = rellenarInstruccionesSistema;
@@ -178,7 +188,7 @@ namespace Frugalia {
         /// </param>
         /// <returns></returns>
         internal static string ObtenerRellenoInstrucciónSistema(bool rellenarInstruccionesSistema, ref string rellenoInstrucciónSistema, 
-            int conversacionesDuranteCachéExtendida, string instrucciónSistema, double tókenesFunciones, double tókenesArchivos, Modelo modelo, 
+            int conversacionesDuranteCachéExtendida, string instrucciónSistema, double tókenesFunciones, double tókenesArchivos, Modelo modelo, ModoServicio modo,
             decimal tasaDeCambioUsd, string grupoCaché, ref StringBuilder información, int consultasPorConversación = 1, Conversación conversación = null, 
             double? tókenesPromedioMensajeUsuario = null, double? tókenesPromedioRespuestaIA = null) {
 
@@ -264,7 +274,7 @@ namespace Frugalia {
 
             var s = tókenesInstrucciónSistema + tókenesArchivos + tókenesFunciones;
             var fE = ObtenerFactorCaché(modelo, grupoCaché);
-            var fD = Modelo.ObtenerFactorDescuentoCaché(modelo);
+            var fD = Modelo.ObtenerFactorDescuentoCaché(modelo, modo);
             var sObj = (int)modelo.LímiteTókenesActivaciónCachéAutomática + 1.0; // Para GPT a partir de 1024 se activa la caché de tókenes de entrada https://platform.openai.com/docs/guides/prompt-caching.
             bool rellenarS;
 
@@ -458,12 +468,14 @@ namespace Frugalia {
                     buscarEnInternet, funciones, ref información);
 
 
-        private static Respuesta ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, Cliente cliente, bool lote,
-            ref Dictionary<string, Tókenes> tókenes, int segundosLímite, out Resultado resultado) {
+        private static Respuesta ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, Cliente cliente, 
+            ModoServicio modo, int segundosLímite, List<string> archivosIds, ref Dictionary<string, Tókenes> tókenes, out Resultado resultado, 
+            ref StringBuilder información) {
 
             if (!string.IsNullOrEmpty(mensajeUsuario) && conversación != null) throw new Exception("Debe haber mensajeUsuario o conversación, pero no ambas.");
 
-            var (respuesta, tókenesUsadosEnConsulta, resultado2) = cliente.ObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, lote, segundosLímite);
+            var (respuesta, tókenesUsadosEnConsulta, resultado2) = 
+                cliente.ObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, modo, segundosLímite, archivosIds, ref información);
             resultado = resultado2;
             AgregarSumandoPosibleNulo(ref tókenes, tókenesUsadosEnConsulta);
 
@@ -487,10 +499,10 @@ namespace Frugalia {
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         private static Respuesta ObtenerRespuesta(string mensajeUsuario, Conversación conversación, string instrucciónSistema, string rellenoInstrucciónSistema,
-            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesInstrucciónÚtil, Cliente cliente, Familia familia, Modelo modelo, bool lote, 
-            Razonamiento razonamiento, Verbosidad verbosidad, string grupoCaché, bool esCalidadAdaptable, Restricciones restricciones, 
-            CalidadAdaptable calidadAdaptable, TratamientoNegritas tratamientoNegritas, int segundosLímite, out string respuestaTextoLimpio, 
-            ref Dictionary<string, Tókenes> tókenes, ref StringBuilder información, out Resultado resultado) {
+            bool buscarEnInternet, List<Función> funciones, double tókenesAdicionalesInstrucciónÚtil, Cliente cliente, Familia familia, Modelo modelo, 
+            ModoServicio modo, Razonamiento razonamiento, Verbosidad verbosidad, string grupoCaché, bool esCalidadAdaptable, Restricciones restricciones, 
+            CalidadAdaptable calidadAdaptable, TratamientoNegritas tratamientoNegritas, int segundosLímite, List<string> archivosIds, 
+            out string respuestaTextoLimpio, ref Dictionary<string, Tókenes> tókenes, ref StringBuilder información, out Resultado resultado) {
 
             resultado = Resultado.Respondido;
 
@@ -541,8 +553,8 @@ namespace Frugalia {
                 var reintentoMenosRestrictivoRealizado = false;
 
                 reintentarMenosRestrictiva:
-                var respuestaInicial = ObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, cliente, lote, ref tókenes, segundosLímite,
-                    out Resultado resultadoInicial);
+                var respuestaInicial = ObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, cliente, modo, segundosLímite, archivosIds, ref tókenes, 
+                    out Resultado resultadoInicial, ref información);
                 var textoRespuesta = respuestaInicial.ObtenerTextoRespuesta(tratamientoNegritas);
 
                 int nivelMejoramientoSugerido;
@@ -678,8 +690,8 @@ namespace Frugalia {
                             opciones.EscribirOpcionesRazonamientoYLímitesTókenes(razonamientoMejorado, modeloMejorado, restricciones, longitudInstrucciónÚtil, 
                                 verbosidad, ref información);
 
-                            respuesta = ObtenerRespuesta(mensajeUsuario, conversación, opciones, modeloMejorado, cliente, lote, ref tókenes, segundosLímite, 
-                                out resultado);
+                            respuesta = ObtenerRespuesta(mensajeUsuario, conversación, opciones, modeloMejorado, cliente, modo, segundosLímite, archivosIds, 
+                                ref tókenes, out resultado, ref información);
 
                             if (resultado == Resultado.MáximosTókenesAlcanzados)
                                 información.AgregarLínea($"Se alcanzó la cantidad máxima de tókenes en la consulta mejorada. Se recomienda aumentar los tókenes " +
@@ -692,7 +704,8 @@ namespace Frugalia {
                 }
 
             } else {
-                respuesta = ObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, cliente, lote, ref tókenes, segundosLímite, out resultado);
+                respuesta = ObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, cliente, modo, segundosLímite, archivosIds, ref tókenes, 
+                    out resultado, ref información);
             }
 
             respuestaTextoLimpio = respuesta.ObtenerTextoRespuesta(tratamientoNegritas);
@@ -736,7 +749,7 @@ namespace Frugalia {
             try {
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(RellenarInstruccionesSistema, ref rellenoInstrucciónSistema,
-                    consultasDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos: 0, Modelo, TasaDeCambioUsd, GrupoCaché, 
+                    consultasDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos: 0, Modelo, Modo, TasaDeCambioUsd, GrupoCaché, 
                     ref información);
 
                 if (EstimarTókenesEntradaInstrucciones(mensajeUsuario, instrucciónSistema, rellenoInstrucciónSistema) > Modelo.TókenesEntradaLímiteSeguro) {
@@ -755,8 +768,9 @@ namespace Frugalia {
                 }
 
                 ObtenerRespuesta(mensajeUsuario, conversación: null, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet, funciones: null,
-                    tókenesAdicionalesInstrucciónÚtil: 0, Cliente, Familia, Modelo, Lote, Razonamiento, Verbosidad, GrupoCaché, EsCalidadAdaptable, Restricciones, 
-                    CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                    tókenesAdicionalesInstrucciónÚtil: 0, Cliente, Familia, Modelo, Modo, Razonamiento, Verbosidad, GrupoCaché, EsCalidadAdaptable, Restricciones, 
+                    CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, null, out string respuestaTextoLimpio, ref tókenes, ref información, 
+                    out resultado);
 
                 error = null;
                 return respuestaTextoLimpio;
@@ -803,7 +817,7 @@ namespace Frugalia {
                 var tókenesArchivos = Archivador.EstimarTókenes(rutasArchivos);
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(RellenarInstruccionesSistema, ref rellenoInstrucciónSistema, 
-                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos, Modelo, TasaDeCambioUsd, GrupoCaché, 
+                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones: 0, tókenesArchivos, Modelo, Modo, TasaDeCambioUsd, GrupoCaché, 
                     ref información);
 
                 if (rutasArchivos == null || rutasArchivos.Count == 0) { error = "La lista rutasArchivos está vacía."; return null; }
@@ -820,9 +834,9 @@ namespace Frugalia {
                 if (!string.IsNullOrEmpty(conversaciónConArchivosYError.Error)) { error = conversaciónConArchivosYError.Error; return null; }
 
                 var respuesta = ObtenerRespuesta(mensajeUsuario: null, conversaciónConArchivosYError.Conversación, instrucciónSistema, rellenoInstrucciónSistema,
-                    buscarEnInternet: false, funciones: null, tipoArchivo != TipoArchivo.Imagen ? tókenesArchivos : 0, Cliente, Familia, Modelo, Lote, // Si los archivos son imágenes, por el momento no se suman los tókenes del archivo a los tókenes de entrada adicionales porque el caso de imágenes muy simples (por ejemplo, un imagen de un solo color) no implicarían una alta carga de razonamiento adicional requerido, en cambio imágenes más complejas como fotos de tablas nutricionales sí implicarían una alta carga de razonamiento adicional. Por lo tanto, derivar los tókenes adicionales de entrada de los tókenes del tamaño del archivo de la imagen no sería muy apropiado. Si se quisiera ser más estricto, se debería preanalizar la imagen para determinar que tanta carga de razonamiento extra puede requerir.
+                    buscarEnInternet: false, funciones: null, tipoArchivo != TipoArchivo.Imagen ? tókenesArchivos : 0, Cliente, Familia, Modelo, Modo, // Si los archivos son imágenes, por el momento no se suman los tókenes del archivo a los tókenes de entrada adicionales porque el caso de imágenes muy simples (por ejemplo, un imagen de un solo color) no implicarían una alta carga de razonamiento adicional requerido, en cambio imágenes más complejas como fotos de tablas nutricionales sí implicarían una alta carga de razonamiento adicional. Por lo tanto, derivar los tókenes adicionales de entrada de los tókenes del tamaño del archivo de la imagen no sería muy apropiado. Si se quisiera ser más estricto, se debería preanalizar la imagen para determinar que tanta carga de razonamiento extra puede requerir.
                     Razonamiento, Verbosidad, GrupoCaché, EsCalidadAdaptable, Restricciones, CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, 
-                    out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
+                    archivador.ArchivosIds, out string respuestaTextoLimpio, ref tókenes, ref información, out resultado);
 
                 error = null;
                 return respuestaTextoLimpio;
@@ -834,7 +848,7 @@ namespace Frugalia {
                 return null;
 
             } finally {
-                archivador?.EliminarArchivos();
+                if (Modo != ModoServicio.Lote) archivador?.EliminarArchivos(); // Si es consulta en lote no se pueden eliminar los archivos porque los va a necesitar el modelo cuando ejecute las consultas del lote.
             }
 
         } // Consultar>
@@ -903,8 +917,8 @@ namespace Frugalia {
         /// <returns>
         /// El texto de respuesta final para el usuario, limpio de marcas auxiliares internas. Devuelve null si ocurre un error.
         /// </returns>
-        public string Consultar(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, Conversación conversación,
-            List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int consultasPorConversación,
+        public string Consultar(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, 
+            Conversación conversación, List<Función> funciones, out string error, out Dictionary<string, Tókenes> tókenes, int consultasPorConversación,
             double tókenesPromedioMensajeUsuario, double tókenesPromedioRespuestaIA, out bool funciónEjecutada, out StringBuilder información, 
             out Resultado resultado, bool usarModeloYRazonamientoMínimosEnRespuestaFunción = false) {
 
@@ -929,7 +943,7 @@ namespace Frugalia {
                 var tókenesFunciones = Función.EstimarTókenes(funciones);
 
                 instrucciónSistema += ObtenerRellenoInstrucciónSistema(RellenarInstruccionesSistema, ref rellenoInstrucciónSistema, 
-                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones, tókenesArchivos: 0, Modelo, TasaDeCambioUsd, GrupoCaché,
+                    conversacionesDuranteCachéExtendida, instrucciónSistema, tókenesFunciones, tókenesArchivos: 0, Modelo, Modo, TasaDeCambioUsd, GrupoCaché,
                     ref información, consultasPorConversación, conversación, tókenesPromedioMensajeUsuario, tókenesPromedioRespuestaIA);
 
                 if (conversación.EstimarTókenesTotales() + tókenesFunciones // Las funciones se incluyen en el objeto Opciones que se envía en cada llamada al modelo, y no se repiten por cada mensaje del usuario. El modelo recibe la definición de funciones una sola vez en el contexto de la consulta, así que su costo en tókenes solo se cuenta una vez por petición. Leer más en https://platform.openai.com/docs/guides/function-calling.
@@ -961,8 +975,8 @@ namespace Frugalia {
                     }
 
                     respuesta = ObtenerRespuesta(mensajeUsuario: null, conversación, instrucciónSistema, rellenoInstrucciónSistema, buscarEnInternet: false,
-                        funciones, tókenesFunciones, Cliente, Familia, modeloAUsar, Lote, razonamientoAUsar, Verbosidad, GrupoCaché, EsCalidadAdaptable, 
-                        Restricciones, CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, out respuestaTextoLimpio, ref tókenesConsulta, 
+                        funciones, tókenesFunciones, Cliente, Familia, modeloAUsar, Modo, razonamientoAUsar, Verbosidad, GrupoCaché, EsCalidadAdaptable, 
+                        Restricciones, CalidadAdaptable, TratamientoNegritas, SegundosLímitePorConsulta, null, out respuestaTextoLimpio, ref tókenesConsulta, 
                         ref información, out resultado); // No es necesario procesar el objeto resultado porque al estar en un ciclo do...while, se reintentará varias veces y si no logra un resultado satisfactorio, sale por haber llegado al límite de iteraciones.
                     
                     funciónEjecutadaÚltimaConsulta = false;

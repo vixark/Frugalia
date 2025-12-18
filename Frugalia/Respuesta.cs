@@ -22,6 +22,7 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
+using OpenAI.Batch;
 using OpenAI.Responses;
 using System;
 using System.Collections.Generic;
@@ -36,11 +37,17 @@ namespace Frugalia {
     internal class Respuesta {
 
 
-        internal ResponseResult RespuestaGPT { get; set; }
+        internal ResponseResult RespuestaGpt { get; set; }
+        
+        internal Lote Lote { get; set; }
 
         internal object RespuestaGemini { get; set; }
 
+        internal object RespuestaLoteGemini { get; set; }
+
         internal object RespuestaClaude { get; set; }
+
+        internal object RespuestaLoteClaude { get; set; }
 
         private Familia Familia { get; }
 
@@ -61,7 +68,9 @@ namespace Frugalia {
 
                 FunciónObtenerTextoRespuesta = (tratamientoNegritas) => {
 
-                    var respuesta = RespuestaGPT?.GetOutputText() ?? "";
+                    if (Lote != null && RespuestaGpt == null) return $"{Lote}";
+
+                    var respuesta = RespuestaGpt?.GetOutputText() ?? "";
 
                     if (respuesta.Contains("**")) {
 
@@ -84,8 +93,8 @@ namespace Frugalia {
 
                 };
 
-                FunciónObtenerÍtemsRespuesta = () => RespuestaGPT?.OutputItems == null ? new List<ÍtemRespuesta>() 
-                    : RespuestaGPT.OutputItems.Select(i => new ÍtemRespuesta(i)).ToList();
+                FunciónObtenerÍtemsRespuesta = () => RespuestaGpt?.OutputItems == null ? new List<ÍtemRespuesta>() 
+                    : RespuestaGpt.OutputItems.Select(i => new ÍtemRespuesta(i)).ToList();
 
                 break;
 
@@ -107,10 +116,13 @@ namespace Frugalia {
         } // Respuesta>
 
 
-        internal Respuesta(ResponseResult respuestaGPT) : this(Familia.GPT) => RespuestaGPT = respuestaGPT;
+        internal Respuesta(ResponseResult respuestaGpt) : this(Familia.GPT) => RespuestaGpt = respuestaGpt;
+
+
+        internal Respuesta(Lote lote, Familia familia) : this(familia) => Lote = lote;
 
 
     } // Respuesta>
-   
+
 
 } // Frugalia>

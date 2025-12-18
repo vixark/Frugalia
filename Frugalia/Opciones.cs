@@ -37,7 +37,7 @@ namespace Frugalia {
     internal class Opciones {
 
 
-        internal CreateResponseOptions OpcionesGPT { get; }
+        internal CreateResponseOptions OpcionesGpt { get; }
 
         internal object OpcionesGemini { get; }
 
@@ -101,9 +101,9 @@ namespace Frugalia {
             switch (Familia) {
             case Familia.GPT:
 
-                OpcionesGPT = new CreateResponseOptions();
+                OpcionesGpt = new CreateResponseOptions();
 
-                AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGPT.Instructions = instrucciónSistema2 ?? "";
+                AcciónEscribirInstrucciónSistema = instrucciónSistema2 => OpcionesGpt.Instructions = instrucciónSistema2 ?? "";
 
                 FunciónEscribirOpcionesRazonamientoYObtenerInformación = (razonamientoE2, modelo2, longitudIU2) => {
 
@@ -141,7 +141,7 @@ namespace Frugalia {
                             if (razonamientoE2 != RazonamientoEfectivo.Ninguno) // No se debe agregar ReasoningOptions none porque saca error en modelos que no soportan razonamiento. Si el usuario correctamente especificó Razonamiento = Ninguno para este modelo, se deja pasar.
                                 throw new Exception("No se esperaba intentar escribir ReasoningOptions con RazonamientoEfectivo != Ninguno.");
                         } else {
-                            OpcionesGPT.ReasoningOptions = new ResponseReasoningOptions { ReasoningEffortLevel = new ResponseReasoningEffortLevel(textoRazonamiento) };
+                            OpcionesGpt.ReasoningOptions = new ResponseReasoningOptions { ReasoningEffortLevel = new ResponseReasoningEffortLevel(textoRazonamiento) };
                         }
 
                     }
@@ -150,7 +150,7 @@ namespace Frugalia {
 
                 };
 
-                AcciónEscribirMáximosTókenesSalida = máximos => OpcionesGPT.MaxOutputTokenCount = máximos;
+                AcciónEscribirMáximosTókenesSalida = máximos => OpcionesGpt.MaxOutputTokenCount = máximos;
 
                 EscribirInstrucciónSistema(instrucciónSistema);
 
@@ -174,20 +174,20 @@ namespace Frugalia {
                     default:
                         throw new Exception($"Verbosidad {verbosidad} no considerada.");
                     }
-                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // En unas pruebas se obtuvieron en promedio 393 caracteres; 249 con verbosidad baja y 657 con verbosidad alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET incluye esta opción de forma estructurada.
+                    OpcionesGpt.Patch.Set(Encoding.UTF8.GetBytes("$.text.verbosity"), textoVerbosidad); // En unas pruebas se obtuvieron en promedio 393 caracteres; 249 con verbosidad baja y 657 con verbosidad alta. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET incluye esta opción de forma estructurada.
 
                 }
 
                 if (modelo.UsaCachéExtendida) {
 
-                    OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona adecuadamente por 24 horas. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
+                    OpcionesGpt.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_retention"), "24h"); // No se ha comprobado aún si esto funciona adecuadamente por 24 horas. Este parche con Patch.Set() es temporal mientras la API de OpenAI para .NET no incluya esta opción de manera estructurada.
                     if (!string.IsNullOrWhiteSpace(grupoCaché)) {
 
                         if (modelo.FactorÉxitoCachéConGrupoCaché <= modelo.FactorÉxitoCaché) {
                             información.AgregarLíneaSiNoEstá($"No se estableció el grupo de caché porque el modelo {modelo} tiene un FactorÉxitoCachéConGrupoCaché " +
                                 $"menor o igual al FactorÉxitoCaché (sin grupo caché).");
                         } else {
-                            OpcionesGPT.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_key"), grupoCaché);
+                            OpcionesGpt.Patch.Set(Encoding.UTF8.GetBytes("$.prompt_cache_key"), grupoCaché);
                             información.AgregarLíneaSiNoEstá($"Se estableció el grupo de caché {grupoCaché}.");
                         }
 
@@ -197,7 +197,7 @@ namespace Frugalia {
 
                 }
                    
-                if (buscarEnInternet) OpcionesGPT.Tools.Add(ResponseTool.CreateWebSearchTool());
+                if (buscarEnInternet) OpcionesGpt.Tools.Add(ResponseTool.CreateWebSearchTool());
 
                 if (funciones != null) {
 
@@ -207,13 +207,13 @@ namespace Frugalia {
                         var requeridos = función.Parámetros.Where(p => p.Requerido).Select(p => p.Nombre).ToArray();
                         var esquema = new { type = "object", properties = propiedades, required = requeridos, additionalProperties = false };
                         var parametros = BinaryData.FromObjectAsJson(esquema);
-                        OpcionesGPT.Tools.Add(ResponseTool.CreateFunctionTool(función.Nombre, parametros, strictModeEnabled: true, función.Descripción));
+                        OpcionesGpt.Tools.Add(ResponseTool.CreateFunctionTool(función.Nombre, parametros, strictModeEnabled: true, función.Descripción));
 
                     }
 
                 }
 
-                FunciónObtenerInstrucciónSistema = () => OpcionesGPT.Instructions;
+                FunciónObtenerInstrucciónSistema = () => OpcionesGpt.Instructions;
 
                 break;
 

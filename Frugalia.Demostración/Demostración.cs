@@ -58,76 +58,89 @@ internal class Demostración {
                 $"mostrados (~0,001 USD, etc.) son el costo aproximado por ejecución de cada demostración.{DobleLínea}{SugerenciaNoUsarResultados}")) },
 
         { 2, ($"Baja complejidad con GPT 5.2 sin calidad adaptable (≈{ADólares(6.7)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
         { 3, ($"Baja complejidad con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(3.2)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, ModoServicio.Normal)) },
         { 4, ($"Baja complejidad con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(0.7)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 1), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, 
+                ModoServicio.Normal)) },
 
         { 5, ($"Media complejidad con GPT 5.2 sin calidad adaptable (≈{ADólares(15.4)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
         { 6, ($"Media complejidad con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(13.6)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, ModoServicio.Normal)) },
         { 7, ($"Media complejidad con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(3)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 2), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, 
+                ModoServicio.Normal)) },
 
         { 8, ($"Alta complejidad con GPT 5.2 sin calidad adaptable (≈{ADólares(39.8)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal,
                 restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) },
         { 9, ($"Alta complejidad con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(6.2)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false,
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-mini", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, ModoServicio.Normal,
                 restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Media)) }, // No sugirió casi modelo mejor.
         { 10, ($"Alta complejidad con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(13.3)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false,
+            Consultar((s, m) => ConsultaTexto(s, m, 3), "gpt-5-nano", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, 
+                ModoServicio.Normal,
                 restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Media)) }, //  Sugirió modelo mucho mejor (dos niveles) en un ensayo, en otro dijo que lo hizo bien y en los otros tres sugirió un modelo mejor.
 
         { 11, ($"Cálculo matemático con GPT 5.2 sin calidad adaptable (≈{ADólares(100.7)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.2", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false,
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5.2", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal,
                 restricciónTókenesRazonamiento: RestricciónTókenesRazonamiento.Baja)) }, // Todas bien.
         { 12, ($"Cálculo matemático con GPT 5 Mini mejorable hasta GPT 5.2 (≈{ADólares(24.7)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-mini", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, lote: false,
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-mini", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModelo, d, ModoServicio.Normal,
                 restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // Todas bien y sin sugerir mejora de modelo.
         { 13, ($"Cálculo matemático con GPT 5 Nano mejorable hasta GPT 5.2 (≈{ADólares(2.5)}).", "Calidad Adaptable con Autoevaluación", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, lote: false,
+            Consultar((s, m) => ConsultaTexto(s, m, 4), "gpt-5-nano", Razonamiento.Medio, Verbosidad.Baja, CalidadAdaptable.MejorarModeloDosNiveles, d, 
+                ModoServicio.Normal,
                 restricciónTókenesRazonamiento : RestricciónTókenesRazonamiento.Baja)) }, // Se equivocó en una no sugirió nunca mejora de modelo. Si se sube el nivel de complejidad matemático (por ejemplo matrices 5x5 o más) se encontró que nano prefiere inventar y contestar con seguridad antes que aceptar que no sabe. La ignorancia de su propia ignorancia tan común en los humanos. Se debe usar la funcionalidad de CalidadAdaptable con cuidado y asegurando que en el caso de uso particular si aporta valor.
         
         { 14, ($"Explicación de la función.", "Relleno de Instrucción del Sistema", (d) =>
             EscribirTítuloYTexto("Relleno de Instrucción del Sistema", $"La instrucción del sistema es un texto que permite configurar el tono, rol y demás características del asistente de IA. Cuando se tiene una conversación de varios mensajes con el modelo, la instrucción del sistema se envía con los mensajes anteriores como contexto. Al ser un texto estable en todas las consultas de la conversación, es posible incrementar su longitud para que el modelo detecte un bloque de texto grande y constante al inicio de cada consulta y active la caché.{DobleLínea}La caché permite que en las próximas consultas el costo de los tókenes de entrada se reduzca hasta el 10% de su valor original. Pero al aumentar la longitud de la instrucción del sistema, también aumentan los tókenes de entrada. Por eso se hace una optimización matemática usando datos como la cantidad de conversaciones durante la caché extendida, la cantidad de mensajes por conversación, la longitud de la instrucción del sistema y la longitud promedio de los mensajes del usuario, para decidir en qué casos es viable rellenar la instrucción del sistema para conseguir ahorros.{DobleLínea}El funcionamiento de la caché en los modelos es incierto, por lo tanto se considera que la caché se activará en el {0.50:P0} a el {0.95:P0} de las veces que se llega al límite requerido (el % de éxito depende del modelo y de si se está usando grupo de caché). No todos los modelos tienen activación automática gratuita de la caché, entonces no se darían ahorros al rellenar la instrucción del sistema, estos casos se manejan transparentemente para el usuario de la librería. El valor del parámetro 'conversaciones durante la caché extendida' depende del modelo, en el caso de la familia de modelos GPT, es la cantidad de conversaciones que usen la misma instrucción del sistema en 24 horas.{DobleLínea}La efectividad de esta función depende de los valores de los parámetros que le pases, así que asegúrate de que los datos sí sean representativos de tu caso de uso.")) },
 
         { 15, ($"Conversación y funciones con instrucción del sistema corta (relleno no necesario) (≈{ADólares(124)}).",
-            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Corta), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            "Relleno de Instrucción del Sistema", (d) => Consultar((s, m) =>
+            ConversaciónConFunciones(s, m, Longitud.Corta), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
 
         { 16, ($"Conversación y funciones con mensaje del usuario muy largo (relleno no necesario) (≈{ADólares(170)}).",
-            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Corta, usarMensajeUsuarioMuyLargo: true), 
-                "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            "Relleno de Instrucción del Sistema", (d) => Consultar((s, m) =>
+            ConversaciónConFunciones(s, m, Longitud.Corta, usarMensajeUsuarioMuyLargo: true), 
+                "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
 
         { 17, ($"Conversación y funciones con instrucción del sistema media (realizando relleno) (≈{ADólares(138)}).",
-            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            "Relleno de Instrucción del Sistema", (d) => Consultar((s, m) =>
+            ConversaciónConFunciones(s, m, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
 
         { 18, ($"Conversación y funciones con instrucción del sistema media (relleno desactivado) (≈{ADólares(172)}).",
-            "Relleno de Instrucción del Sistema", (d) => Consultar((servicio, modelo) =>
-            ConversaciónConFunciones(servicio, modelo, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false, 
+            "Relleno de Instrucción del Sistema", (d) => Consultar((s, m) =>
+            ConversaciónConFunciones(s, m, Longitud.Media), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal, 
                 rellenarInstruccionesSistema: false)) },
 
         { 19, ($"Explicación de la función.", "Razonamiento Adaptable Simple", (d) =>
             EscribirTítuloYTexto("Razonamiento Adaptable Simple", $"Aunque los modelos suelen elegir adecuadamente qué tanto razonar para cada tipo de consulta, puede convenir hacer un control más estricto para evitar que razonen de más y por lo tanto generen sobrecostos en consultas simples.{DobleLínea}Al establecer el nivel de razonamiento, se puede usar uno de los valores que incluyen varios niveles y se elegirá el adecuado según la longitud de la instrucción útil. Por ejemplo, si se establece el razonamiento en NingunoBajoOMedio, se elegirá Ninguno si la cantidad de carácteres de la instrucción útil es inferior a {CarácteresLímiteInstrucciónParaSubirRazonamiento}, Bajo si es inferior a {CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles} y Medio si supera {CarácteresLímiteInstrucciónParaSubirRazonamientoDosNiveles} carácteres.{DobleLínea}La instrucción útil incluye el mensaje del usuario, la instrucción del sistema, el equivalente a funciones y archivos, y la instrucción de autoevaluación (si se está usando calidad adaptable).{DobleLínea}Aunque es un control simple que no diferencia entre consultas cortas simples y consultas cortas complejas, es una funcionalidad que puede reducir costos sin perder calidad en las respuestas en ciertos casos de uso.")) },
 
         { 20, ($"Mensaje de usuario corto con GPT 5.2 con Razonamiento = NingunoOBajo (≈{ADólares(2.8)}).", "Razonamiento Adaptable Simple", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 5), "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 5), "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
         { 21, ($"Mensaje de usuario corto con GPT 5.2 con Razonamiento = Bajo (≈{ADólares(3.5)}).", "Razonamiento Adaptable Simple", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 5), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 5), "gpt-5.2", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
         { 22, ($"Mensaje de usuario largo con GPT 5.2 con Razonamiento = NingunoOBajo (≈{ADólares(15)}).", "Razonamiento Adaptable Simple", (d) =>
-            Consultar((s, m) => ConsultaTexto(s, m, 6), "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No, d, lote: false)) },
+            Consultar((s, m) => ConsultaTexto(s, m, 6), "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Normal)) },
+
+        { 23, ($"Explicación de la función.", "Consultas en Lote", (d) =>
+            EscribirTítuloYTexto("Consultas en Lote", $"Los modelos dan un gran descuento si envías las consultas para ser procesadas en 24 horas. Típicamente este descuento es del 50% del costo normal, por lo que aprovechar las consultas por lote es escencial si quieres ahorrar en tus consultas que no necesitan dar respuesta en tiempo real.")) },
+
+        { 24, ($"Consulta con archivos en lote (≈{ADólares(150000)}).", "Consultas en Lote", (d) => 
+            Consultar((s, m) => ConsultaConArchivos(s, m), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Lote)) },
+
+
+
 
         //{ 14, ("Consulta con archivos.", "Archivos", () =>
         //    Consultar(ConsultaConArchivos, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
-        //        13, lote: false)) },
+        //        13, ModoServicio.Normal)) },
         //{ 15,("Consulta buscando en internet con error por Razonamiento = Ninguno.", "Búsqueda en Internet", () =>
         //    Consultar(ConsultaBuscandoEnInternet, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
-        //        15, lote: false)) },
+        //        15, ModoServicio.Normal)) },
 
     };
 
@@ -199,7 +212,7 @@ internal class Demostración {
 
     internal static string Consultar(Func<Servicio, Modelo,
         (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado resultado)> consulta,
-        string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, int númeroDemostración, bool lote, 
+        string nombreModelo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, int númeroDemostración, ModoServicio modo, 
         RestricciónTókenesSalida restricciónTókenesSalida = RestricciónTókenesSalida.Alta, 
         RestricciónTókenesRazonamiento restricciónTókenesRazonamiento = RestricciónTókenesRazonamiento.Alta, bool rellenarInstruccionesSistema = true) {
 
@@ -225,7 +238,7 @@ internal class Demostración {
         };
 
         var grupoCaché = string.IsNullOrWhiteSpace(GrupoCaché) ? "" : $"{GrupoCaché}-{númeroDemostración}";
-        var servicio = new Servicio(((Modelo)modelo).Nombre, lote, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
+        var servicio = new Servicio(((Modelo)modelo).Nombre, modo, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
             TasaDeCambioUsd, grupoCaché, out string errorInicio, out string advertenciaInicio, out string informaciónInicio, rellenarInstruccionesSistema, 
             restricciones);
 

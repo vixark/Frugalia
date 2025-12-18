@@ -23,8 +23,15 @@
 //
 
 using OpenAI;
+using OpenAI.Batch;
+using OpenAI.Files;
 using OpenAI.Responses;
 using System;
+using System.ClientModel;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using static Frugalia.General;
 
@@ -35,7 +42,7 @@ namespace Frugalia {
     internal class Cliente {
 
 
-        private OpenAIClient ClienteGPT { get; }
+        private OpenAIClient ClienteGpt { get; }
 
         private object ClienteGemini { get; }
 
@@ -43,11 +50,17 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private Func<string, Conversación, Opciones, Modelo, bool, int, (Respuesta, Tókenes, Resultado)> FunciónObtenerRespuesta { get; }
+        private string ClaveAPI { get; }
 
-        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, bool lote, 
-            int segundosLímite) => FunciónObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, lote, segundosLímite);
+        private DelegadoObtenerRespuesta FunciónObtenerRespuesta { get; }
 
+        private delegate (Respuesta, Tókenes, Resultado) DelegadoObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, 
+            Modelo modelo, ModoServicio modo, int segundosLímite, List<string> archivosIds, ref StringBuilder información);
+
+        internal (Respuesta, Tókenes, Resultado) ObtenerRespuesta(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo, 
+            ModoServicio modo, int segundosLímite, List<string> archivosIds, ref StringBuilder información) 
+                => FunciónObtenerRespuesta(mensajeUsuario, conversación, opciones, modelo, modo, segundosLímite, archivosIds, ref información);
+           
         private Func<Archivador> FunciónObtenerArchivador { get; }
 
         internal Archivador ObtenerArchivador() => FunciónObtenerArchivador();
@@ -56,58 +69,14 @@ namespace Frugalia {
         internal Cliente(Familia familia, string claveAPI) {
 
             Familia = familia;
+            ClaveAPI = claveAPI;
 
             switch (Familia) {
             case Familia.GPT:
 
-                ClienteGPT = new OpenAIClient(claveAPI);
-
-                FunciónObtenerRespuesta = (mensajeUsuario, conversación, opciones, modelo, lote, segundosLímite) => {
-
-                    var respondedor = ClienteGPT.GetResponsesClient(modelo.Nombre);
-                    ResponseResult respuestaGPT;
-                    var resultado = Resultado.Respondido;
-
-                    using (var cancelador = new CancellationTokenSource()) {
-
-                        cancelador.CancelAfter(TimeSpan.FromSeconds(segundosLímite));
-
-                        try {
-
-                            opciones.OpcionesGPT.InputItems.Clear(); // Aunque deberían venir vacía porque no se está asignando este valor al crear el objeto OpcionesGPT, se limpia para asegurar que quede vacía..
-                            if (!string.IsNullOrEmpty(mensajeUsuario)) {
-                                opciones.OpcionesGPT.InputItems.Add(ResponseItem.CreateUserMessageItem(mensajeUsuario));
-                            } else if (conversación != null) {
-                                foreach (var item in conversación.ConversaciónGPT) opciones.OpcionesGPT.InputItems.Add(item);
-                            } else {
-                                throw new InvalidOperationException("Debe haber al menos un mensaje del usuario o conversación.");
-                            }
-                            respuestaGPT = respondedor.CreateResponse(opciones.OpcionesGPT, cancelador.Token);
-
-                        } catch (OperationCanceledException) {
-                            resultado = Resultado.TiempoSuperado;
-                            return (new Respuesta(null), new Tókenes(), resultado);
-                        }
-
-                    }
-
-                    Tókenes tókenes;
-                    if (respuestaGPT.Usage == null) {
-                        tókenes = new Tókenes(modelo, lote, "respuestaGPT.Usage es nulo.");
-                    } else {
-                        tókenes = new Tókenes(modelo, lote, respuestaGPT.Usage.InputTokenCount, respuestaGPT.Usage.OutputTokenCount,
-                            respuestaGPT.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGPT.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
-                    }
-                    
-                    if (respuestaGPT?.IncompleteStatusDetails?.Reason.Value.ToString() == "max_output_tokens")
-                        resultado = Resultado.MáximosTókenesAlcanzados;
-
-                    return (new Respuesta(respuestaGPT), tókenes, resultado);
-
-                };
-
-                FunciónObtenerArchivador = () => new Archivador(ClienteGPT.GetOpenAIFileClient());
-
+                ClienteGpt = new OpenAIClient(claveAPI);
+                FunciónObtenerRespuesta = ObtenerRespuestaGpt;
+                FunciónObtenerArchivador = () => new Archivador(ClienteGpt.GetOpenAIFileClient());
                 break;
 
             case Familia.Claude:
@@ -126,6 +95,88 @@ namespace Frugalia {
             }
 
         } // Cliente>
+
+
+        private (Respuesta, Tókenes, Resultado) ObtenerRespuestaGpt(string mensajeUsuario, Conversación conversación, Opciones opciones, Modelo modelo,
+            ModoServicio modo, int segundosLímite, List<string> archivosIds, ref StringBuilder información) {
+
+            var respondedor = ClienteGpt.GetResponsesClient(modelo.Nombre);
+            ResponseResult respuestaGpt = null;
+            Lote lote = null;
+            var resultado = Resultado.Respondido;
+
+            using (var cancelador = new CancellationTokenSource()) {
+
+                cancelador.CancelAfter(TimeSpan.FromSeconds(segundosLímite));
+
+                try {
+
+                    opciones.OpcionesGpt.InputItems.Clear(); // Aunque deberían venir vacía porque no se está asignando este valor al crear el objeto OpcionesGpt, se limpia para asegurar que quede vacía..
+                    if (!string.IsNullOrEmpty(mensajeUsuario)) {
+                        opciones.OpcionesGpt.InputItems.Add(ResponseItem.CreateUserMessageItem(mensajeUsuario));
+                    } else if (conversación != null) {
+                        foreach (var item in conversación.ConversaciónGpt) opciones.OpcionesGpt.InputItems.Add(item);
+                    } else {
+                        throw new InvalidOperationException("Debe haber al menos un mensaje del usuario o conversación.");
+                    }
+
+                    if (modo == ModoServicio.Lote) {
+
+                        var json = "";
+                        var consultaId = Guid.NewGuid().ToString("N");
+                        var líneaJson = Lote.ObtenerLíneaJsonGpt(opciones.OpcionesGpt, modelo.Nombre, consultaId, Archivador.ObtenerDiccionario(archivosIds)); // Se pasan los archivos procesados en los metadatos para recuperarlos cuando se obtenga el resultado de la consulta y eliminarlos.
+                        json = AgregarLineaJson(json, líneaJson);
+
+                        var archivador = ObtenerArchivador();
+                        var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json);
+                        OpenAIFile archivoLote;
+                        using (var flujoMemoria = new MemoryStream(bytes)) {
+                            archivoLote = (OpenAIFile)archivador.ArchivadorGpt.UploadFile(flujoMemoria, "lote.jsonl", FileUploadPurpose.Batch);
+                        }
+
+                        var contenidoLote = BinaryContent.Create(BinaryData.FromObjectAsJson(
+                            new { input_file_id = archivoLote.Id, endpoint = "/v1/responses", completion_window = "24h" }));
+                        var clienteLote = new BatchClient(ClaveAPI);
+                        var operaciónLote = clienteLote.CreateBatch(contenidoLote, waitUntilCompleted: false);
+                        var respuesta = operaciónLote.GetRawResponse().Content;
+                        var jsonRespuesta = JsonDocument.Parse(respuesta);
+                        lote = Lote.ObtenerLoteGpt(jsonRespuesta, consultaId);
+                        if (lote.Estado != EstadoLote.Validando) {
+                            resultado = Resultado.OtroError;
+                            información.AgregarLínea($"Se encontró un estado inesperado en al procesar el lote: {lote.Estado}.");
+                        }
+
+                    } else {
+                        respuestaGpt = respondedor.CreateResponse(opciones.OpcionesGpt, cancelador.Token);
+                    }
+
+                } catch (OperationCanceledException) {
+                    resultado = Resultado.TiempoSuperado;
+                    return (new Respuesta(respuestaGpt: null), new Tókenes(), resultado);
+                }
+
+            }
+
+            var tókenes = new Tókenes();
+
+            if (modo == ModoServicio.Lote) {
+                return (new Respuesta(lote, Familia), tókenes, resultado);
+            } else {
+
+                if (respuestaGpt.Usage == null) {
+                    tókenes = new Tókenes(modelo, modo, "respuestaGpt.Usage es nulo.");
+                } else {
+                    tókenes = new Tókenes(modelo, modo, respuestaGpt.Usage.InputTokenCount, respuestaGpt.Usage.OutputTokenCount,
+                        respuestaGpt.Usage.OutputTokenDetails?.ReasoningTokenCount, respuestaGpt.Usage.InputTokenDetails?.CachedTokenCount, 0, 0);
+                }
+
+                if (respuestaGpt?.IncompleteStatusDetails?.Reason.Value.ToString() == "max_output_tokens")
+                    resultado = Resultado.MáximosTókenesAlcanzados;
+                return (new Respuesta(respuestaGpt), tókenes, resultado);
+
+            }
+
+        } // ObtenerRespuestaGpt>
 
 
     } // Cliente>

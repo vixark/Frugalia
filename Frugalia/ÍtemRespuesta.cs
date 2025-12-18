@@ -34,7 +34,7 @@ namespace Frugalia {
     public class ÍtemRespuesta {
 
 
-        internal ResponseItem ÍtemRespuestaGPT { get; set; }
+        internal ResponseItem ÍtemRespuestaGpt { get; set; }
 
         internal object ÍtemRespuestaGemini { get; set; }
 
@@ -92,14 +92,14 @@ namespace Frugalia {
             switch (Familia) {
             case Familia.GPT:
 
-                FunciónEsSolicitudFunción = () => ÍtemRespuestaGPT is FunctionCallResponseItem;
+                FunciónEsSolicitudFunción = () => ÍtemRespuestaGpt is FunctionCallResponseItem;
 
-                FunciónObtenerJsonArgumentosFunción = () => JsonDocument.Parse(((FunctionCallResponseItem)ÍtemRespuestaGPT).FunctionArguments);
+                FunciónObtenerJsonArgumentosFunción = () => JsonDocument.Parse(((FunctionCallResponseItem)ÍtemRespuestaGpt).FunctionArguments);
 
-                FunciónObtenerNombreFunción = () => ((FunctionCallResponseItem)ÍtemRespuestaGPT).FunctionName;
+                FunciónObtenerNombreFunción = () => ((FunctionCallResponseItem)ÍtemRespuestaGpt).FunctionName;
 
                 FunciónCrearÍtemRespuestaFunción = (resultadoFunción)
-                    => new ÍtemRespuesta(ResponseItem.CreateFunctionCallOutputItem(((FunctionCallResponseItem)ÍtemRespuestaGPT).CallId, resultadoFunción));
+                    => new ÍtemRespuesta(ResponseItem.CreateFunctionCallOutputItem(((FunctionCallResponseItem)ÍtemRespuestaGpt).CallId, resultadoFunción));
 
                 break;
 
@@ -121,7 +121,7 @@ namespace Frugalia {
         } // ÍtemRespuesta>
 
 
-        public ÍtemRespuesta(ResponseItem ítemRespuestaGPT) : this(Familia.GPT) => ÍtemRespuestaGPT = ítemRespuestaGPT;
+        public ÍtemRespuesta(ResponseItem ítemRespuestaGpt) : this(Familia.GPT) => ÍtemRespuestaGpt = ítemRespuestaGpt;
 
 
     } // ÍtemRespuesta>

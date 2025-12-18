@@ -27,6 +27,7 @@ using OpenAI.Responses;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using static Frugalia.General;
 using static Frugalia.GlobalFrugalia;
 
@@ -37,13 +38,13 @@ namespace Frugalia {
     internal class Archivador {
 
 
-        internal OpenAIFileClient ArchivadorGPT { get; set; }
+        internal OpenAIFileClient ArchivadorGpt { get; set; }
 
         internal object ArchivadorGemini { get; set; }
 
         internal object ArchivadorClaude { get; set; }
 
-        private readonly List<string> ArchivosIds = new List<string>();
+        internal readonly List<string> ArchivosIds = new List<string>();
 
         private Familia Familia { get; }
 
@@ -55,8 +56,9 @@ namespace Frugalia {
 
         private Func<List<string>, string, TipoArchivo, (Conversación Conversación, string Error)> FunciónObtenerConversaciónConArchivos { get; }
 
-        internal (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string mensajeUsuario, TipoArchivo tipoArchivo)
-            => FunciónObtenerConversaciónConArchivos(rutasArchivos, mensajeUsuario, tipoArchivo);
+        internal (Conversación Conversación, string Error) ObtenerConversaciónConArchivos(List<string> rutasArchivos, string mensajeUsuario,
+            TipoArchivo tipoArchivo)
+                => FunciónObtenerConversaciónConArchivos(rutasArchivos, mensajeUsuario, tipoArchivo);
 
 
         private Archivador(Familia familia) {
@@ -68,7 +70,7 @@ namespace Frugalia {
                 AcciónEliminarArchivos = () => {
 
                     foreach (var archivoId in ArchivosIds) {
-                        ArchivadorGPT.DeleteFile(archivoId);
+                        ArchivadorGpt.DeleteFile(archivoId);
                     }
                     ArchivosIds.Clear();
 
@@ -89,7 +91,7 @@ namespace Frugalia {
                             return (null, $"No se encontró la ruta de archivo {rutaArchivo}.");
                         }
                             
-                        var archivo = (OpenAIFile)ArchivadorGPT.UploadFile(rutaArchivo, FileUploadPurpose.UserData);
+                        var archivo = (OpenAIFile)ArchivadorGpt.UploadFile(rutaArchivo, FileUploadPurpose.UserData);
                         ArchivosIds.Add(archivo.Id);
                         if (tipoArchivo == TipoArchivo.Pdf) {
                             instruccionesYArchivos.Add(ResponseContentPart.CreateInputFilePart(archivo.Id));
@@ -104,9 +106,9 @@ namespace Frugalia {
                     }
                     instruccionesYArchivos.Add(ResponseContentPart.CreateInputTextPart(mensajeUsuario));
 
-                    var conversaciónConArchivosGPT = new List<ResponseItem>() { ResponseItem.CreateUserMessageItem(instruccionesYArchivos) };
+                    var conversaciónConArchivosGpt = new List<ResponseItem>() { ResponseItem.CreateUserMessageItem(instruccionesYArchivos) };
 
-                    return (new Conversación(conversaciónConArchivosGPT), error);
+                    return (new Conversación(conversaciónConArchivosGpt), error);
 
                 };
 
@@ -130,7 +132,7 @@ namespace Frugalia {
         } // Archivador>
 
 
-        public Archivador(OpenAIFileClient archivadorGPT) : this(Familia.GPT) => ArchivadorGPT = archivadorGPT;
+        public Archivador(OpenAIFileClient archivadorGpt) : this(Familia.GPT) => ArchivadorGpt = archivadorGpt;
 
 
         internal static double EstimarTókenes(List<string> rutasArchivos) {
@@ -153,6 +155,43 @@ namespace Frugalia {
             return tókenesEstimados;
 
         } // EstimarTókenes>
+
+
+        internal static Dictionary<string, string> ObtenerDiccionario(List<string> archivosIds) {
+
+            var diccionario = new Dictionary<string, string>();
+            if (archivosIds != null) {
+                for (int i = 0; i < archivosIds.Count; i++) {
+                    diccionario.Add($"archivo-{i + 1}", archivosIds[i]);
+                }
+            }
+
+            return diccionario;
+
+        } // ObtenerDiccionario>
+
+
+        internal static List<string> ObtenerArchivosIdsDesdeMetadatos(JsonElement raiz) {
+
+            if (!raiz.TryGetProperty("metadata", out JsonElement meta) || meta.ValueKind != JsonValueKind.Object)
+                return new List<string>();
+
+            var archivosIds = new List<string>();
+
+            foreach (var prop in meta.EnumerateObject()) {
+
+                if (!prop.Name.StartsWith("archivo-", StringComparison.OrdinalIgnoreCase)) continue;
+
+                if (prop.Value.ValueKind != JsonValueKind.String) continue;
+
+                var id = prop.Value.GetString();
+                if (!string.IsNullOrWhiteSpace(id)) archivosIds.Add(id.Trim());
+
+            }
+
+            return archivosIds;
+
+        } // ObtenerArchivosIdsDesdeMetadatos>
 
 
     } // Archivador>

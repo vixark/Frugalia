@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using static Frugalia.General;
 
 
@@ -83,9 +82,9 @@ namespace Frugalia {
         GPT, // Familia de OpenAI, referencia generalista con muy buen rendimiento en razonamiento y código.
         Claude, // Modelos de Anthropic, muy fuertes en razonamiento largo, código y uso corporativo.
         Gemini, // Familia multimodal de Google, buena integración con el ecosistema y servicios de Google Cloud.
+        DeepSeek, // Modelos tipo mezcla de expertos muy potentes y baratos, especialmente fuertes en razonamiento y generación de código.
         Mistral, // Modelos ligeros y eficientes, muy competitivos en relación coste/rendimiento.
         Llama, // Familia pesos-abiertos de Meta, estándar de facto para despliegues autoalojados.
-        DeepSeek, // Modelos tipo mezcla de expertos muy potentes y baratos, especialmente fuertes en razonamiento y generación de código.
         Qwen, // Familia multilingüe de Alibaba, muy buenos resultados en chino y otros idiomas como el español.
         GLM // Familia de Zhipu, centrada en razonamiento y agentes, alternativa china de bajo costo.
     }
@@ -125,6 +124,26 @@ namespace Frugalia {
         Usuario,
         AsistenteIA // Solo mensajes del asistente IA.
     } // TipoMensaje>
+
+
+    public enum EstadoLote {
+        Validando, // El archivo de entrada se está validando antes de que pueda comenzar el lote.
+        Falló, // El archivo de entrada no superó el proceso de validación.
+        EnProgreso, // El archivo de entrada fue validado correctamente y el lote se está ejecutando actualmente.
+        Finalizando, // El lote ha finalizado y los resultados se están preparando.
+        Completado, // El lote se ha completado y los resultados están listos.
+        Expiró, // El lote no pudo completarse dentro de la ventana de 24 horas.
+        Cancelando, // El lote se está cancelando (puede tardar hasta 10 minutos).
+        Cancelado, // El lote fue cancelado.
+    } // EstadoLote>
+
+
+    public enum ModoServicio {
+        Normal, // Velocidad normal y precios estándar. Modo predeterminado. 
+        Económico, // Velocidad y precios reducidos. Flex en OpenAI.
+        Lote, // Precios reducidos y procesamiento asincrónico, típicamente en máximo 24 horas.
+        Prioritario, // Máxima velocidad y mayores costos.
+    } // ModoServicio>
 
 
     public static class GlobalFrugalia { // Funciones y constantes auxiliares de lógica de negocio que solo aplican en esta librería. Se diferencia de General que contiene funciones que se podrían copiar y pegar en otros proyectos.
@@ -182,36 +201,67 @@ namespace Frugalia {
         internal const double FactorSeguridadTókenesEntradaMáximos = 0.75; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 75%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. El 75% se obtiene de 3/4 que es un rango de carácteres tókenes típico promedio a típico máximo.
 
         public static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
-            { "gpt-5.2-pro", new Modelo("gpt-5.2-pro", Familia.GPT, 21, 21, 168, 168, null, null, null, null, 400000, 0.5m, 1, null, false,
+            { "gpt-5.2-pro", new Modelo("gpt-5.2-pro", Familia.GPT, 21, 21, 168, 168, null, null, null, null, 400000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)), // Se usa 1 para los que son iguales a Normal, así Normal sea cero. Por ejemplo, en el precio de escritura en caché para modelos GPT.
                 razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Medio, RazonamientoEfectivo.Alto,
                     RazonamientoEfectivo.MuyAlto }) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
-            { "gpt-5.2", new Modelo("gpt-5.2", Familia.GPT, 1.75m, 0.175m, 14, 14, null, null, null, 1024, 400000, 0.5m, 1, null, true,
+            { "gpt-5.2", new Modelo("gpt-5.2", Familia.GPT, 1.75m, 0.175m, 14, 14, null, null, null, 1024, 400000, true,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(2, 2, 1)),
                 $"gpt-5.2-pro{Deshabilitado}", factorÉxitoCaché: 0.55, factorÉxitoCachéConGrupoCaché: 0.70) }, // Se hicieron 60 consultas que debían activar la caché y se encontró que sin grupo de caché falló 27 veces fallaba y con grupo de caché 18.5 veces fallaba. Igual experimento se hizo con los otros modelos GPT.
-            { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, 0.5m, 1, null, false,
+            { "gpt-5-pro", new Modelo("gpt-5-pro", Familia.GPT, 15, 15, 120, 120, null, null, null, null, 400000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)),
                 razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo>() { RazonamientoEfectivo.Alto }) }, // https://openai.com/api/pricing/. No tiene descuento para tókenes de entrada de caché y por lo tanto tampoco tiene límite de tókenes para activación automática de caché.
-            { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, 0.5m, 1, null, true, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
+            { "gpt-5.1", new Modelo("gpt-5.1", Familia.GPT, 1.25m, 0.125m, 10, 10, null, null, null, 1024, 400000, true, // A Noviembre 2025 ChatGPT cobra igual los tókenes de salida de razonamiento que los de salida de no razonamiento.
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(2, 2, 1)),
                 $"gpt-5.2-pro{Deshabilitado}", factorÉxitoCaché: 0.80, factorÉxitoCachéConGrupoCaché: 0.95,
                 razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
-            { "gpt-5-mini", new Modelo("gpt-5-mini", Familia.GPT, 0.25m, 0.025m, 2, 2, null, null, null, 1024, 400000, 0.5m, 1, null, false,
+            { "gpt-5-mini", new Modelo("gpt-5-mini", Familia.GPT, 0.25m, 0.025m, 2, 2, null, null, null, 1024, 400000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(1.8, 1.8, 1)),
                 "gpt-5.2", $"gpt-5.2-pro{Deshabilitado}", factorÉxitoCaché: 0.25, factorÉxitoCachéConGrupoCaché: 0.25, // A diciembre 2025, la caché de este modelo no funcionaba bien.
                 razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
-            { "gpt-5-nano", new Modelo("gpt-5-nano", Familia.GPT, 0.05m, 0.005m, 0.4m, 0.4m, null, null, null, 1024, 400000, 0.5m, 1, null, false,
+            { "gpt-5-nano", new Modelo("gpt-5-nano", Familia.GPT, 0.05m, 0.005m, 0.4m, 0.4m, null, null, null, 1024, 400000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)),
                 "gpt-5-mini", "gpt-5.2", $"gpt-5.2-pro{Deshabilitado}", factorÉxitoCaché: 0.75, factorÉxitoCachéConGrupoCaché: 0.75,
                 razonamientosEfectivosNoPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.MuyAlto }) },
-            { "gpt-4.1", new Modelo("gpt-4.1", Familia.GPT, 2, 0.5m, 8, 8, null, null, null, 1024, 1047576, 0.5m, 1, null, true,
+            { "gpt-4.1", new Modelo("gpt-4.1", Familia.GPT, 2, 0.5m, 8, 8, null, null, null, 1024, 1047576, true,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 2, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(1.75, 1.75, 1)), // En diciembre 2025 gpt-4.1 no tiene habilitada la caché en modo lote, por lo tanto el precio es de 1 USD/Mt (valor de entrada normal por lote), lo que es equivalente multiplicar por 2 el valor de caché para modo normal (0.5 USD/Mt).
                 "gpt-5.2", "gpt-5.2-pro", factorÉxitoCaché: 0.85, factorÉxitoCachéConGrupoCaché: 0.80, // A diciembre 2025, la caché con grupo caché de este modelo no funcionaba bien.
                 razonamientosEfectivosPermitidos: new List<RazonamientoEfectivo> { RazonamientoEfectivo.Ninguno },
                 verbosidadesPermitidas: new List<Verbosidad>()) }, // Modelo sin razonamiento y sin verbosidad. Se pasa la lista de las verbosidades permitidas vacía y la de los razonamientos efectivos solo con el elemento Ninguno.
-            { "claude-opus-4-5", new Modelo("claude-opus-4-5", Familia.Claude, 5, 0.5m, 25, 25, 6.25m, 10, null, null, 200000, 0.5m, 0.5m, 0.5m, false) }, // https://claude.com/pricing#api.
-            { "claude-sonnet-4-5", new Modelo("claude-sonnet-4-5", Familia.Claude, 3, 0.3m, 15, 15, 3.75m, 6, null, null, 200000, 0.5m, 0.5m, 0.5m, false,
+            { "claude-opus-4-5", new Modelo("claude-opus-4-5", Familia.Claude, 5, 0.5m, 25, 25, 6.25m, 10, null, null, 200000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 0.5), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) }, // https://claude.com/pricing#api.
+            { "claude-sonnet-4-5", new Modelo("claude-sonnet-4-5", Familia.Claude, 3, 0.3m, 15, 15, 3.75m, 6, null, null, 200000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 0.5), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)),
                 "claude-opus-4-5") },
-            { "claude-sonnet+-4-5" , new Modelo("claude-sonnet+-4-5", Familia.Claude, 6, 0.6m, 22.5m, 22.5m, 7.5m, 12, null, null, 1000000, 0.5m, 0.5m, 0.5m, 
-                false) }, // Modelo de contexto muy grande, útil para el procesamiento de textos muy grandes. 
-            { "claude-haiku-4-5", new Modelo("claude-haiku-4-5", Familia.Claude, 1, 0.1m, 5, 5, 1.25m, 2, null, null, 200000, 0.5m, 0.5m, 0.5m, false,
+            { "claude-sonnet+-4-5" , new Modelo("claude-sonnet+-4-5", Familia.Claude, 6, 0.6m, 22.5m, 22.5m, 7.5m, 12, null, null, 1000000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 0.5), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) }, // Modelo de contexto muy grande, útil para el procesamiento de textos muy grandes. 
+            { "claude-haiku-4-5", new Modelo("claude-haiku-4-5", Familia.Claude, 1, 0.1m, 5, 5, 1.25m, 2, null, null, 200000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 0.5), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)),
                 "claude-sonnet-4-5", "claude-opus-4-5") },
-            { "gemini-3-pro-preview", new Modelo("gemini-3-pro-preview", Familia.Gemini, 2, 0.2m, 12, 12, null, null, 4.5m, null, 200000, 0.5m, 1, null, false) }, // https://ai.google.dev/gemini-api/docs/pricing.
-            { "gemini-3-pro+-preview", new Modelo("gemini-3-pro+-preview", Familia.Gemini, 4, 0.4m, 18, 18, null, null, 4.5m, null, 1048576, 0.5m, 1, null, false) },
+            { "gemini-3-pro-preview", new Modelo("gemini-3-pro-preview", Familia.Gemini, 2, 0.2m, 12, 12, null, null, 4.5m, null, 200000, false, 
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) }, // https://ai.google.dev/gemini-api/docs/pricing.
+            { "gemini-3-pro+-preview", new Modelo("gemini-3-pro+-preview", Familia.Gemini, 4, 0.4m, 18, 18, null, null, 4.5m, null, 1048576, false, 
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) }, // Modelo de contexto ampliado.
+            { "gemini-3-flash-preview", new Modelo("gemini-3-flash-preview", Familia.Gemini, 0.5m, 0.05m, 3, 3, null, null, 1m, null, 1000000, false,
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) },
         };
+
+        public static readonly Dictionary<Familia, ModoServicio[]> ModosServicioDisponibles = new Dictionary<Familia, ModoServicio[]> {
+            { Familia.GPT, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Prioritario, ModoServicio.Económico, ModoServicio.Lote } },
+            { Familia.Claude, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Lote } }, // Aunque Claude si tiene un servicio prioritario, no se cobra adicional por token si no que dan un acceso prioritario más rápido y de mayor disponibilidad en línea dependiendo del compromiso de gasto mensual, por lo tanto para efectos de esta librería no se debe tener en cuenta para nada porque involucra aspectos fuera de su alcance.
+            { Familia.DeepSeek, new ModoServicio[] { ModoServicio.Normal } },
+            { Familia.Gemini, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Lote } },
+        };
+
+
+        internal static Dictionary<ModoServicio, FactoresPrecioPorModo> FactoresPrecio(FactoresPrecioPorModo factoresLote, FactoresPrecioPorModo factoresEconómico, 
+            FactoresPrecioPorModo factoresPrioritario) =>
+                new Dictionary<ModoServicio, FactoresPrecioPorModo> {
+                    { ModoServicio.Normal, new FactoresPrecioPorModo() }, // El normal siempre se agrega con factores = 1.
+                    { ModoServicio.Económico, factoresEconómico ?? new FactoresPrecioPorModo(false) },
+                    { ModoServicio.Lote, factoresLote ?? new FactoresPrecioPorModo(false) },
+                    { ModoServicio.Prioritario, factoresPrioritario ?? new FactoresPrecioPorModo(false) },
+                };
 
 
         public static string LeerClave(string rutaArchivo, out string error) {
@@ -659,44 +709,6 @@ namespace Frugalia {
 
         } // AgregarSumandoPosibleNulo>
 
-
-        internal static List<(string Nombre, string Valor)> ExtraerParámetros(JsonDocument json) {
-
-            if (json == null) return new List<(string Nombre, string Valor)> { };
-
-            var resultado = new List<(string Nombre, string Valor)>();
-            foreach (var propiedad in json.RootElement.EnumerateObject()) {
-                var nombre = propiedad.Name.ToLowerInvariant();
-                var valor = ATexto(propiedad.Value);
-                resultado.Add((nombre, valor));
-            }
-
-            return resultado;
-
-        } // ExtraerParámetros>
-
-
-        private static string ATexto(JsonElement elemento) {
-
-            switch (elemento.ValueKind) {
-            case JsonValueKind.String:
-                return elemento.GetString();
-            case JsonValueKind.Number:
-                Suspender(); // Verificar cuando suceda.
-                return elemento.GetRawText(); // Devuelve el texto crudo: 123, 3.14, etc.
-            case JsonValueKind.True:
-            case JsonValueKind.False:
-                Suspender(); // Verificar cuando suceda.
-                return elemento.GetBoolean().ToString();
-            case JsonValueKind.Null:
-                Suspender(); // Verificar cuando suceda.
-                return null;
-            default:
-                Suspender(); // Verificar cuando suceda.
-                return elemento.GetRawText(); // Objetos, vectores, etc: se devuelve crudo.
-            }
-
-        } // ATexto>
 
 
     } // GlobalFrugalia>

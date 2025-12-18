@@ -26,7 +26,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text;
+using System.Text.Json;
 
 
 namespace Frugalia {
@@ -412,6 +414,74 @@ namespace Frugalia {
             return false;
 
         } // ContieneLínea>
+
+
+        internal static string AgregarLineaJson(string jsonActual, string líneaJson) {
+
+            if (string.IsNullOrWhiteSpace(líneaJson)) throw new ArgumentException("La línea json no puede estar vacía.", nameof(líneaJson));
+            return (jsonActual ?? string.Empty) + líneaJson + "\n";
+
+        } // AgregarLineaJson>
+
+
+        internal static DateTime ObtenerFecha(long segundosUnix) => DateTimeOffset.FromUnixTimeSeconds(segundosUnix).UtcDateTime;
+
+
+        internal static string ObtenerTexto(JsonElement elementoJson, string nombre) {
+
+            if (elementoJson.TryGetProperty(nombre, out JsonElement e) && e.ValueKind != JsonValueKind.Null)
+                return e.GetString();
+            return null;
+
+        } // ObtenerTexto>
+
+
+        internal static long ObtenerLong(JsonElement elementoJson, string nombre) {
+
+            if (elementoJson.TryGetProperty(nombre, out JsonElement e) && e.ValueKind == JsonValueKind.Number)
+                return e.GetInt64();
+            return 0;
+
+        } // ObtenerLong>
+
+
+        internal static List<(string Nombre, string Valor)> ExtraerParámetros(JsonDocument json) {
+
+            if (json == null) return new List<(string Nombre, string Valor)> { };
+
+            var resultado = new List<(string Nombre, string Valor)>();
+            foreach (var propiedad in json.RootElement.EnumerateObject()) {
+                var nombre = propiedad.Name.ToLowerInvariant();
+                var valor = ATexto(propiedad.Value);
+                resultado.Add((nombre, valor));
+            }
+
+            return resultado;
+
+        } // ExtraerParámetros>
+
+
+        internal static string ATexto(JsonElement elemento) {
+
+            switch (elemento.ValueKind) {
+            case JsonValueKind.String:
+                return elemento.GetString();
+            case JsonValueKind.Number:
+                Suspender(); // Verificar cuando suceda.
+                return elemento.GetRawText(); // Devuelve el texto crudo: 123, 3.14, etc.
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                Suspender(); // Verificar cuando suceda.
+                return elemento.GetBoolean().ToString();
+            case JsonValueKind.Null:
+                Suspender(); // Verificar cuando suceda.
+                return null;
+            default:
+                Suspender(); // Verificar cuando suceda.
+                return elemento.GetRawText(); // Objetos, vectores, etc: se devuelve crudo.
+            }
+
+        } // ATexto>
 
 
     } // General>

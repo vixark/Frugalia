@@ -35,7 +35,7 @@ public class Globales {
     [Fact]
     public void AgregarSumando_CreaDiccionarioCuandoEsNulo() {
 
-        var tókenes = new Tókenes(Modelos["gpt-5-mini"], lote: false, 10, 5, 2, 1, 0, 0);
+        var tókenes = new Tókenes(Modelos["gpt-5-mini"], modo: ModoServicio.Normal, 10, 5, 2, 1, 0, 0);
         Dictionary<string, Tókenes>? diccionarioNulo = null;
         AgregarSumandoPosibleNulo(ref diccionarioNulo, tókenes);
         var clave = ObtenerClave(tókenes);
@@ -51,8 +51,8 @@ public class Globales {
     public void AgregarSumando_SumaTokensCuandoExisteLaClave() {
 
         var diccionario = new Dictionary<string, Tókenes>();
-        var inicial = new Tókenes(Modelos["gpt-5-mini"], lote: true, 100, 50, 10, 20, 5, 0);
-        var adicional = new Tókenes(Modelos["gpt-5-mini"], lote: true, 50, 20, 5, 5, 3, 0);
+        var inicial = new Tókenes(Modelos["gpt-5-mini"], modo: ModoServicio.Lote, 100, 50, 10, 20, 5, 0);
+        var adicional = new Tókenes(Modelos["gpt-5-mini"], modo: ModoServicio.Lote, 50, 20, 5, 5, 3, 0);
 
         diccionario.AgregarSumando(inicial);
         diccionario.AgregarSumando(adicional);

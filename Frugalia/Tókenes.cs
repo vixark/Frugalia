@@ -47,7 +47,7 @@ namespace Frugalia {
 
         public int EntradaNoCaché { get; }
 
-        public bool Lote { get; }
+        public ModoServicio Modo { get; }
 
         public string Error { get; } // Error al obtener los tókenes del servicio.
 
@@ -65,18 +65,19 @@ namespace Frugalia {
         /// <summary>
         /// Clave que identifica un grupo de tókenes sumables.
         /// </summary>
-        public string Clave => $"{NombreModelo}{(Lote ? "-lote" : "")}{(MinutosEscrituraManualCaché == 0 ? "" : $"-{MinutosEscrituraManualCaché}mincaché")}";
+        public string Clave => $"{NombreModelo}{(Modo != ModoServicio.Normal ? $"-{Modo.ToString().ToLower()}" : "")}" +
+            $"{(MinutosEscrituraManualCaché == 0 ? "" : $"-{MinutosEscrituraManualCaché}mincaché")}";
 
 
-        public Tókenes(Modelo modelo, bool lote, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché, int? escrituraManualCaché, 
-            int? minutosEscrituraManualCaché) {
+        public Tókenes(Modelo modelo, ModoServicio modo, int? entradaTotal, int? salidaTotal, int? salidaRazonamiento, int? entradaCaché, 
+            int? escrituraManualCaché, int? minutosEscrituraManualCaché) {
 
             MinutosEscrituraManualCaché = minutosEscrituraManualCaché ?? 0;
             var minutosCachéVálidosClaude = new List<int>() { 0, 5, 60 };
             if (modelo.Familia == Familia.Claude && !minutosCachéVálidosClaude.Contains(MinutosEscrituraManualCaché))
                 throw new Exception("No se pueden usar MinutosEscrituraManualCaché diferentes de 0, 5 o 60 para modelos de tipo Claude.");
 
-            Lote = lote;
+            Modo = modo;
             Modelo = modelo;
             EntradaTotal = entradaTotal ?? 0;
             SalidaTotal = salidaTotal ?? 0;
@@ -95,10 +96,7 @@ namespace Frugalia {
         } // Tókenes>
 
 
-        /// <param name="nombreModelo"></param>
-        /// <param name="lote"></param>
-        /// <param name="error"></param>
-        internal Tókenes(Modelo modelo, bool lote, string error) : this(modelo, lote, null, null, null, null, null, null) {
+        internal Tókenes(Modelo modelo, ModoServicio modo, string error) : this(modelo, modo, null, null, null, null, null, null) {
             Error = error;
         } // Tókenes>
 
@@ -108,13 +106,13 @@ namespace Frugalia {
             if (!string.IsNullOrEmpty(tókenes1.Error)) return tókenes1; // Si alguno de los dos tókenes tiene error, la suma no es posible y se devuelve el objeto tókenes del error.
             if (!string.IsNullOrEmpty(tókenes2.Error)) return tókenes2;
             if (tókenes1.NombreModelo != tókenes2.NombreModelo) throw new Exception("No se pueden sumar tókenes usados de diferente modelo.");
-            if (tókenes1.Lote != tókenes2.Lote) throw new Exception("No se pueden sumar tókenes de lote y no lote.");
+            if (tókenes1.Modo != tókenes2.Modo) throw new Exception("No se pueden sumar tókenes de diferentes modos de servicio.");
             if (tókenes1.MinutosEscrituraManualCaché != tókenes2.MinutosEscrituraManualCaché)
                 throw new Exception("No se pueden sumar tókenes que tuvieron escritura manual en caché con diferente duración de almacenamiento en caché.");
 
             return new Tókenes(
                 tókenes1.Modelo,
-                tókenes2.Lote,
+                tókenes2.Modo,
                 tókenes1.EntradaTotal + tókenes2.EntradaTotal,
                 tókenes1.SalidaTotal + tókenes2.SalidaTotal,
                 tókenes1.SalidaRazonamiento + tókenes2.SalidaRazonamiento,
@@ -143,11 +141,11 @@ namespace Frugalia {
             foreach (var kv in listaTókenes) {
 
                 var tókenes = kv.Value;
-                if (tókenes.Lote) Suspender(); // Verificar funcionamiento.
+                if (tókenes.Modo == ModoServicio.Lote) Suspender(); // Verificar funcionamiento del cálculo de tókenes de entrada con lote. En especial el caso con caché.
                 var clave = tókenes.Clave;
                 var modelo = tókenes.Modelo;
-                var factorEntradaYSalida = tókenes.Lote ? modelo.FactorDescuentoEntradaYSalidaPorLote : 1m;
-                var factorLecturaCaché = tókenes.Lote ? modelo.FactorDescuentoLecturaCachePorLote : 1m;
+                var factorEntradaYSalida = (decimal)modelo.FactoresPrecio[tókenes.Modo].EntradaYSalida;
+                var factorLecturaCaché = (decimal)modelo.FactoresPrecio[tókenes.Modo].LecturaCache;
                 var pesosNoCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaNoCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd) * factorEntradaYSalida;
                 var pesosCaché = CalcularCostoMonedaLocalTókenes(tókenes.EntradaCaché, modelo.PrecioEntradaCaché, tasaCambioUsd) * factorLecturaCaché;
                 var pesosNoRazonamiento = CalcularCostoMonedaLocalTókenes(tókenes.SalidaNoRazonamiento, modelo.PrecioSalidaNoRazonamiento, tasaCambioUsd) 
@@ -155,7 +153,7 @@ namespace Frugalia {
                 var pesosRazonamiento = CalcularCostoMonedaLocalTókenes(tókenes.SalidaRazonamiento, modelo.PrecioSalidaRazonamiento, tasaCambioUsd)
                     * factorEntradaYSalida;
 
-                var pesosEscrituraManualCaché = 0m;
+                var pesosEscrituraCaché = 0m;
                 switch (modelo.Familia) {
                 case Familia.GPT:
                     break; // 0.
@@ -163,18 +161,18 @@ namespace Frugalia {
 
                     Suspender(); // Verificar funcionamiento.
                     var costoEscrituraCachéClaude = 0m;
-                    if (modelo.PrecioEscrituraManualCachéRefrescablePor5Minutos == null || modelo.PrecioEscrituraManualCachéRefrescablePor60Minutos == null)
+                    if (modelo.PrecioEscrituraCachéRefrescablePor5Minutos == null || modelo.PrecioEscrituraCachéRefrescablePor60Minutos == null)
                         throw new Exception("No se esperaba que un modelo Claude tenga PrecioEscrituraManualCachéRefrescablePor5Minutos o Por60Minutos vacíos.");
                     if (tókenes.MinutosEscrituraManualCaché == 0) {
                         // 0.
                     } else if (tókenes.MinutosEscrituraManualCaché == 5) {
-                        costoEscrituraCachéClaude = (decimal)modelo.PrecioEscrituraManualCachéRefrescablePor5Minutos;
+                        costoEscrituraCachéClaude = (decimal)modelo.PrecioEscrituraCachéRefrescablePor5Minutos;
                     } else if (tókenes.MinutosEscrituraManualCaché == 60) {
-                        costoEscrituraCachéClaude = (decimal)modelo.PrecioEscrituraManualCachéRefrescablePor60Minutos;
+                        costoEscrituraCachéClaude = (decimal)modelo.PrecioEscrituraCachéRefrescablePor60Minutos;
                     } else {
                         throw new Exception("No se esperaba que MinutosEscrituraManualCaché fuera diferente de 0, 5 o 60 para modelos Claude.");
                     }
-                    pesosEscrituraManualCaché = CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, costoEscrituraCachéClaude, tasaCambioUsd);
+                    pesosEscrituraCaché = CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, costoEscrituraCachéClaude, tasaCambioUsd);
                     break;
 
                 case Familia.Gemini:
@@ -184,7 +182,7 @@ namespace Frugalia {
                         throw new Exception("No se esperaba que un modelo Gemini tenga PrecioAlmacenamientoCachéPorHora vacío.");
                     var fracciónHora = tókenes.MinutosEscrituraManualCaché / 60m;
                     var precioAlmacenamientoCachéFracciónHora = (decimal)modelo.PrecioAlmacenamientoCachéPorHora * fracciónHora;
-                    pesosEscrituraManualCaché = CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd)
+                    pesosEscrituraCaché = CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, modelo.PrecioEntradaNoCaché, tasaCambioUsd)
                         + CalcularCostoMonedaLocalTókenes(tókenes.EscrituraManualCaché, precioAlmacenamientoCachéFracciónHora, tasaCambioUsd); // Al escribir en caché Gemini cobra los tókenes de entrada normalmente y el costo del tiempo de almacenamiento
                     break;
 
@@ -196,10 +194,10 @@ namespace Frugalia {
                     texto += $"{clave}: {tókenes.Error}{Environment.NewLine}";
                 } else {
 
-                    var factorEscrituraCaché = tókenes.Lote ? (modelo.FactorDescuentoEscrituraCachéPorLote ?? 1) : 1m; // Si es vacío no hay descuento, entonces el factor es 1.
-                    pesosEscrituraManualCaché *= factorEscrituraCaché;
+                    var factorEscrituraCaché = (decimal)modelo.FactoresPrecio[tókenes.Modo].EscrituraCaché;
+                    pesosEscrituraCaché *= factorEscrituraCaché;
 
-                    var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraManualCaché;
+                    var totalPesos = pesosNoCaché + pesosCaché + pesosNoRazonamiento + pesosRazonamiento + pesosEscrituraCaché;
                     totalTodos += totalPesos;
 
                     texto += $"{clave}: {tókenes.EntradaNoCaché} tókenes de entrada no caché a {FormatearMoneda(pesosNoCaché)} " + Environment.NewLine +
@@ -207,7 +205,7 @@ namespace Frugalia {
                        $"{clave}: {tókenes.SalidaNoRazonamiento} tókenes de salida no razonamiento a {FormatearMoneda(pesosNoRazonamiento)}" + Environment.NewLine +
                        $"{clave}: {tókenes.SalidaRazonamiento} tókenes de salida razonamiento a {FormatearMoneda(pesosRazonamiento)}" + Environment.NewLine +
                        $"{clave}: {tókenes.EscrituraManualCaché} tókenes de escritura manual en caché por {tókenes.MinutosEscrituraManualCaché} minutos " +
-                       $"a {FormatearMoneda(pesosEscrituraManualCaché)}" + Environment.NewLine +
+                       $"a {FormatearMoneda(pesosEscrituraCaché)}" + Environment.NewLine +
                        $"Total {clave}: {FormatearMoneda(totalPesos)}" + DobleLínea;
 
                 }
