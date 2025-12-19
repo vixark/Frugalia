@@ -50,7 +50,7 @@ namespace Frugalia {
 
         private Familia Familia { get; }
 
-        private string ClaveAPI { get; }
+        private string ClaveApi { get; }
 
         private DelegadoObtenerRespuesta FunciónObtenerRespuesta { get; }
 
@@ -66,15 +66,15 @@ namespace Frugalia {
         internal Archivador ObtenerArchivador() => FunciónObtenerArchivador();
 
 
-        internal Cliente(Familia familia, string claveAPI) {
+        internal Cliente(Familia familia, string claveApi) {
 
             Familia = familia;
-            ClaveAPI = claveAPI;
+            ClaveApi = claveApi;
 
             switch (Familia) {
             case Familia.GPT:
 
-                ClienteGpt = new OpenAIClient(claveAPI);
+                ClienteGpt = new OpenAIClient(claveApi);
                 FunciónObtenerRespuesta = ObtenerRespuestaGpt;
                 FunciónObtenerArchivador = () => new Archivador(ClienteGpt.GetOpenAIFileClient());
                 break;
@@ -136,11 +136,9 @@ namespace Frugalia {
 
                         var contenidoLote = BinaryContent.Create(BinaryData.FromObjectAsJson(
                             new { input_file_id = archivoLote.Id, endpoint = "/v1/responses", completion_window = "24h" }));
-                        var clienteLote = new BatchClient(ClaveAPI);
-                        var operaciónLote = clienteLote.CreateBatch(contenidoLote, waitUntilCompleted: false);
-                        var respuesta = operaciónLote.GetRawResponse().Content;
-                        var jsonRespuesta = JsonDocument.Parse(respuesta);
-                        lote = Lote.ObtenerLoteGpt(jsonRespuesta, consultaId);
+                        var clienteLote = new BatchClient(ClaveApi);
+                        var respuestaCreaciónLote = clienteLote.CreateBatch(contenidoLote, waitUntilCompleted: false);
+                        lote = Lote.ObtenerLoteGpt(JsonDocument.Parse(respuestaCreaciónLote.GetRawResponse().Content), consultaId);
                         if (lote.Estado != EstadoLote.Validando) {
                             resultado = Resultado.OtroError;
                             información.AgregarLínea($"Se encontró un estado inesperado en al procesar el lote: {lote.Estado}.");
@@ -152,12 +150,12 @@ namespace Frugalia {
 
                 } catch (OperationCanceledException) {
                     resultado = Resultado.TiempoSuperado;
-                    return (new Respuesta(respuestaGpt: null), new Tókenes(), resultado);
+                    return (new Respuesta(respuestaGpt: null), new Tókenes(modelo, modo), resultado);
                 }
 
             }
 
-            var tókenes = new Tókenes();
+            var tókenes = new Tókenes(modelo, modo);
 
             if (modo == ModoServicio.Lote) {
                 return (new Respuesta(lote, Familia), tókenes, resultado);

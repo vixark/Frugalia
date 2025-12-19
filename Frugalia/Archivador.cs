@@ -171,29 +171,6 @@ namespace Frugalia {
         } // ObtenerDiccionario>
 
 
-        internal static List<string> ObtenerArchivosIdsDesdeMetadatos(JsonElement raiz) {
-
-            if (!raiz.TryGetProperty("metadata", out JsonElement meta) || meta.ValueKind != JsonValueKind.Object)
-                return new List<string>();
-
-            var archivosIds = new List<string>();
-
-            foreach (var prop in meta.EnumerateObject()) {
-
-                if (!prop.Name.StartsWith("archivo-", StringComparison.OrdinalIgnoreCase)) continue;
-
-                if (prop.Value.ValueKind != JsonValueKind.String) continue;
-
-                var id = prop.Value.GetString();
-                if (!string.IsNullOrWhiteSpace(id)) archivosIds.Add(id.Trim());
-
-            }
-
-            return archivosIds;
-
-        } // ObtenerArchivosIdsDesdeMetadatos>
-
-
     } // Archivador>
 
 

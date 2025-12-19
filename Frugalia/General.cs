@@ -417,31 +417,24 @@ namespace Frugalia {
 
 
         internal static string AgregarLineaJson(string jsonActual, string líneaJson) {
-
             if (string.IsNullOrWhiteSpace(líneaJson)) throw new ArgumentException("La línea json no puede estar vacía.", nameof(líneaJson));
             return (jsonActual ?? string.Empty) + líneaJson + "\n";
-
         } // AgregarLineaJson>
 
 
         internal static DateTime ObtenerFecha(long segundosUnix) => DateTimeOffset.FromUnixTimeSeconds(segundosUnix).UtcDateTime;
 
 
+        /// <summary>Obtiene el valor de una propiedad json como texto, si es un objeto devuelve el json completo. Si la propiedad no existe o es nula, devuelve null.</summary>
         internal static string ObtenerTexto(JsonElement elementoJson, string nombre) {
-
-            if (elementoJson.TryGetProperty(nombre, out JsonElement e) && e.ValueKind != JsonValueKind.Null)
-                return e.GetString();
-            return null;
-
+            if (!elementoJson.TryGetProperty(nombre, out var e) || e.ValueKind == JsonValueKind.Null) return null;
+            return e.ValueKind == JsonValueKind.String ? e.GetString() : e.ToString(); 
         } // ObtenerTexto>
 
 
         internal static long ObtenerLong(JsonElement elementoJson, string nombre) {
-
-            if (elementoJson.TryGetProperty(nombre, out JsonElement e) && e.ValueKind == JsonValueKind.Number)
-                return e.GetInt64();
+            if (elementoJson.TryGetProperty(nombre, out JsonElement e) && e.ValueKind == JsonValueKind.Number) return e.GetInt64();
             return 0;
-
         } // ObtenerLong>
 
 

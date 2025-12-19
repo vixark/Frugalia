@@ -28,15 +28,18 @@ using OpenAI.Responses;
 using System;
 using System.ClientModel.Primitives;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using static Frugalia.General;
+using System.Text.RegularExpressions;
+//using static Frugalia.General;
 
 
 namespace Frugalia {
 
 
-    internal class Lote {
+    public class Lote {
 
 
         internal string Id { get; set; }
@@ -51,9 +54,133 @@ namespace Frugalia {
 
         internal List<string> ArchivosIds { get; set; }
 
+        internal string RespuestaId { get; set; }
+
+        internal string Errores { get; set; }
+
+        internal string ArchivoErroresId { get; set; }
+
+        internal DateTime Finalización { get; set; }
+
+        internal Tókenes Tókenes { get; set; }
+
 
         public override string ToString() 
             => $"Id = {Id ?? "null"} ConsultaId = {ConsultaId ?? "null"}  Estado = {Estado}  Creación = {Creación:O}  Expiración = {Expiración:O}";
+
+
+        public static string ConsultarLote(Familia familia, string loteId, string claveApi, out string error, out Dictionary<string, Tókenes> tókenes, 
+            out StringBuilder información, out Resultado resultado, string consultaId = null) {
+
+            resultado = Resultado.Abortado;
+            información = new StringBuilder();
+            tókenes = new Dictionary<string, Tókenes>();
+            error = null;
+            Lote lote;
+
+            switch (familia) {
+            case Familia.GPT:
+
+                var clienteLote = new BatchClient(claveApi);
+                var opcionesSolicitud = new RequestOptions();
+                var respuestaLote = clienteLote.GetBatch(loteId, opcionesSolicitud);
+                lote = ObtenerLoteGpt(JsonDocument.Parse(respuestaLote.GetRawResponse().Content), consultaId);
+
+                if (lote.Estado == EstadoLote.Completado) {
+
+                    var clienteArchivo = new OpenAIFileClient(claveApi);
+                    if (!string.IsNullOrWhiteSpace(lote.RespuestaId)) {
+
+                        var respuestaBinaria = clienteArchivo.DownloadFile(lote.RespuestaId);
+                        var respuestaJson = respuestaBinaria.ToString();
+                        var líneaRespuesta = consultaId == null ? ObtenerFilaÚnica(respuestaJson) : BuscarLíneaPorConsultaIdGpt(respuestaJson, consultaId); // Permite que en los casos que se hace una consulta por lote, no sea necesario proporcionar el Id de la consulta.
+                        if (líneaRespuesta != null && líneaRespuesta.HasValue) {
+                            voy aqui
+                        }
+
+                    }
+
+                }
+
+                break;
+
+            case Familia.Claude:
+            case Familia.Gemini:
+            case Familia.DeepSeek:
+            case Familia.Mistral:
+            case Familia.Llama:
+            case Familia.Qwen:
+            case Familia.GLM:
+            default:
+                throw new Exception($"ConsultarLote() no está implementado para la familia {familia}.");
+            }
+
+            switch (lote.Estado) {
+            case EstadoLote.Falló:
+                resultado = Resultado.ErrorLote;
+                error = lote.Errores;
+                break;
+            case EstadoLote.Validando:
+            case EstadoLote.EnProgreso:
+            case EstadoLote.Finalizando:
+                resultado = Resultado.ProcesandoLote;
+                break;
+            case EstadoLote.Completado:
+                resultado = Resultado.Respondido;
+                break;
+            case EstadoLote.Expiró:
+                resultado = Resultado.LoteExpirado;
+                break;
+            case EstadoLote.Cancelando:
+            case EstadoLote.Cancelado:
+                resultado = Resultado.LoteCancelado;
+                break;
+            default:
+                throw new Exception("Estado de lote desconocido.");
+            }
+
+            return lote.Estado.ToString();
+
+        } // ConsultarLote>
+
+
+        private static JsonElement? ObtenerFilaÚnica(string json) {
+
+            using (var sr = new StringReader(json)) {
+
+                string líneaUnica = sr.ReadLine();
+                if (líneaUnica == null || sr.ReadLine() != null) 
+                    throw new Exception("Se esperaba que el archivo de salida del lote contuviera exactamente una línea.");
+
+                return JsonDocument.Parse(líneaUnica).RootElement;  // Clonar como en BuscarLineaPorConsultaIdGpt()>
+
+            }
+
+        } // ObtenerFilaÚnica>
+
+
+        private static JsonElement? BuscarLíneaPorConsultaIdGpt(string json, string consultaId) {
+
+            using (var sr = new StringReader(json)) {
+
+                string línea;
+                while ((línea = sr.ReadLine()) != null) {
+                    
+                    if (string.IsNullOrWhiteSpace(línea)) continue;
+                    using (var documento = JsonDocument.Parse(línea)) {
+                        var raíz = documento.RootElement;
+                        if (raíz.TryGetProperty("custom_id", out var cid) && cid.GetString() == consultaId) 
+                            return JsonDocument.Parse(raíz.GetRawText()).RootElement; // Clonar porque doc se va a Dispose
+
+                    }
+
+                }
+                return null;
+
+            }
+
+        } // BuscarLíneaPorConsultaIdGpt>
+
 
         /// <summary>
         /// Convierte CreateResponseOptions una línea json para agregar al archivo jsonl de lote.
@@ -93,14 +220,22 @@ namespace Frugalia {
         internal static Lote ObtenerLoteGpt(JsonDocument jsonRespuesta, string consultaId) {
 
             if (jsonRespuesta == null) throw new ArgumentNullException(nameof(jsonRespuesta));
-            var raízJson = jsonRespuesta.RootElement;
+            var raíz = jsonRespuesta.RootElement;
+            var nombreModelo = Regex.Replace(ObtenerTexto(raíz, "model"), @"-\d{4}-\d{2}-\d{2}$", "") ;
+            var modelo = Modelo.ObtenerModelo(nombreModelo) 
+                ?? throw new Exception($"No se esperaba que el modelo del archivo del lote {nombreModelo} no estuviera con un modelo soportado.");
             return new Lote {
-                Id = ObtenerTexto(raízJson, "id"),
+                RespuestaId = ObtenerTexto(raíz, "output_file_id"),
+                Errores = ObtenerTexto(raíz, "errors"),
+                ArchivoErroresId = ObtenerTexto(raíz, "error_file_id"),
+                Id = ObtenerTexto(raíz, "id"),
                 ConsultaId = consultaId,
-                Creación = ObtenerFecha(ObtenerLong(raízJson, "created_at")),
-                Expiración = ObtenerFecha(ObtenerLong(raízJson, "expires_at")),
-                Estado = MapearEstadoGpt(ObtenerTexto(raízJson, "status")),
-                ArchivosIds = Archivador.ObtenerArchivosIdsDesdeMetadatos(raízJson),
+                Creación = ObtenerFecha(ObtenerLong(raíz, "created_at")),
+                Expiración = ObtenerFecha(ObtenerLong(raíz, "expires_at")),
+                Finalización = ObtenerFecha(ObtenerLong(raíz, "completed_at")),
+                Tókenes = ExtraerTókenesGpt(raíz, modelo),
+                Estado = MapearEstadoGpt(ObtenerTexto(raíz, "status")),
+                ArchivosIds = ObtenerArchivosIdsDesdeMetadatosGpt(raíz),
             };
 
         } // ObtenerLoteGpt>
@@ -122,6 +257,55 @@ namespace Frugalia {
             }
 
         } // MapearEstadoGpt>
+
+
+        internal static Tókenes ExtraerTókenesGpt(JsonElement elementoJson, Modelo modelo) {
+
+            int? entradaTotal = null;
+            int? salidaTotal = null;
+            int? salidaRazonamiento = null;
+            int? entradaCaché = null;
+
+            if (elementoJson.TryGetProperty("usage", out var usoTókenes) && usoTókenes.ValueKind == JsonValueKind.Object) {
+
+                if (usoTókenes.TryGetProperty("input_tokens", out var it) && it.ValueKind == JsonValueKind.Number) entradaTotal = it.GetInt32();
+
+                if (usoTókenes.TryGetProperty("output_tokens", out var ot) && ot.ValueKind == JsonValueKind.Number) salidaTotal = ot.GetInt32();
+
+                if (usoTókenes.TryGetProperty("input_tokens_details", out var itd) && itd.ValueKind == JsonValueKind.Object
+                    && itd.TryGetProperty("cached_tokens", out var ct) && ct.ValueKind == JsonValueKind.Number) entradaCaché = ct.GetInt32();
+
+                if (usoTókenes.TryGetProperty("output_tokens_details", out var otd) && otd.ValueKind == JsonValueKind.Object
+                    && otd.TryGetProperty("reasoning_tokens", out var rt) && rt.ValueKind == JsonValueKind.Number) salidaRazonamiento = rt.GetInt32();
+
+            }
+
+            return new Tókenes(modelo, ModoServicio.Lote, entradaTotal, salidaTotal, salidaRazonamiento, entradaCaché, null, null);
+
+        } // ExtraerTókenesGpt>
+
+
+        internal static List<string> ObtenerArchivosIdsDesdeMetadatosGpt(JsonElement raiz) {
+
+            if (!raiz.TryGetProperty("metadata", out JsonElement meta) || meta.ValueKind != JsonValueKind.Object)
+                return new List<string>();
+
+            var archivosIds = new List<string>();
+
+            foreach (var prop in meta.EnumerateObject()) {
+
+                if (!prop.Name.StartsWith("archivo-", StringComparison.OrdinalIgnoreCase)) continue;
+
+                if (prop.Value.ValueKind != JsonValueKind.String) continue;
+
+                var id = prop.Value.GetString();
+                if (!string.IsNullOrWhiteSpace(id)) archivosIds.Add(id.Trim());
+
+            }
+
+            return archivosIds;
+
+        } // ObtenerArchivosIdsDesdeMetadatosGpt>
 
 
     } // Lote>

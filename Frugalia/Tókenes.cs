@@ -24,6 +24,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using static Frugalia.General;
 
 
@@ -96,9 +97,10 @@ namespace Frugalia {
         } // Tókenes>
 
 
-        internal Tókenes(Modelo modelo, ModoServicio modo, string error) : this(modelo, modo, null, null, null, null, null, null) {
-            Error = error;
-        } // Tókenes>
+        internal Tókenes(Modelo modelo, ModoServicio modo, string error) : this(modelo, modo, null, null, null, null, null, null) => Error = error;
+
+
+        internal Tókenes(Modelo modelo, ModoServicio modo) : this(modelo, modo, null, null, null, null, null, null) { } 
 
 
         public static Tókenes operator +(Tókenes tókenes1, Tókenes tókenes2) {
@@ -162,7 +164,7 @@ namespace Frugalia {
                     Suspender(); // Verificar funcionamiento.
                     var costoEscrituraCachéClaude = 0m;
                     if (modelo.PrecioEscrituraCachéRefrescablePor5Minutos == null || modelo.PrecioEscrituraCachéRefrescablePor60Minutos == null)
-                        throw new Exception("No se esperaba que un modelo Claude tenga PrecioEscrituraManualCachéRefrescablePor5Minutos o Por60Minutos vacíos.");
+                        throw new Exception("No se esperaba que un modelo Claude tenga PrecioEscrituraCachéRefrescablePor5Minutos o Por60Minutos vacíos.");
                     if (tókenes.MinutosEscrituraManualCaché == 0) {
                         // 0.
                     } else if (tókenes.MinutosEscrituraManualCaché == 5) {

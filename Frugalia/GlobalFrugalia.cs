@@ -96,7 +96,11 @@ namespace Frugalia {
         MáximosTókenesAlcanzados,
         MáximasIteracionesConFunción,
         SinAutoevaluación,
-        OtroError
+        OtroError,
+        ProcesandoLote,
+        ErrorLote,
+        LoteExpirado,
+        LoteCancelado,
     }
 
     public enum RestricciónTókenesSalida {
@@ -200,6 +204,13 @@ namespace Frugalia {
 
         internal const double FactorSeguridadTókenesEntradaMáximos = 0.75; // Para evitar sobrepasar el límite de tókenes de entrada del modelo, se usa un factor de seguridad del 75%. Esto es porque a veces la estimación de tókenes puede ser imprecisa y se corre el riesgo de exceder el límite permitido por el modelo, lo que causaría incremento de costos o errores en la solicitud. Al usar este factor, se garantiza que la cantidad estimada de tókenes de entrada esté por debajo del límite máximo, proporcionando un margen adicional para evitar errores. El 75% se obtiene de 3/4 que es un rango de carácteres tókenes típico promedio a típico máximo.
 
+        public static readonly Dictionary<Familia, ModoServicio[]> ModosServicioDisponibles = new Dictionary<Familia, ModoServicio[]> { // Debe ir antes de Modelos porque se requiere la existencia de este diccionario creado al crear Modelos.
+            { Familia.GPT, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Prioritario, ModoServicio.Económico, ModoServicio.Lote } },
+            { Familia.Claude, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Lote } }, // Aunque Claude si tiene un servicio prioritario, no se cobra adicional por token si no que dan un acceso prioritario más rápido y de mayor disponibilidad en línea dependiendo del compromiso de gasto mensual, por lo tanto para efectos de esta librería no se debe tener en cuenta para nada porque involucra aspectos fuera de su alcance.
+            { Familia.DeepSeek, new ModoServicio[] { ModoServicio.Normal } },
+            { Familia.Gemini, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Lote } },
+        };
+
         public static readonly Dictionary<string, Modelo> Modelos = new Dictionary<string, Modelo>(StringComparer.OrdinalIgnoreCase) { // Para control de costos por el momento se deshabilita el modelo gpt-5-pro. Los que se quieran deshabilitar silenciosamente se les pone {Deshabilitado} en el nombre de modelos mejorados (no en la clave del diccionario) para que no saque excepción y lo ignore como si no existiera.
             { "gpt-5.2-pro", new Modelo("gpt-5.2-pro", Familia.GPT, 21, 21, 168, 168, null, null, null, null, 400000, false,
                 FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)), // Se usa 1 para los que son iguales a Normal, así Normal sea cero. Por ejemplo, en el precio de escritura en caché para modelos GPT.
@@ -238,19 +249,15 @@ namespace Frugalia {
             { "claude-haiku-4-5", new Modelo("claude-haiku-4-5", Familia.Claude, 1, 0.1m, 5, 5, 1.25m, 2, null, null, 200000, false,
                 FactoresPrecio(new FactoresPrecioPorModo(0.5, 0.5, 0.5), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)),
                 "claude-sonnet-4-5", "claude-opus-4-5") },
-            { "gemini-3-pro-preview", new Modelo("gemini-3-pro-preview", Familia.Gemini, 2, 0.2m, 12, 12, null, null, 4.5m, null, 200000, false, 
-                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) }, // https://ai.google.dev/gemini-api/docs/pricing.
-            { "gemini-3-pro+-preview", new Modelo("gemini-3-pro+-preview", Familia.Gemini, 4, 0.4m, 18, 18, null, null, 4.5m, null, 1048576, false, 
-                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) }, // Modelo de contexto ampliado.
-            { "gemini-3-flash-preview", new Modelo("gemini-3-flash-preview", Familia.Gemini, 0.5m, 0.05m, 3, 3, null, null, 1m, null, 1000000, false,
-                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false))) },
-        };
-
-        public static readonly Dictionary<Familia, ModoServicio[]> ModosServicioDisponibles = new Dictionary<Familia, ModoServicio[]> {
-            { Familia.GPT, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Prioritario, ModoServicio.Económico, ModoServicio.Lote } },
-            { Familia.Claude, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Lote } }, // Aunque Claude si tiene un servicio prioritario, no se cobra adicional por token si no que dan un acceso prioritario más rápido y de mayor disponibilidad en línea dependiendo del compromiso de gasto mensual, por lo tanto para efectos de esta librería no se debe tener en cuenta para nada porque involucra aspectos fuera de su alcance.
-            { Familia.DeepSeek, new ModoServicio[] { ModoServicio.Normal } },
-            { Familia.Gemini, new ModoServicio[] { ModoServicio.Normal, ModoServicio.Lote } },
+            { "gemini-3-pro-preview", new Modelo("gemini-3-pro-preview", Familia.Gemini, 2, 0.2m, 12, 12, null, null, 4.5m, 4096, 200000, false, // Gemini llama caché implícita a la caché que se activa automáticamente como la de GPT. Gemini no tiene caché extendida, entonces es incierto cuánto puede durar la caché automática (implícita).
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)), 
+                factorÉxitoCaché: 0.7, factorÉxitoCachéConGrupoCaché: 0.7) }, // https://ai.google.dev/gemini-api/docs/pricing. Aunque no hay grupo caché para Gemini, se establece igual para que no saque excepción y poder mantener la verificación de estos dos valores para modelos que tengan caché automática.
+            { "gemini-3-pro+-preview", new Modelo("gemini-3-pro+-preview", Familia.Gemini, 4, 0.4m, 18, 18, null, null, 4.5m, 4096, 1048576, false, // Modelo de contexto ampliado.
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)), 
+                factorÉxitoCaché: 0.7, factorÉxitoCachéConGrupoCaché: 0.7) }, 
+            { "gemini-3-flash-preview", new Modelo("gemini-3-flash-preview", Familia.Gemini, 0.5m, 0.05m, 3, 3, null, null, 1m, 2048, 1048576, false, // Se pone 2048 porque no hay certeza del valor aplicable para Flash https://ai.google.dev/gemini-api/docs/gemini-3.
+                FactoresPrecio(new FactoresPrecioPorModo(0.5, 1, 1), new FactoresPrecioPorModo(false), new FactoresPrecioPorModo(false)), 
+                factorÉxitoCaché: 0.7, factorÉxitoCachéConGrupoCaché: 0.7) },
         };
 
 

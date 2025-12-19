@@ -35,7 +35,7 @@ internal class Demostración {
 
     internal static decimal TasaDeCambioUsd = 4000; // Se usa un valor redondeado de 4000 COP$/USD en diciembre 2025.
 
-    internal static string RutaClaveAPI = @"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt";
+    internal static string RutaClaveApi = @"D:\Proyectos\Frugalia\Servicios\OpenAI\Clave API - Pruebas.txt";
 
     public const string GrupoCaché = "frugalia-demostración"; // Cambia este valor según la explicación en GlobalFrugalia.cs > AdvertenciaGrupoCachéDemostración. Cámbialo a texto vacío ("") para desactivar el uso de grupos de caché.
 
@@ -129,15 +129,12 @@ internal class Demostración {
         { 23, ($"Explicación de la función.", "Consultas en Lote", (d) =>
             EscribirTítuloYTexto("Consultas en Lote", $"Los modelos dan un gran descuento si envías las consultas para ser procesadas en 24 horas. Típicamente este descuento es del 50% del costo normal, por lo que aprovechar las consultas por lote es escencial si quieres ahorrar en tus consultas que no necesitan dar respuesta en tiempo real.")) },
 
-        { 24, ($"Consulta con archivos en lote (≈{ADólares(150000)}).", "Consultas en Lote", (d) => 
+        { 24, ($"Consulta con archivos en lote ({ADólares(0)}).", "Consultas en Lote", (d) => 
             Consultar((s, m) => ConsultaConArchivos(s, m), "gpt-5.1", Razonamiento.Bajo, Verbosidad.Baja, CalidadAdaptable.No, d, ModoServicio.Lote)) },
 
+        { 25, ($"Consulta con archivos en lote (≈{ADólares(150000)}).", "Consultas en Lote", (d) => ConsultaLote(Familia.GPT)) },
 
 
-
-        //{ 14, ("Consulta con archivos.", "Archivos", () =>
-        //    Consultar(ConsultaConArchivos, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.No,
-        //        13, ModoServicio.Normal)) },
         //{ 15,("Consulta buscando en internet con error por Razonamiento = Ninguno.", "Búsqueda en Internet", () =>
         //    Consultar(ConsultaBuscandoEnInternet, "gpt-5.2", Razonamiento.NingunoOBajo, Verbosidad.Baja, CalidadAdaptable.MejorarModeloYRazonamiento,
         //        15, ModoServicio.Normal)) },
@@ -226,10 +223,10 @@ internal class Demostración {
             return noDisponibleModelo;
         }
 
-        var claveAPI = LeerClave(RutaClaveAPI, out string errorClaveAPI);
-        if (!string.IsNullOrEmpty(errorClaveAPI)) {
-            EscribirMultilíneaRojo(errorClaveAPI, agregarLíneasEnBlancoAlrededor: true);
-            return errorClaveAPI;
+        var claveApi = LeerClave(RutaClaveApi, out string errorClaveApi);
+        if (!string.IsNullOrEmpty(errorClaveApi)) {
+            EscribirMultilíneaRojo(errorClaveApi, agregarLíneasEnBlancoAlrededor: true);
+            return errorClaveApi;
         }
 
         var restricciones = new Restricciones {
@@ -238,7 +235,7 @@ internal class Demostración {
         };
 
         var grupoCaché = string.IsNullOrWhiteSpace(GrupoCaché) ? "" : $"{GrupoCaché}-{númeroDemostración}";
-        var servicio = new Servicio(((Modelo)modelo).Nombre, modo, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveAPI, 
+        var servicio = new Servicio(((Modelo)modelo).Nombre, modo, razonamiento, verbosidad, calidadAdaptable, TratamientoNegritas.Eliminar, claveApi, 
             TasaDeCambioUsd, grupoCaché, out string errorInicio, out string advertenciaInicio, out string informaciónInicio, rellenarInstruccionesSistema, 
             restricciones);
 
@@ -337,6 +334,27 @@ internal class Demostración {
     } // ConsultaTexto>
 
 
+    internal static string ConsultaLote(Familia familia) {
+
+        EscribirMultilíneaMagentaOscuro("Escribe el identificador del lote que quieres consultar:", agregarLíneasEnBlancoAlrededor: true);
+        var loteId = Leer();
+
+        var claveApi = LeerClave(RutaClaveApi, out string errorClaveApi);
+        if (!string.IsNullOrEmpty(errorClaveApi)) {
+            EscribirMultilíneaRojo(errorClaveApi, agregarLíneasEnBlancoAlrededor: true);
+            return errorClaveApi;
+        }
+
+        var respuesta = Lote.ConsultarLote(familia, loteId, claveApi, out string error, out Dictionary<string, Tókenes> tókenes, out StringBuilder información, 
+            out Resultado resultado);
+
+        EscribirMensajes(null, null, $"Lote: {loteId}", respuesta, null);
+
+        return respuesta;
+
+    } // ConsultaLote>
+
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Quitar el parámetro no utilizado", Justification = "")]
     internal static (string Respuesta, Dictionary<string, Tókenes> Tókenes, string DetalleCosto, string Error, StringBuilder Información, Resultado Resultado)
         ConsultaConArchivos(Servicio servicio, Modelo modelo) {
@@ -348,8 +366,8 @@ internal class Demostración {
         var archivos = new List<string> { @"D:\Proyectos\Frugalia\Archivos Pruebas\algodón-en-discos-familia-120unidad.jpg" };
         var tipoArchivo = TipoArchivo.Imagen;
 
-        var respuesta = servicio.Consultar(consultasDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, mensajeUsuario, archivos, out string error,
-            out Dictionary<string, Tókenes> tókenes, tipoArchivo, out StringBuilder información, out Resultado resultado);
+        var respuesta = servicio.Consultar(consultasDuranteCachéExtendida, instrucciónSistema, ref rellenoInstrucciónSistema, mensajeUsuario, archivos, tipoArchivo,
+            out string error, out Dictionary<string, Tókenes> tókenes, out StringBuilder información, out Resultado resultado);
 
         EscribirMensajes(instrucciónSistema, rellenoInstrucciónSistema, mensajeUsuario, respuesta, archivo: $"{tipoArchivo}: {archivos[0]}");
 

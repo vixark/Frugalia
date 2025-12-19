@@ -22,13 +22,14 @@
 // When redistributing this file, preserve this notice, as required by the GNU Affero General Public License.
 //
 
+using OpenAI.Batch;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
-using static Frugalia.GlobalFrugalia;
 using static Frugalia.General;
-using System.Linq;
+using static Frugalia.GlobalFrugalia;
 
 
 namespace Frugalia {
@@ -55,7 +56,7 @@ namespace Frugalia {
 
         public ModoServicio Modo { get; }
 
-        private string ClaveAPI { get; }
+        private string ClaveApi { get; }
 
         private bool Iniciado { get; }
 
@@ -95,7 +96,7 @@ namespace Frugalia {
 
 
         public Servicio(string nombreModelo, ModoServicio modo, Razonamiento razonamiento, Verbosidad verbosidad, CalidadAdaptable calidadAdaptable, // A propósito se provee un constructor con varios parámetros no opcionales para forzar al usuario de la librería a manualmente omitir ciertas optimizaciones. El objetivo de la librería es generar ahorros, entonces por diseño se prefiere que el usuario omita estos ahorros manualmente.
-            TratamientoNegritas tratamientoNegritas, string claveAPI, decimal tasaDeCambioUsd, string grupoCaché, out string error, out string advertencia,
+            TratamientoNegritas tratamientoNegritas, string claveApi, decimal tasaDeCambioUsd, string grupoCaché, out string error, out string advertencia,
             out string información, bool rellenarInstruccionesSistema = true, Restricciones restricciones = null, int segundosLímitePorConsulta = 60) {
 
             información = "";
@@ -108,7 +109,7 @@ namespace Frugalia {
                 error = $"El modelo '{nombreModelo}' no es válido.";
             } else {
 
-                if (string.IsNullOrWhiteSpace(claveAPI)) error = "La clave de la API no puede ser nula ni vacía.";
+                if (string.IsNullOrWhiteSpace(claveApi)) error = "La clave de la API no puede ser nula ni vacía.";
                 if (tasaDeCambioUsd <= 0) error = "La tasa de cambio a dólares no puede ser 0 o menor.";
                 if (segundosLímitePorConsulta <= 0) error = "Los segundos límite por consulta no pueden ser 0 o menores.";
                 if (calidadAdaptable != CalidadAdaptable.No && modo == ModoServicio.Lote) error = "No se puede usar calidad adaptable en consultas en lote.";
@@ -138,7 +139,7 @@ namespace Frugalia {
             }
 
             Restricciones = restricciones ?? new Restricciones(); // Si es nulo, se inicia con los valores por defecto.
-            ClaveAPI = claveAPI;
+            ClaveApi = claveApi;
             Modelo = (Modelo)modelo;
             Familia = Modelo.Familia;
             Razonamiento = razonamiento;
@@ -146,7 +147,7 @@ namespace Frugalia {
             CalidadAdaptable = calidadAdaptable;
             TratamientoNegritas = tratamientoNegritas;
             Modo = modo;
-            Cliente = new Cliente(Familia, ClaveAPI);
+            Cliente = new Cliente(Familia, ClaveApi);
             Iniciado = true;
             RellenarInstruccionesSistema = rellenarInstruccionesSistema;
             información = textoInformación.ToString();
@@ -799,7 +800,7 @@ namespace Frugalia {
         /// <param name="tipoArchivo"></param>
         /// <returns></returns>
         public string Consultar(int conversacionesDuranteCachéExtendida, string instrucciónSistema, ref string rellenoInstrucciónSistema, string mensajeUsuario,
-            List<string> rutasArchivos, out string error, out Dictionary<string, Tókenes> tókenes, TipoArchivo tipoArchivo, out StringBuilder información,
+            List<string> rutasArchivos, TipoArchivo tipoArchivo, out string error, out Dictionary<string, Tókenes> tókenes, out StringBuilder información,
             out Resultado resultado) {
 
             resultado = Resultado.Abortado;
