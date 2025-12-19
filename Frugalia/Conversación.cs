@@ -26,7 +26,7 @@ using OpenAI.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Frugalia.GlobalFrugalia;
+using static Frugalia.Global;
 using static Frugalia.General;
 
 

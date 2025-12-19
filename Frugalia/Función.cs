@@ -25,7 +25,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Frugalia.GlobalFrugalia;
+using static Frugalia.Global;
 
 
 namespace Frugalia {

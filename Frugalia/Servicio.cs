@@ -29,7 +29,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using static Frugalia.General;
-using static Frugalia.GlobalFrugalia;
+using static Frugalia.Global;
 
 
 namespace Frugalia {

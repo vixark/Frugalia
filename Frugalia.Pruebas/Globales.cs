@@ -24,7 +24,7 @@
 
 using System.Reflection;
 namespace Frugalia.Pruebas;
-using static Frugalia.GlobalFrugalia;
+using static Frugalia.Global;
 
 
 public class Globales {

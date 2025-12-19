@@ -279,3 +279,6 @@ dotnet_diagnostic.CA2211.severity = none
 
 # IDE0075: Simplificar la expresión condicional. Para que me permita escribir condicionales que para mi son más claros como a == 5 ? variableBool : false o cosas de ese estilo. Prefiero no hacer trucos como a == 5 && variableBool porque no lo leo su lógica tan fácilmente.
 dotnet_diagnostic.IDE0075.severity = none
+
+# IDE0130: El espacio de nombres no coincide con la estructura de carpetas
+dotnet_diagnostic.IDE0130.severity = none

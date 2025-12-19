@@ -150,7 +150,7 @@ namespace Frugalia {
     } // ModoServicio>
 
 
-    public static class GlobalFrugalia { // Funciones y constantes auxiliares de lógica de negocio que solo aplican en esta librería. Se diferencia de General que contiene funciones que se podrían copiar y pegar en otros proyectos.
+    public static class Global { // Funciones y constantes auxiliares de lógica de negocio que solo aplican en esta librería. Se diferencia de General que contiene funciones que se podrían copiar y pegar en otros proyectos.
 
 
         internal const string UnEspacio = " ";
